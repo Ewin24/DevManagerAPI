@@ -9,7 +9,7 @@ using Domain.Enums;
 public class ApplyToProjectRequest
 {
     [MaxLength(800)]
-    public string? Motivation { get; set; }
+    public string? Message { get; set; }
 }
 
 /// <summary>
@@ -22,7 +22,7 @@ public class ApplicationResponse
     public string ProjectName { get; set; } = null!;
     public Guid UserId { get; set; }
     public string UserName { get; set; } = null!;
-    public string? Motivation { get; set; }
+    public string? Message { get; set; }
     public ApplicationStatus Status { get; set; }
     public DateTime? ReviewedAt { get; set; }
     public string? ReviewNotes { get; set; }

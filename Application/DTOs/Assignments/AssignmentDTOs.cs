@@ -6,7 +6,7 @@ using Domain.Enums;
 /// <summary>
 /// DTO para asignar empleado a proyecto
 /// </summary>
-public class AssignUserRequest
+public class CreateAssignmentRequest
 {
     [Required]
     public Guid ProjectId { get; set; }
@@ -15,6 +15,11 @@ public class AssignUserRequest
     public Guid UserId { get; set; }
 
     public Guid? ProjectRoleId { get; set; }
+    
+    /// <summary>
+    /// ID de la aplicación previa (opcional)
+    /// </summary>
+    public Guid? ApplicationId { get; set; }
 }
 
 /// <summary>

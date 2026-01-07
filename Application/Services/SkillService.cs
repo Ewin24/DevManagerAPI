@@ -1,0 +1,53 @@
+namespace Application.Services;
+
+using Application.Common.Exceptions;
+using Application.DTOs.Skills;
+using Application.Interfaces;
+using Domain.Entities.Talent;
+using Domain.Interfaces.Repositories;
+
+/// <summary>
+/// Servicio para gestión de catálogo de habilidades
+/// </summary>
+public class SkillService : ISkillService
+{
+    private readonly ISkillRepository _skillRepository;
+
+    public SkillService(ISkillRepository skillRepository)
+    {
+        _skillRepository = skillRepository;
+    }
+
+    public async Task<IEnumerable<SkillDto>> GetAllSkillsAsync(Guid organizationId)
+    {
+        var skills = await _skillRepository.GetAllAsync(organizationId);
+
+        return skills.Select(s => new SkillDto
+        {
+            Id = s.Id,
+            Name = s.Name,
+            Category = s.Category,
+            SkillType = s.SkillType
+        });
+    }
+
+    public async Task<Guid> CreateSkillAsync(SkillDto skillDto, Guid organizationId)
+    {
+        // Validar que no exista una skill con el mismo nombre (case insensitive)
+        var exists = await _skillRepository.ExistsByNameAsync(skillDto.Name, organizationId);
+        if (exists)
+        {
+            throw new BusinessValidationException($"Ya existe una habilidad con el nombre '{skillDto.Name}'");
+        }
+
+        var skill = new Skill
+        {
+            Name = skillDto.Name,
+            Category = skillDto.Category,
+            SkillType = skillDto.SkillType,
+            OrganizationId = organizationId
+        };
+
+        return await _skillRepository.CreateAsync(skill);
+    }
+}
