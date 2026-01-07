@@ -48,7 +48,7 @@ public class EmployeeSkillResponse
     public byte Level { get; set; }
     public string? EvidenceUrl { get; set; }
     public DateTime? LastValidatedAt { get; set; }
-    public bool IsSystemValidated { get; set; } // true si ValidatedByUserId es NULL
+    public Guid? ValidatedByUserId { get; set; }
 }
 
 /// <summary>

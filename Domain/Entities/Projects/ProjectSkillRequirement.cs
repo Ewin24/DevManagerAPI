@@ -16,6 +16,9 @@ public class ProjectSkillRequirement
     public bool IsMandatory { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsDeleted { get; set; }
+    
+    // Propiedades calculadas (usadas por servicios)
+    public string SkillName { get; set; } = string.Empty;
 
     // Navegación
     public Organization? Organization { get; set; }
