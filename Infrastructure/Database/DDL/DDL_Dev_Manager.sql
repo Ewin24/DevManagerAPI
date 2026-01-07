@@ -1,6 +1,5 @@
 /* =========================================================
    DevManager - SQL Server Database Schema (Multi-tenant)
-   auditing + soft delete
    ========================================================= */
 
 -- CREATE DATABASE DevManager;
@@ -67,7 +66,6 @@ CREATE TABLE iam.Users (
 );
 GO
 
--- Email único por organización (multi-tenant)
 CREATE UNIQUE INDEX UX_Users_Org_Email
 ON iam.Users(OrganizationId, Email)
 WHERE IsDeleted = 0;
@@ -80,7 +78,7 @@ GO
 
 CREATE TABLE iam.Roles (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_Roles PRIMARY KEY,
-    OrganizationId  uniqueidentifier NULL, -- NULL = rol global, si lo deseas
+    OrganizationId  uniqueidentifier NULL, 
     Name            nvarchar(80)     NOT NULL,
     Description     nvarchar(200)    NULL,
 
@@ -147,9 +145,10 @@ GO
 
 CREATE TABLE talent.Skills (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_Skills PRIMARY KEY,
-    OrganizationId  uniqueidentifier NULL, -- NULL = catálogo global
+    OrganizationId  uniqueidentifier NULL, 
     Name            nvarchar(120)    NOT NULL,
     Category        nvarchar(80)     NULL,
+    SkillType       nvarchar(20)     NULL, -- 'Hard', 'Soft', 'Language' tipo de skill para reportes y análisis
 
     CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_Skills_CreatedAt DEFAULT (sysutcdatetime()),
     IsDeleted       bit              NOT NULL CONSTRAINT DF_Skills_IsDeleted DEFAULT (0),
@@ -173,7 +172,7 @@ CREATE TABLE talent.EmployeeSkills (
     Level           tinyint          NOT NULL, -- 1..5
     EvidenceUrl     nvarchar(400)    NULL,
     LastValidatedAt datetime2(3)     NULL,
-
+    ValidatedByUserId uniqueidentifier NULL, -- Necesario para auditoría: saber si lo validó el Sistema (Agente) o un Humano.
     CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_EmployeeSkills_CreatedAt DEFAULT (sysutcdatetime()),
     CreatedByUserId uniqueidentifier NULL,
     UpdatedAt       datetime2(3)     NULL,
@@ -186,11 +185,12 @@ CREATE TABLE talent.EmployeeSkills (
         FOREIGN KEY (UserId) REFERENCES iam.Users(Id),
     CONSTRAINT FK_EmployeeSkills_Skills
         FOREIGN KEY (SkillId) REFERENCES talent.Skills(Id),
+    CONSTRAINT FK_EmployeeSkills_Validator
+        FOREIGN KEY (ValidatedByUserId) REFERENCES iam.Users(Id),
     CONSTRAINT CK_EmployeeSkills_Level CHECK (Level BETWEEN 1 AND 5)
 );
 GO
 
--- Evita duplicar el mismo skill para un usuario (por organización)
 CREATE UNIQUE INDEX UX_EmployeeSkills_Org_User_Skill
 ON talent.EmployeeSkills(OrganizationId, UserId, SkillId)
 WHERE IsDeleted = 0;
@@ -231,7 +231,7 @@ WHERE IsDeleted = 0;
 GO
 
 /* =========================
-   3) Tablas Projects (Proyectos, Requisitos, Postulaciones, Asignaciones)
+   3) Tablas Projects
    ========================= */
 
 CREATE TABLE projects.Projects (
@@ -245,6 +245,7 @@ CREATE TABLE projects.Projects (
     StartDate        date             NULL,
     EndDate          date             NULL,
 
+    ComplexityLevel  tinyint          NOT NULL CONSTRAINT DF_Projects_Complexity DEFAULT(1), -- El sistema debe saber la dificultad del proyecto para calcular cuánta experiencia ganan los empleados. 
     Status           tinyint          NOT NULL, -- 1 Draft, 2 Open, 3 InProgress, 4 Closed, 5 Cancelled
 
     CreatedAt        datetime2(3)     NOT NULL CONSTRAINT DF_Projects_CreatedAt DEFAULT (sysutcdatetime()),
@@ -255,7 +256,8 @@ CREATE TABLE projects.Projects (
 
     CONSTRAINT FK_Projects_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),
-    CONSTRAINT CK_Projects_Status CHECK (Status BETWEEN 1 AND 5)
+    CONSTRAINT CK_Projects_Status CHECK (Status BETWEEN 1 AND 5),
+    CONSTRAINT CK_Projects_Complexity CHECK (ComplexityLevel BETWEEN 1 AND 3)
 );
 GO
 
@@ -265,7 +267,6 @@ INCLUDE (Name, StartDate, EndDate)
 WHERE IsDeleted = 0;
 GO
 
--- Código único por organización
 CREATE UNIQUE INDEX UX_Projects_Org_Code
 ON projects.Projects(OrganizationId, Code)
 WHERE Code IS NOT NULL AND IsDeleted = 0;
@@ -304,13 +305,12 @@ INCLUDE (ProjectId, RequiredLevel, IsMandatory)
 WHERE IsDeleted = 0;
 GO
 
--- Roles dentro de un proyecto
 CREATE TABLE projects.ProjectRoles (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_ProjectRoles PRIMARY KEY,
     OrganizationId  uniqueidentifier NOT NULL,
     ProjectId       uniqueidentifier NOT NULL,
 
-    Name            nvarchar(80)     NOT NULL, -- Dev, QA, PM, etc.
+    Name            nvarchar(80)     NOT NULL, 
     NeededCount     int              NOT NULL CONSTRAINT DF_ProjectRoles_NeededCount DEFAULT (1),
 
     CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_ProjectRoles_CreatedAt DEFAULT (sysutcdatetime()),
@@ -340,6 +340,8 @@ CREATE TABLE projects.ProjectApplications (
 
     ReviewedByUserId uniqueidentifier NULL,
     ReviewedAt       datetime2(3)     NULL,
+    
+    ReviewNotes     nvarchar(500)    NULL, -- Feedback de rechazo o aprobación. Útil para que el empleado sepa en qué mejorar.
 
     CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_ProjectApplications_CreatedAt DEFAULT (sysutcdatetime()),
     IsDeleted       bit              NOT NULL CONSTRAINT DF_ProjectApplications_IsDeleted DEFAULT (0),
@@ -356,7 +358,6 @@ CREATE TABLE projects.ProjectApplications (
 );
 GO
 
--- Un usuario solo puede tener UNA postulación activa por proyecto
 CREATE UNIQUE INDEX UX_ProjectApplications_Org_Project_User
 ON projects.ProjectApplications(OrganizationId, ProjectId, UserId)
 WHERE IsDeleted = 0;
@@ -397,7 +398,6 @@ CREATE TABLE projects.ProjectAssignments (
 );
 GO
 
--- Evita doble asignación activa del mismo usuario al mismo proyecto
 CREATE UNIQUE INDEX UX_ProjectAssignments_Org_Project_User_Active
 ON projects.ProjectAssignments(OrganizationId, ProjectId, UserId)
 WHERE IsDeleted = 0 AND Status = 1;
@@ -410,7 +410,7 @@ WHERE IsDeleted = 0;
 GO
 
 /* =========================
-   4) Historial / Evaluación de habilidades (soporte “calificación automática”)
+   4) Historial / Evaluación de habilidades
    ========================= */
 
 CREATE TABLE projects.ProjectParticipation (
@@ -421,6 +421,9 @@ CREATE TABLE projects.ProjectParticipation (
 
     RoleName        nvarchar(80)     NULL,
     ContributionScore tinyint        NULL, -- 1..5
+    
+    FeedbackComments nvarchar(max)   NULL,  -- Texto fundamental para el "Natural Language Processing" del Agente Inteligente. Sin texto, el agente es ciego a los matices.
+
     CompletedAt     datetime2(3)     NULL,
 
     CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_ProjectParticipation_CreatedAt DEFAULT (sysutcdatetime()),
@@ -474,14 +477,14 @@ ON talent.SkillEvaluations(OrganizationId, UserId, SkillId, CreatedAt DESC);
 GO
 
 /* =========================
-   5) Reporting (BI básico)
+   5) Reporting (BI básico & Agente)
    ========================= */
 
 CREATE TABLE reporting.ReportSnapshots (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_ReportSnapshots PRIMARY KEY,
     OrganizationId  uniqueidentifier NOT NULL,
     SnapshotDate    date             NOT NULL,
-    JsonPayload     nvarchar(max)    NOT NULL, -- métricas agregadas
+    JsonPayload     nvarchar(max)    NOT NULL, 
 
     CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_ReportSnapshots_CreatedAt DEFAULT (sysutcdatetime()),
 
@@ -535,6 +538,5 @@ CREATE INDEX IX_RecommendationLogs_Org_Date
 ON reporting.RecommendationLogs(OrganizationId, GeneratedAt DESC);
 GO
 
-
-PRINT 'DevManager schema created successfully.';
+PRINT 'DevManager schema created successfully (with Expert Enhancements).';
 GO
