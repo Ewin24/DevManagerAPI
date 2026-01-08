@@ -51,7 +51,22 @@ Edita `API/appsettings.Development.json`:
 }
 ```
 
-### 3. Ejecutar la API
+### 3. Poblar Base de Datos (RECOMENDADO)
+
+**Ejecuta el seeder SQL** con datos de prueba listos (5 usuarios, 3 proyectos, 11 skills):
+
+```bash
+# El seeder ya tiene password hashes generados
+sqlcmd -S localhost -d DevManager -E -i Infrastructure/Database/Seeders/Seeder.sql
+```
+
+📖 Ver **[Infrastructure/Database/Seeders/EJECUTAR_SEEDER.md](Infrastructure/Database/Seeders/EJECUTAR_SEEDER.md)** para:
+- Cuentas de prueba (admin@techcorp.com / Password123!)
+- Cómo verificar que funcionó
+- Ejemplos de API calls
+- Troubleshooting
+
+### 4. Ejecutar la API
 
 ```bash
 dotnet build
