@@ -65,4 +65,9 @@ public class EmployeeSkillService : IEmployeeSkillService
     {
         return await _employeeSkillRepository.ValidateSkillAsync(employeeSkillId, organizationId, validatorUserId, newLevel);
     }
+
+    public async Task<IEnumerable<EmployeeSkillResponse>> GetSkillsByUserIdAsync(Guid userId, Guid organizationId)
+    {
+        return await GetEmployeeSkillsAsync(userId, organizationId);
+    }
 }

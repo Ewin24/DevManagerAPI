@@ -18,4 +18,5 @@ public class EmployeeProfile : AuditableEntity
     // Navegación
     public User? User { get; set; }
     public Organization? Organization { get; set; }
+    public ICollection<EmployeeSkill>? EmployeeSkills { get; set; }
 }

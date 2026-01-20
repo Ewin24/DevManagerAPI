@@ -50,4 +50,37 @@ public class SkillService : ISkillService
 
         return await _skillRepository.CreateAsync(skill);
     }
+
+    public async Task<SkillDto?> GetSkillByIdAsync(Guid skillId, Guid organizationId)
+    {
+        var skill = await _skillRepository.GetByIdAsync(skillId);
+        
+        if (skill == null)
+            return null;
+
+        return new SkillDto
+        {
+            Id = skill.Id,
+            Name = skill.Name,
+            Category = skill.Category,
+            SkillType = skill.SkillType
+        };
+    }
+
+    public async Task<SkillDto?> GetSkillByNameAsync(string skillName, Guid organizationId)
+    {
+        var skills = await _skillRepository.GetAllAsync(organizationId);
+        var skill = skills.FirstOrDefault(s => s.Name.Equals(skillName, StringComparison.OrdinalIgnoreCase));
+        
+        if (skill == null)
+            return null;
+
+        return new SkillDto
+        {
+            Id = skill.Id,
+            Name = skill.Name,
+            Category = skill.Category,
+            SkillType = skill.SkillType
+        };
+    }
 }

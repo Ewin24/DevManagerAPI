@@ -11,10 +11,17 @@ using Domain.Interfaces.Repositories;
 public class ProfileService : IProfileService
 {
     private readonly IProfileRepository _profileRepository;
+    private readonly IEmployeeSkillRepository _employeeSkillRepository;
+    private readonly ISkillRepository _skillRepository;
 
-    public ProfileService(IProfileRepository profileRepository)
+    public ProfileService(
+        IProfileRepository profileRepository,
+        IEmployeeSkillRepository employeeSkillRepository,
+        ISkillRepository skillRepository)
     {
         _profileRepository = profileRepository;
+        _employeeSkillRepository = employeeSkillRepository;
+        _skillRepository = skillRepository;
     }
 
     public async Task<EmployeeProfileDto?> GetMyProfileAsync(Guid userId, Guid organizationId)
@@ -47,5 +54,29 @@ public class ProfileService : IProfileService
         };
 
         return await _profileRepository.UpsertAsync(profile);
+    }
+
+    public async Task<EmployeeProfileDto?> GetProfileByIdAsync(Guid userId, Guid organizationId)
+    {
+        return await GetMyProfileAsync(userId, organizationId);
+    }
+
+    public async Task<IEnumerable<ProfileWithSkillsDto>> GetAllProfilesWithSkillsAsync(Guid organizationId)
+    {
+        var profiles = await _profileRepository.GetAllAsync(organizationId);
+        
+        return profiles.Select(p => new ProfileWithSkillsDto
+        {
+            UserId = p.UserId,
+            Bio = p.Bio,
+            YearsExperience = p.YearsExperience.HasValue ? (byte?)p.YearsExperience.Value : null,
+            Skills = p.EmployeeSkills?.Select(es => new EmployeeSkillSummary
+            {
+                SkillId = es.SkillId,
+                SkillName = es.Skill?.Name ?? "Unknown",
+                CurrentLevel = es.Level,
+                LastValidatedAt = es.LastValidatedAt
+            }) ?? Enumerable.Empty<EmployeeSkillSummary>()
+        });
     }
 }

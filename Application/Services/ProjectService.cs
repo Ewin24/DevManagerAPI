@@ -118,4 +118,27 @@ public class ProjectService : IProjectService
             IsMandatory = r.IsMandatory
         });
     }
+
+    public async Task<ProjectDetailsDto?> GetProjectDetailsAsync(Guid projectId, Guid organizationId)
+    {
+        var project = await _projectRepository.GetByIdAsync(projectId, organizationId);
+        
+        if (project == null)
+            return null;
+
+        var skillRequirements = await GetSkillRequirementsAsync(projectId, organizationId);
+
+        return new ProjectDetailsDto
+        {
+            Id = project.Id,
+            Code = project.Code,
+            Name = project.Name,
+            Description = project.Description,
+            StartDate = project.StartDate,
+            EndDate = project.EndDate,
+            ComplexityLevel = project.ComplexityLevel,
+            Status = project.Status,
+            SkillRequirements = skillRequirements
+        };
+    }
 }

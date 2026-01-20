@@ -1,6 +1,18 @@
-# DevManager API - Sistema de Gestión de Talento y Proyectos
+# DevManager API - Sistema de Gestión de Talento con IA
 
-API REST multi-tenant para gestión de talento, habilidades y proyectos construida con .NET 8.0 y Clean Architecture.
+API REST multi-tenant para gestión de talento, habilidades y proyectos construida con .NET 8.0, Clean Architecture y **Google Gemini AI** para orquestación inteligente.
+
+## 🤖 Nuevo: Agente Cognitivo de IA
+
+**DevManager v2.0** incluye un agente de IA avanzado que:
+
+- ✅ **Valida skills semánticamente** con análisis de evidencia y certificaciones
+- ✅ **Hace matching inteligente** de candidatos a proyectos (score 0-100)
+- ✅ **Responde en lenguaje natural** sobre talento, brechas de capacitación y tendencias
+- ✅ **Genera snapshots predictivos** y optimiza recomendaciones en segundo plano
+- ✅ **Implementa HITL** (Human-in-the-loop) para decisiones críticas
+
+📚 **[Lee la guía completa del agente →](AGENT_GUIDE.md)**
 
 ## 🏗️ Arquitectura
 
@@ -9,7 +21,7 @@ DevManager/
 ├── API/                    # Presentación (Controllers, Middleware)
 ├── Application/            # Lógica de aplicación (Services, DTOs, Interfaces)
 ├── Domain/                 # Núcleo del negocio (Entities, Enums)
-└── Infrastructure/         # Acceso a datos (Repositories, Dapper)
+└── Infrastructure/         # Acceso a datos (Repositories, Entity Framework)
 ```
 
 **Principios Clean Architecture:**
@@ -33,10 +45,6 @@ sqlcmd -S localhost -E -Q "CREATE DATABASE DevManager;"
 
 # Ejecutar DDL (crear tablas)
 sqlcmd -S localhost -d DevManager -E -i Infrastructure/Database/DDL/DDL_Dev_Manager.sql
-
-# Ejecutar Stored Procedures
-cd Infrastructure/Database/StoredProcedures
-sqlcmd -S localhost -d DevManager -E -i 01_IAM_Procedures.sql
 ```
 
 ### 2. Configurar Connection String
@@ -142,6 +150,23 @@ Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9...
 
 ## 🚀 Endpoints Disponibles
 
+### 🤖 Agent AI (Nuevo en v2.0)
+- `POST /agent/query` - Consulta en lenguaje natural
+- `POST /agent/validate-skill` - Validación semántica de skills
+- `POST /agent/match-candidates` - Matching inteligente para proyectos
+- `POST /agent/approve/{actionId}` - Aprobar acción (HITL)
+- `POST /agent/reject/{actionId}` - Rechazar acción
+
+**Ejemplo rápido:**
+```bash
+curl -X POST http://localhost:5073/agent/query \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "¿Quiénes son los mejores candidatos para un proyecto .NET?", "requireApproval": false}'
+```
+
+📚 **[Ver guía completa del agente →](AGENT_GUIDE.md)**
+
 ### Auth (Público)
 - `POST /auth/login` - Iniciar sesión
 - `POST /auth/register` - Registrar organización + admin
@@ -156,11 +181,13 @@ Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9...
 ## 📦 Tecnologías
 
 - **Framework**: .NET 8.0 (ASP.NET Core Web API)
-- **ORM**: Dapper 2.1.66 (micro ORM)
+- **ORM**: Entity Framework Core 8.0.11
 - **Database**: SQL Server 2019+ (Microsoft.Data.SqlClient 6.1.3)
 - **Auth**: JWT Bearer 8.0.11
+- **AI**: Google Gemini API (gemini-1.5-flash) 🆕
 - **API Docs**: Swagger/OpenAPI (Swashbuckle 6.6.2)
 - **Security**: HMACSHA512 (password hashing)
+- **Background Jobs**: IHostedService (.NET 8) 🆕
 
 ## 🏛️ Arquitectura de Datos
 
@@ -238,6 +265,8 @@ La API usa middleware global para manejo estandarizado de errores:
 - Projects, ProjectSkillRequirements, ProjectRoles
 - ProjectApplications, ProjectAssignments, ProjectParticipation
 
+- **AgentActions** 🆕 - Auditoría de acciones del agente IA
+- **AgentConfiguration** 🆕 - Configuración del agente por organización
 **Reporting** (`reporting.*`)
 - ReportSnapshots, RecommendationRules, RecommendationLogs
 
@@ -261,17 +290,6 @@ Domain.Interfaces.Repositories
 Infrastructure.Data
 Infrastructure.Repositories
 Infrastructure.Services
-```
-
-### Stored Procedures:
-```sql
-sp_[Schema]_[Action]
-
-Ejemplos:
-- sp_Iam_GetUserByEmail
-- sp_Iam_CreateUser
-- sp_Talent_GetEmployeeSkills
-- sp_Projects_CreateProject
 ```
 
 ### Controllers:
@@ -352,15 +370,26 @@ DevManagerAPI/
 └── DevManager.sln
 ```
 
-## ⚠️ Pendientes
-
-- [ ] Implementar módulos Talent (Profiles, Skills)
-- [ ] Implementar módulo Projects
+### Módulos Funcionales
+- [ ] Implementar módulos Talent completo (Profiles, Skills)
+- [ ] Implementar módulo Projects completo
 - [ ] Agregar validaciones con FluentValidation
 - [ ] Tests unitarios (xUnit)
 - [ ] Tests de integración
+
+### Agente IA - Mejoras Futuras
+- [ ] Vector embeddings para semantic search
+- [ ] Memoria conversacional
+- [ ] Fine-tuning con datos históricos
+- [ ] Dashboard de métricas del agente
+- [ ] Notificaciones proactivas (Slack/Teams)
+
+### Infraestructura
 - [ ] Rate limiting
 - [ ] Health checks
+- [ ] Logging estructurado (Serilog)
+- [ ] Cache (Redis)
+- [ ] CI/CD pipeline
 - [ ] Logging estructurado (Serilog)
 - [ ] Cache (Redis)
 
@@ -373,10 +402,21 @@ Este proyecto sigue Clean Architecture y SOLID principles. Al agregar nuevas fun
 3. Crear interface de repositorio en `Domain/Interfaces/Repositories/`
 4. Implementar repositorio en `Infrastructure/Repositories/`
 5. Crear interface de servicio en `Application/Interfaces/`
-6. Implementar servicio en `Application/Services/`
+## 📚 Documentación Adicional
+
+- **[AGENT_GUIDE.md](AGENT_GUIDE.md)** - Guía completa del Agente de IA (500+ líneas)
+- **[ESTADO_PROYECTO.md](ESTADO_PROYECTO.md)** - Estado detallado del proyecto
+- **[API_EXAMPLES.md](API/API_EXAMPLES.md)** - Ejemplos de uso de la API
+- **[CHANGELOG.md](CHANGELOG.md)** - Historial de cambios
+- **[Examples/AgentClientExample.cs](Examples/AgentClientExample.cs)** - Cliente C# de ejemplo
+
+---
+
+**Desarrollado con ❤️ usando Clean Architecture + .NET 8.0 + Google Gemini AI
 7. Crear controller en `API/Controllers/`
 8. Registrar dependencias en `ApplicationServiceExtensions.cs`
-9. Crear stored procedures en `Infrastructure/Database/StoredProcedures/`
+8. Configurar entidades en `Infrastructure/Data/Configuration/`
+9. Crear controllers en `API/Controllers/`
 
 ## 📄 Licencia
 

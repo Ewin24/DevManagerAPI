@@ -24,6 +24,15 @@
 
 4. **Reporting** - `reporting.*`
    - ReportSnapshots (métricas en JSON), RecommendationRules, RecommendationLogs
+   - **AgentActions** - Auditoría de acciones del agente IA
+   - **AgentConfiguration** - Configuración del agente por organización
+
+5. **Agent** - Agente Cognitivo de IA (NUEVO v2.0)
+   - Integración con Google Gemini AI (gemini-2.5-flash-lite)
+   - Model Context Protocol (MCP) - Tool Use Pattern
+   - Chain of Thought (CoT) reasoning implementado
+   - HITL (Human-in-the-loop) para decisiones críticas
+   - Background services para procesamiento asíncrono
 
 ## Arquitectura Clean Architecture (.NET 8.0)
 
@@ -88,7 +97,25 @@ GO
 USE DevManager;
 GO
 -- Ejecutar Infrastructure/Database/DDL/DDL_Dev_Manager.sql
+-- Ejecutar Infrastructure/Database/DDL/DDL_Agent_Tables.sql (NUEVO v2.0)
 ```
+
+### Configurar Agente IA (NUEVO v2.0)
+```json
+// API/appsettings.json
+{
+  "GoogleAI": {
+    "ApiKey": "YOUR_GOOGLE_AI_API_KEY_HERE",
+    "Model": "gemini-1.5-flash"
+  },
+  "Agent": {
+    "EnableBackgroundServices": true,
+    "RequireHumanApproval": true
+  }
+}
+```
+
+**Obtener API Key**: https://aistudio.google.com/app/apikey
 
 ## Guía de Implementación
 
@@ -121,7 +148,7 @@ public interface IOrganizationRepository
 }
 ```
 
-3. **Infrastructure** - Implementar repositorio (ADO.NET, Dapper o EF Core según se decida)
+3. **Infrastructure** - Implementar repositorio usando Entity Framework Core
 
 4. **Application** - DTOs y servicios:
 ```csharp
@@ -146,34 +173,39 @@ public class OrganizationsController : ControllerBase
 builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
 ```
 
-## Estado Actual del Proyecto (Actualizado: 6 Enero 2026)
+## Estado Actual del Proyecto (Actualizado: 19 Enero 2026)
 
-### ✅ Completado (100% - MVP Base)
+### ✅ Completado v2.0 - Agente IA Implementado
 - ✅ Clean Architecture implementada (4 capas)
-- ✅ Esquema SQL completo (541 líneas, 18 tablas, 4 esquemas)
+- ✅ Esquema SQL completo (18 tablas + 2 tablas de agente)
 - ✅ Multi-tenancy implementado y funcional
-- ✅ Dapper 2.1.66 configurado con Stored Procedures
+- ✅ Entity Framework Core 8.0.11
 - ✅ JWT Authentication (Bearer + Claims)
 - ✅ Password hashing (HMACSHA512 + Salt)
 - ✅ Manejo de errores global y estandarizado
 - ✅ Módulo IAM completo (Auth + Users)
-  - 18 entidades de dominio
-  - 5 enumeraciones
-  - 12 DTOs
-  - 3 servicios
-  - 3 repositorios con Dapper
-  - 2 controllers (7 endpoints)
-  - 7 stored procedures
+- ✅ **Agente Cognitivo de IA** (NUEVO)
+  - Google Gemini AI integrado (gemini-2.5-flash-lite)
+  - 5 endpoints del agente (/agent/*)
+  - Validación semántica de skills
+  - Matching inteligente de candidatos
+  - Consultas en lenguaje natural
+  - HITL (Human-in-the-loop)
+  - Background services (snapshots + optimizer)
+  - Auditoría completa (reporting.AgentActions)
+  - Model Context Protocol (MCP)
+  - Chain of Thought (CoT) reasoning
 - ✅ Swagger UI con JWT authentication
-- ✅ Documentación completa (5 archivos markdown)
+- ✅ Documentación completa (8+ archivos markdown)
 
 ### ⚠️ Pendiente (Siguientes fases)
-- ⚠️ Módulo Talent (tablas existen, falta implementar servicios)
-- ⚠️ Módulo Projects (tablas existen, falta implementar servicios)
-- ⚠️ Módulo Reporting (tablas existen, falta implementar servicios)
+- ⚠️ Módulo Talent completo (para matching real con datos)
+- ⚠️ Módulo Projects completo (para matching real con proyectos)
+- ⚠️ Vector embeddings para semantic search
+- ⚠️ Fine-tuning del agente con datos históricos
 - ⚠️ Tests unitarios e integración
 - ⚠️ FluentValidation
-- ⚠️ Paginación y filtros avanzados
+- ⚠️ Dashboard de métricas del agente
 
 ## Próximos Pasos Recomendados
 
@@ -182,21 +214,27 @@ builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
 2. Crear interfaces de servicio en `Application/Interfaces/`
 3. Implementar servicios en `Application/Services/`
 4. Crear repositorios en `Infrastructure/Repositories/`
-5. Crear stored procedures en `Infrastructure/Database/StoredProcedures/`
+5. Configurar entidades en `Infrastructure/Data/Configuration/`
 6. Crear controllers en `API/Controllers/`
 7. Registrar en `ApplicationServiceExtensions.cs`
 
 ### Referencias de código existente:
-- **Service pattern:** `Application/Services/AuthService.cs` y `UserService.cs`
-- **Repository pattern:** `Infrastructure/Repositories/AuthRepository.cs` y `UserRepository.cs`
-- **Controller pattern:** `API/Controllers/AuthController.cs` y `UsersController.cs`
-- **Stored Procedures:** `Infrastructure/Database/StoredProcedures/01_IAM_Procedures.sql`
-- **DTOs:** `Application/DTOs/Auth/` y `Application/DTOs/Users/`
+- **Service pattern:** `Application/Services/AuthService.cs`, `UserService.cs`, `AgentService.cs`
+- **Repository pattern:** `Infrastructure/Repositories/AuthRepository.cs`, `UserRepository.cs`, `AgentRepository.cs`
+- **Controller pattern:** `API/Controllers/AuthController.cs`, `UsersController.cs`, `AgentController.cs`
+- **AI Integration:** `Infrastructure/Services/AI/GeminiService.cs` (Google Gemini API)
+- **Background Services:** `Infrastructure/BackgroundServices/` (IHostedService)
+- **Entity Configuration:** `Infrastructure/Data/Configuration/` (Fluent API)
+- **DTOs:** `Application/DTOs/Auth/`, `Application/DTOs/Users/`, `Application/DTOs/Agent/`
 - **Middleware:** `API/Middleware/GlobalExceptionHandlerMiddleware.cs`
 - **Extensions:** `API/Extensions/ApplicationServiceExtensions.cs`
 
 ### Documentación de referencia:
 - `README.md` - Guía principal
+- `AGENT_GUIDE.md` - Guía completa del agente IA (500+ líneas)
+- `QUICKSTART_AGENT.md` - Setup rápido del agente
+- `IMPLEMENTATION_SUMMARY.md` - Resumen de implementación v2.0
+- `Examples/AgentClientExample.cs` - Cliente C# de ejemplo
 - `ESTADO_PROYECTO.md` - Estado detallado y checklist
 - `SETUP_DATABASE.md` - Configuración de base de datos
 - `API_EXAMPLES.md` - Ejemplos de uso con curl, PowerShell, C#
