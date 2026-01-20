@@ -5,11 +5,11 @@
 -- =============================================
 
 USE DevManager;
-GO
+
 
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
-GO
+
 
 PRINT '==========================================';
 PRINT 'DevManager - Seeder Completo';
@@ -349,4 +349,4 @@ PRINT '';
 PRINT 'Organization ID TechCorp:';
 PRINT '  11111111-1111-1111-1111-111111111111';
 PRINT '==========================================';
-GO
+

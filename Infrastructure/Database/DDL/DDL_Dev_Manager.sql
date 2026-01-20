@@ -3,9 +3,9 @@
    ========================================================= */
 
 -- CREATE DATABASE DevManager;
--- GO
+-- 
 -- USE DevManager;
--- GO
+-- 
 
 /* =========================
    0) Esquemas
@@ -14,7 +14,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'iam') EXEC('CREATE SCHEMA
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'talent') EXEC('CREATE SCHEMA talent');
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'projects') EXEC('CREATE SCHEMA projects');
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'reporting') EXEC('CREATE SCHEMA reporting');
-GO
+
 
 /* =========================
    1) Tablas IAM (Identity & Access)
@@ -37,7 +37,7 @@ CREATE TABLE iam.Organizations (
 
     CONSTRAINT UQ_Organizations_Nit UNIQUE (Nit)
 );
-GO
+
 
 CREATE TABLE iam.Users (
     Id                uniqueidentifier NOT NULL CONSTRAINT PK_Users PRIMARY KEY,
@@ -64,17 +64,17 @@ CREATE TABLE iam.Users (
     CONSTRAINT FK_Users_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_Users_Org_Email
 ON iam.Users(OrganizationId, Email)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE INDEX IX_Users_Org_IsActive
 ON iam.Users(OrganizationId, IsActive)
 INCLUDE (Email, FirstName, LastName);
-GO
+
 
 CREATE TABLE iam.Roles (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_Roles PRIMARY KEY,
@@ -88,12 +88,12 @@ CREATE TABLE iam.Roles (
     CONSTRAINT FK_Roles_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_Roles_Org_Name
 ON iam.Roles(OrganizationId, Name)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE TABLE iam.UserRoles (
     UserId          uniqueidentifier NOT NULL,
@@ -107,11 +107,11 @@ CREATE TABLE iam.UserRoles (
     CONSTRAINT FK_UserRoles_Roles FOREIGN KEY (RoleId) REFERENCES iam.Roles(Id),
     CONSTRAINT FK_UserRoles_Organizations FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
 );
-GO
+
 
 CREATE INDEX IX_UserRoles_Org_User
 ON iam.UserRoles(OrganizationId, UserId);
-GO
+
 
 /* =========================
    2) Tablas Talent (Perfil, Skills, Certificaciones)
@@ -136,12 +136,12 @@ CREATE TABLE talent.EmployeeProfiles (
     CONSTRAINT FK_EmployeeProfiles_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
 );
-GO
+
 
 CREATE INDEX IX_EmployeeProfiles_Org
 ON talent.EmployeeProfiles(OrganizationId)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE TABLE talent.Skills (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_Skills PRIMARY KEY,
@@ -156,12 +156,12 @@ CREATE TABLE talent.Skills (
     CONSTRAINT FK_Skills_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_Skills_Org_Name
 ON talent.Skills(OrganizationId, Name)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE TABLE talent.EmployeeSkills (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_EmployeeSkills PRIMARY KEY,
@@ -189,18 +189,18 @@ CREATE TABLE talent.EmployeeSkills (
         FOREIGN KEY (ValidatedByUserId) REFERENCES iam.Users(Id),
     CONSTRAINT CK_EmployeeSkills_Level CHECK (Level BETWEEN 1 AND 5)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_EmployeeSkills_Org_User_Skill
 ON talent.EmployeeSkills(OrganizationId, UserId, SkillId)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE INDEX IX_EmployeeSkills_Org_Skill
 ON talent.EmployeeSkills(OrganizationId, SkillId)
 INCLUDE (UserId, Level)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE TABLE talent.Certifications (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_Certifications PRIMARY KEY,
@@ -223,12 +223,12 @@ CREATE TABLE talent.Certifications (
     CONSTRAINT FK_Certifications_Users
         FOREIGN KEY (UserId) REFERENCES iam.Users(Id)
 );
-GO
+
 
 CREATE INDEX IX_Certifications_Org_User
 ON talent.Certifications(OrganizationId, UserId)
 WHERE IsDeleted = 0;
-GO
+
 
 /* =========================
    3) Tablas Projects
@@ -259,18 +259,18 @@ CREATE TABLE projects.Projects (
     CONSTRAINT CK_Projects_Status CHECK (Status BETWEEN 1 AND 5),
     CONSTRAINT CK_Projects_Complexity CHECK (ComplexityLevel BETWEEN 1 AND 3)
 );
-GO
+
 
 CREATE INDEX IX_Projects_Org_Status
 ON projects.Projects(OrganizationId, Status)
 INCLUDE (Name, StartDate, EndDate)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE UNIQUE INDEX UX_Projects_Org_Code
 ON projects.Projects(OrganizationId, Code)
 WHERE Code IS NOT NULL AND IsDeleted = 0;
-GO
+
 
 CREATE TABLE projects.ProjectSkillRequirements (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_ProjectSkillRequirements PRIMARY KEY,
@@ -292,18 +292,18 @@ CREATE TABLE projects.ProjectSkillRequirements (
         FOREIGN KEY (SkillId) REFERENCES talent.Skills(Id),
     CONSTRAINT CK_ProjectSkillRequirements_Level CHECK (RequiredLevel BETWEEN 1 AND 5)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_ProjectSkillRequirements_Org_Project_Skill
 ON projects.ProjectSkillRequirements(OrganizationId, ProjectId, SkillId)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE INDEX IX_ProjectSkillRequirements_Org_Skill
 ON projects.ProjectSkillRequirements(OrganizationId, SkillId)
 INCLUDE (ProjectId, RequiredLevel, IsMandatory)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE TABLE projects.ProjectRoles (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_ProjectRoles PRIMARY KEY,
@@ -322,12 +322,12 @@ CREATE TABLE projects.ProjectRoles (
         FOREIGN KEY (ProjectId) REFERENCES projects.Projects(Id),
     CONSTRAINT CK_ProjectRoles_NeededCount CHECK (NeededCount >= 1)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_ProjectRoles_Org_Project_Name
 ON projects.ProjectRoles(OrganizationId, ProjectId, Name)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE TABLE projects.ProjectApplications (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_ProjectApplications PRIMARY KEY,
@@ -356,18 +356,18 @@ CREATE TABLE projects.ProjectApplications (
         FOREIGN KEY (ReviewedByUserId) REFERENCES iam.Users(Id),
     CONSTRAINT CK_ProjectApplications_Status CHECK (Status BETWEEN 1 AND 4)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_ProjectApplications_Org_Project_User
 ON projects.ProjectApplications(OrganizationId, ProjectId, UserId)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE INDEX IX_ProjectApplications_Org_Project_Status
 ON projects.ProjectApplications(OrganizationId, ProjectId, Status)
 INCLUDE (UserId, ReviewedAt)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE TABLE projects.ProjectAssignments (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_ProjectAssignments PRIMARY KEY,
@@ -396,18 +396,18 @@ CREATE TABLE projects.ProjectAssignments (
         FOREIGN KEY (AssignedByUserId) REFERENCES iam.Users(Id),
     CONSTRAINT CK_ProjectAssignments_Status CHECK (Status BETWEEN 1 AND 3)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_ProjectAssignments_Org_Project_User_Active
 ON projects.ProjectAssignments(OrganizationId, ProjectId, UserId)
 WHERE IsDeleted = 0 AND Status = 1;
-GO
+
 
 CREATE INDEX IX_ProjectAssignments_Org_Project_Status
 ON projects.ProjectAssignments(OrganizationId, ProjectId, Status)
 INCLUDE (UserId, ProjectRoleId, AssignedAt)
 WHERE IsDeleted = 0;
-GO
+
 
 /* =========================
    4) Historial / Evaluación de habilidades
@@ -437,12 +437,12 @@ CREATE TABLE projects.ProjectParticipation (
         FOREIGN KEY (UserId) REFERENCES iam.Users(Id),
     CONSTRAINT CK_ProjectParticipation_ContributionScore CHECK (ContributionScore IS NULL OR ContributionScore BETWEEN 1 AND 5)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_ProjectParticipation_Org_Project_User
 ON projects.ProjectParticipation(OrganizationId, ProjectId, UserId)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE TABLE talent.SkillEvaluations (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_SkillEvaluations PRIMARY KEY,
@@ -470,11 +470,11 @@ CREATE TABLE talent.SkillEvaluations (
     CONSTRAINT CK_SkillEvaluations_Source CHECK (Source BETWEEN 1 AND 3),
     CONSTRAINT CK_SkillEvaluations_DeltaLevel CHECK (DeltaLevel BETWEEN -5 AND 5)
 );
-GO
+
 
 CREATE INDEX IX_SkillEvaluations_Org_User_Skill_Date
 ON talent.SkillEvaluations(OrganizationId, UserId, SkillId, CreatedAt DESC);
-GO
+
 
 /* =========================
    5) Reporting (BI básico & Agente)
@@ -491,11 +491,11 @@ CREATE TABLE reporting.ReportSnapshots (
     CONSTRAINT FK_ReportSnapshots_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
 );
-GO
+
 
 CREATE UNIQUE INDEX UX_ReportSnapshots_Org_Date
 ON reporting.ReportSnapshots(OrganizationId, SnapshotDate);
-GO
+
 
 CREATE TABLE reporting.RecommendationRules (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_RecommendationRules PRIMARY KEY,
@@ -512,12 +512,12 @@ CREATE TABLE reporting.RecommendationRules (
     CONSTRAINT FK_RecommendationRules_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
 );
-GO
+
 
 CREATE INDEX IX_RecommendationRules_Org_Active
 ON reporting.RecommendationRules(OrganizationId, IsActive)
 WHERE IsDeleted = 0;
-GO
+
 
 CREATE TABLE reporting.RecommendationLogs (
     Id              uniqueidentifier NOT NULL CONSTRAINT PK_RecommendationLogs PRIMARY KEY,
@@ -532,11 +532,10 @@ CREATE TABLE reporting.RecommendationLogs (
     CONSTRAINT FK_RecommendationLogs_GeneratedByUser
         FOREIGN KEY (GeneratedByUserId) REFERENCES iam.Users(Id)
 );
-GO
+
 
 CREATE INDEX IX_RecommendationLogs_Org_Date
 ON reporting.RecommendationLogs(OrganizationId, GeneratedAt DESC);
-GO
+
 
 PRINT 'DevManager schema created successfully (with Expert Enhancements).';
-GO
