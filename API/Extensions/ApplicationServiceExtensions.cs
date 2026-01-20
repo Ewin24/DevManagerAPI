@@ -57,6 +57,19 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IAssignmentService, AssignmentService>();
 
+        // Servicios de IA y Agente
+        services.AddHttpClient<IGeminiService, Infrastructure.Services.AI.GeminiService>();
+        services.AddScoped<IAgentService, AgentService>();
+        services.AddScoped<IAgentRepository, Infrastructure.Repositories.AgentRepository>();
+
+        // Background Services (procesamiento asíncrono)
+        var enableBackgroundServices = configuration.GetValue<bool>("Agent:EnableBackgroundServices", true);
+        if (enableBackgroundServices)
+        {
+            services.AddHostedService<Infrastructure.BackgroundServices.ReportSnapshotGeneratorService>();
+            services.AddHostedService<Infrastructure.BackgroundServices.RecommendationOptimizerService>();
+        }
+
         // Configuración de CORS
         services.AddCors(options =>
         {

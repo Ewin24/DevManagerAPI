@@ -41,11 +41,11 @@ GO
    Reporting Schema creado exitosamente
    ```
 
-### Paso 4: Crear Stored Procedures
-1. Abrir archivo: `Infrastructure/Database/StoredProcedures/01_IAM_Procedures.sql`
+### Paso 4: Ejecutar el DDL del Agente (NUEVO v2.0)
+1. Abrir archivo: `Infrastructure/Database/DDL/DDL_Agent_Tables.sql`
 2. Asegurarse que la base de datos seleccionada sea `DevManager`
 3. Click en **Execute** (F5)
-4. Verificar mensaje: `Stored Procedures IAM creados exitosamente`
+4. Verificar mensaje: `Tablas del agente creadas exitosamente`
 
 ### Paso 5: Verificar Creación
 Ejecutar queries de verificación:
@@ -313,8 +313,8 @@ ALTER ROLE db_owner ADD MEMBER devmanager_user;
 ### Error: "Invalid object name 'iam.Users'"
 **Solución:** Ejecutar primero el DDL completo.
 
-### Error: "Could not find stored procedure 'sp_Iam_GetUserByEmail'"
-**Solución:** Ejecutar scripts de stored procedures.
+### Error: "Invalid object name 'reporting.AgentActions'"
+**Solución:** Ejecutar script DDL del agente: `DDL_Agent_Tables.sql`
 
 ---
 
