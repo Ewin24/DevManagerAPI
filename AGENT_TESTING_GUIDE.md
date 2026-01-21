@@ -86,18 +86,39 @@ dotnet watch run
 
 ## 📊 Datos de Prueba
 
-### Script SQL para Crear Datos de Prueba
+### Cargar Seeder Unificado
 
-Ejecuta este script para crear una organización de prueba con usuarios, skills y un proyecto:
+Ejecuta el seeder completo que incluye **todos los datos necesarios** para pruebas del agente:
 
+```bash
+# Desde la raíz del proyecto
+sqlcmd -S localhost -d DevManager -E -i Infrastructure/Database/Seeders/Seeder.sql
+```
+
+**Este seeder incluye datos completos para testing:**
+- ✅ **22 skills globales** (Java, Spring Boot, C#, .NET Core, React, Docker, Kubernetes, Microservices, PostgreSQL, TypeScript, etc.)
+- ✅ **3 empleados con skills en Java** (nivel 4-5) y Spring Boot
+- ✅ **Proyecto "App Móvil Delivery"** con requisitos Java/Spring Boot/Microservices
+- ✅ **13 employee skills** con validaciones y GitHub evidence
+- ✅ **3 proyectos completos** (Sistema Hospitalario, E-commerce, App Móvil)
+
+**Verificar datos cargados:**
 ```sql
 USE DevManager;
 GO
 
--- 1. CREAR ORGANIZACIÓN DE PRUEBA
-DECLARE @OrgId uniqueidentifier = NEWID();
-DECLARE @UserId1 uniqueidentifier = NEWID();
-DECLARE @UserId2 uniqueidentifier = NEWID();
+-- Verificar skills cargadas
+SELECT Name, Category, SkillType 
+FROM [talent].[Skills] 
+WHERE IsDeleted = 0;
+-- Debe retornar 22 skills (21 globales + 1 organizacional)
+
+-- Verificar empleados con Java
+SELECT u.FullName, s.Name, es.Level
+FROM [talent].[EmployeeSkills] es
+JOIN [iam].[Users] u ON es.UserId = u.Id
+JOIN [talent].[Skills] s ON es.SkillId = s.Id
+WHERE s.Name = 'Java' AND es.IsDeleted = 0;
 DECLARE @SkillJava uniqueidentifier = NEWID();
 DECLARE @SkillPython uniqueidentifier = NEWID();
 DECLARE @SkillReact uniqueidentifier = NEWID();

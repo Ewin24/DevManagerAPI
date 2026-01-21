@@ -2,6 +2,10 @@
 -- DevManager Database Seeder - COMPLETO
 -- Basado en DDL_Dev_Manager.sql
 -- Password: "Password123!"
+-- 
+-- INCLUYE:
+-- - Datos base del sistema (usuarios, roles, skills básicas)
+-- - Datos de prueba para el Agente IA
 -- =============================================
 
 USE DevManager;
@@ -12,7 +16,7 @@ SET ANSI_NULLS ON;
 
 
 PRINT '==========================================';
-PRINT 'DevManager - Seeder Completo';
+PRINT 'DevManager - Seeder Completo + Datos Agente IA';
 PRINT '==========================================';
 PRINT '';
 
@@ -82,21 +86,37 @@ PRINT '   ✓ 6 asignaciones de roles';
 -- =============================================
 PRINT '5. Insertando Skills...';
 
+-- Skills globales (OrganizationId = NULL)
 INSERT INTO [talent].[Skills] (Id, OrganizationId, Name, Category, SkillType, CreatedAt, IsDeleted)
 VALUES 
     (NEWID(), NULL, 'C#', 'Programming Language', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
     (NEWID(), NULL, 'JavaScript', 'Programming Language', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
     (NEWID(), NULL, 'Python', 'Programming Language', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'Java', 'Programming Language', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'TypeScript', 'Programming Language', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
     (NEWID(), NULL, 'SQL Server', 'Database', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'PostgreSQL', 'Database', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
     (NEWID(), NULL, 'Azure', 'Cloud', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'AWS', 'Cloud', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, '.NET Core', 'Framework', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'Spring Boot', 'Framework', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
     (NEWID(), NULL, 'React', 'Framework', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'Angular', 'Framework', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
     (NEWID(), NULL, 'Docker', 'DevOps', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
     (NEWID(), NULL, 'Kubernetes', 'DevOps', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'CI/CD', 'DevOps', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'Microservicios', 'Architecture', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'REST APIs', 'Architecture', 'Hard', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
     (NEWID(), NULL, 'Liderazgo', 'Management', 'Soft', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
     (NEWID(), NULL, 'Comunicación', 'Interpersonal', 'Soft', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+    (NEWID(), NULL, 'Trabajo en Equipo', 'Interpersonal', 'Soft', DATEADD(MONTH, -6, SYSUTCDATETIME()), 0);
+
+-- Skills específicas de organización
+INSERT INTO [talent].[Skills] (Id, OrganizationId, Name, Category, SkillType, CreatedAt, IsDeleted)
+VALUES
     (NEWID(), '11111111-1111-1111-1111-111111111111', 'Metodología TechCorp', 'Process', 'Hard', DATEADD(MONTH, -5, SYSUTCDATETIME()), 0);
 
-PRINT '  ✓ 11 skills insertadas';
+PRINT '  ✓ 22 skills insertadas (21 globales + 1 organizacional)';
 
 -- =============================================
 -- 6. TALENT: Employee Profiles
@@ -122,21 +142,26 @@ PRINT '  ✓ 3 perfiles de empleados insertados';
 -- =============================================
 PRINT '7. Insertando Employee Skills...';
 
-DECLARE @CsharpId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'C#');
-DECLARE @JSId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'JavaScript');
-DECLARE @ReactId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'React');
-DECLARE @AzureId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Azure');
-DECLARE @LiderazgoId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Liderazgo');
+DECLARE @CsharpId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'C#' AND OrganizationId IS NULL);
+DECLARE @JSId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'JavaScript' AND OrganizationId IS NULL);
+DECLARE @ReactId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'React' AND OrganizationId IS NULL);
+DECLARE @AzureId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Azure' AND OrganizationId IS NULL);
+DECLARE @LiderazgoId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Liderazgo' AND OrganizationId IS NULL);
+DECLARE @JavaId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Java' AND OrganizationId IS NULL);
+DECLARE @SpringBootId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Spring Boot' AND OrganizationId IS NULL);
+DECLARE @PostgreSQLId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'PostgreSQL' AND OrganizationId IS NULL);
 
--- María García
+-- María García (Manager con skills técnicas)
 INSERT INTO [talent].[EmployeeSkills] (Id, OrganizationId, UserId, SkillId, Level, EvidenceUrl, LastValidatedAt, ValidatedByUserId, CreatedAt, IsDeleted)
 VALUES 
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000002', @CsharpId, 4, 
      'https://github.com/maria/csharp-projects', DATEADD(MONTH, -1, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000001', DATEADD(MONTH, -5, SYSUTCDATETIME()), 0),
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000002', @LiderazgoId, 5, 
-     NULL, DATEADD(MONTH, -2, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000001', DATEADD(MONTH, -5, SYSUTCDATETIME()), 0);
+     NULL, DATEADD(MONTH, -2, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000001', DATEADD(MONTH, -5, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000002', @AzureId, 4, 
+     NULL, DATEADD(MONTH, -1, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000001', DATEADD(MONTH, -4, SYSUTCDATETIME()), 0);
 
--- Juan Martínez
+-- Juan Martínez (Full Stack Developer)
 INSERT INTO [talent].[EmployeeSkills] (Id, OrganizationId, UserId, SkillId, Level, EvidenceUrl, LastValidatedAt, ValidatedByUserId, CreatedAt, IsDeleted)
 VALUES 
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @CsharpId, 5, 
@@ -144,17 +169,27 @@ VALUES
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @JSId, 4, 
      'https://github.com/juan/js-projects', DATEADD(DAY, -20, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -4, SYSUTCDATETIME()), 0),
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @ReactId, 4, 
-     NULL, DATEADD(DAY, -10, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0);
+     NULL, DATEADD(DAY, -10, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @JavaId, 4, 
+     'https://github.com/juan/java-microservices', DATEADD(DAY, -30, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @SpringBootId, 3, 
+     NULL, DATEADD(DAY, -30, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -2, SYSUTCDATETIME()), 0);
 
--- Ana López
+-- Ana López (Backend Developer)
 INSERT INTO [talent].[EmployeeSkills] (Id, OrganizationId, UserId, SkillId, Level, EvidenceUrl, LastValidatedAt, ValidatedByUserId, CreatedAt, IsDeleted)
 VALUES 
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @CsharpId, 4, 
      'https://github.com/ana/backend-services', DATEADD(DAY, -5, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @AzureId, 3, 
-     NULL, DATEADD(DAY, -7, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -2, SYSUTCDATETIME()), 0);
+     NULL, DATEADD(DAY, -7, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @JavaId, 5, 
+     'https://github.com/ana/java-enterprise', DATEADD(DAY, -10, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @SpringBootId, 5, 
+     'https://github.com/ana/springboot-apps', DATEADD(DAY, -10, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @PostgreSQLId, 4, 
+     NULL, DATEADD(DAY, -15, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -2, SYSUTCDATETIME()), 0);
 
-PRINT '  ✓ 7 employee skills insertadas';
+PRINT '  ✓ 13 employee skills insertadas';
 
 -- =============================================
 -- 8. TALENT: Certifications
@@ -199,14 +234,36 @@ PRINT '   ✓ 3 proyectos';
 -- =============================================
 PRINT '10. Insertando Project Skill Requirements...';
 
+DECLARE @MicroservicesId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Microservicios' AND OrganizationId IS NULL);
+DECLARE @DotNetCoreId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = '.NET Core' AND OrganizationId IS NULL);
+DECLARE @DockerId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Docker' AND OrganizationId IS NULL);
+DECLARE @KubernetesId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Kubernetes' AND OrganizationId IS NULL);
+
+-- Sistema Hospitalario (requiere C# + Azure + .NET Core + Microservicios)
 INSERT INTO [projects].[ProjectSkillRequirements] (Id, OrganizationId, ProjectId, SkillId, RequiredLevel, IsMandatory, CreatedAt, IsDeleted)
 VALUES 
     (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', @CsharpId, 4, 1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
     (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', @AzureId, 3, 1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', @DotNetCoreId, 4, 1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', @MicroservicesId, 3, 0, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0);
+
+-- E-commerce (requiere React + JavaScript + REST APIs)
+INSERT INTO [projects].[ProjectSkillRequirements] (Id, OrganizationId, ProjectId, SkillId, RequiredLevel, IsMandatory, CreatedAt, IsDeleted)
+VALUES 
     (NEWID(), '11111111-1111-1111-1111-111111111111', 'BBBBBBBB-1111-1111-1111-111111111111', @ReactId, 4, 1, DATEADD(MONTH, -1, SYSUTCDATETIME()), 0),
     (NEWID(), '11111111-1111-1111-1111-111111111111', 'BBBBBBBB-1111-1111-1111-111111111111', @JSId, 3, 0, DATEADD(MONTH, -1, SYSUTCDATETIME()), 0);
 
-PRINT '   ✓ 4 project skill requirements';
+-- App Móvil Delivery (requiere Java + Spring Boot + PostgreSQL + Microservicios)
+INSERT INTO [projects].[ProjectSkillRequirements] (Id, OrganizationId, ProjectId, SkillId, RequiredLevel, IsMandatory, CreatedAt, IsDeleted)
+VALUES 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @JavaId, 4, 1, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @SpringBootId, 4, 1, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @PostgreSQLId, 3, 1, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @MicroservicesId, 3, 0, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @DockerId, 3, 0, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @KubernetesId, 2, 0, DATEADD(DAY, -10, SYSUTCDATETIME()), 0);
+
+PRINT '   ✓ 13 project skill requirements';
 
 -- =============================================
 -- 11. PROJECTS: Project Roles
@@ -325,12 +382,12 @@ PRINT '✓ 2 Organizaciones';
 PRINT '✓ 3 Roles';
 PRINT '✓ 5 Usuarios';
 PRINT '✓ 6 Asignaciones de roles';
-PRINT '✓ 11 Skills';
+PRINT '✓ 22 Skills (21 globales + 1 organizacional)';
 PRINT '✓ 3 Employee Profiles';
-PRINT '✓ 7 Employee Skills';
+PRINT '✓ 13 Employee Skills (con Java, Spring Boot, .NET Core)';
 PRINT '✓ 2 Certifications';
-PRINT '✓ 3 Projects';
-PRINT '✓ 4 Project Skill Requirements';
+PRINT '✓ 3 Projects (Sistema Hospitalario, E-commerce, App Móvil)';
+PRINT '✓ 13 Project Skill Requirements (incluye Microservicios, Docker, K8s)';
 PRINT '✓ 3 Project Roles';
 PRINT '✓ 3 Project Applications';
 PRINT '✓ 1 Project Assignment';
@@ -341,12 +398,24 @@ PRINT '✓ 2 Recommendation Rules';
 PRINT '';
 PRINT 'Cuentas de prueba (Password: "Password123!"):';
 PRINT '  • admin@techcorp.com (Admin + Manager)';
-PRINT '  • maria.garcia@techcorp.com (Manager)';
-PRINT '  • juan.martinez@techcorp.com (Developer)';
-PRINT '  • ana.lopez@techcorp.com (Developer)';
+PRINT '  • maria.garcia@techcorp.com (Manager) - C#:4, Azure:4, Liderazgo:5';
+PRINT '  • juan.martinez@techcorp.com (Developer) - C#:5, JS:4, React:4, Java:4, Spring:3';
+PRINT '  • ana.lopez@techcorp.com (Developer) - C#:4, Azure:3, Java:5, Spring:5, PostgreSQL:4';
 PRINT '  • admin@innovatelab.com (Admin)';
 PRINT '';
 PRINT 'Organization ID TechCorp:';
 PRINT '  11111111-1111-1111-1111-111111111111';
+PRINT '';
+PRINT '🤖 DATOS PARA PRUEBAS DEL AGENTE IA:';
+PRINT '  ✓ 3 empleados con skills en Java (nivel 4-5)';
+PRINT '  ✓ 2 empleados con Spring Boot';
+PRINT '  ✓ 1 proyecto con requisitos de Java + Microservicios (App Móvil)';
+PRINT '  ✓ Skills validadas con evidencia en GitHub';
+PRINT '';
+PRINT '📝 QUERIES DE PRUEBA RECOMENDADAS:';
+PRINT '  • POST /agent/query: "¿Cuántos desarrolladores tenemos con Java?"';
+PRINT '  • POST /agent/match-candidates: projectId del App Móvil Delivery';
+PRINT '  • POST /agent/validate-skill: userId de Ana + skillId de Java';
 PRINT '==========================================';
+
 
