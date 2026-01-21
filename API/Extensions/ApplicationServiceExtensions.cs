@@ -26,7 +26,7 @@ public static class ApplicationServiceExtensions
     {
         // Entity Framework Core DbContext
         services.AddDbContext<DevManagerDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(configuration.GetConnectionString("ConexionSQL")));
 
         // Repositorios EF Core - IAM
         services.AddScoped<IAuthRepository, AuthRepository>();
@@ -57,15 +57,28 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IAssignmentService, AssignmentService>();
 
+        // Servicios de IA y Agente
+        services.AddHttpClient<IGeminiService, Infrastructure.Services.AI.GeminiService>();
+        services.AddScoped<IAgentService, AgentService>();
+        services.AddScoped<IAgentRepository, Infrastructure.Repositories.AgentRepository>();
+
+        // Background Services (procesamiento asíncrono)
+        var enableBackgroundServices = configuration.GetValue<bool>("Agent:EnableBackgroundServices", true);
+        if (enableBackgroundServices)
+        {
+            services.AddHostedService<Infrastructure.BackgroundServices.ReportSnapshotGeneratorService>();
+            services.AddHostedService<Infrastructure.BackgroundServices.RecommendationOptimizerService>();
+        }
+
         // Configuración de CORS
         services.AddCors(options =>
         {
             options.AddPolicy("DevManagerPolicy", builder =>
             {
-                builder
-                    .AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader();
+                builder.SetIsOriginAllowed(origin => true) // Permite cualquier origen (local o desplegado)
+                       .AllowAnyMethod()
+                       .AllowAnyHeader()
+                       .AllowCredentials(); // Permite credenciales (cookies, headers de auth)
             });
         });
 

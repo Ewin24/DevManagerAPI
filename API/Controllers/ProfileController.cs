@@ -25,9 +25,39 @@ public class ProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene el perfil del usuario autenticado
+    /// Obtiene el perfil completo del usuario autenticado
     /// </summary>
-    /// <returns>Perfil del empleado</returns>
+    /// <remarks>
+    /// Retorna la información del perfil profesional del usuario que realiza la petición.
+    /// 
+    /// **Ejemplo de Response (200 OK):**
+    /// 
+    ///     {
+    ///         "success": true,
+    ///         "message": null,
+    ///         "data": {
+    ///             "userId": "11111111-0000-0000-0000-000000000003",
+    ///             "bio": "Desarrollador Full Stack con 5 años de experiencia en .NET y React",
+    ///             "yearsExperience": 5,
+    ///             "linkedinUrl": "https://linkedin.com/in/juan-martinez",
+    ///             "githubUrl": "https://github.com/juanmartinez",
+    ///             "portfolioUrl": "https://juandev.com",
+    ///             "createdAt": "2024-02-01T10:00:00Z",
+    ///             "updatedAt": "2025-12-15T08:30:00Z"
+    ///         }
+    ///     }
+    /// 
+    /// **Casos de uso:**
+    /// - Vista de "Mi Perfil" en aplicación
+    /// - Validación de completitud de perfil
+    /// - Datos para CV automático
+    /// 
+    /// **Nota:** UserId se extrae del JWT (ClaimTypes.NameIdentifier). Si el usuario no tiene perfil, retorna 404.
+    /// </remarks>
+    /// <returns>Perfil del empleado autenticado</returns>
+    /// <response code="200">Perfil obtenido exitosamente</response>
+    /// <response code="404">Perfil no encontrado (usuario sin perfil creado)</response>
+    /// <response code="401">No autenticado</response>
     [HttpGet("me")]
     [ProducesResponseType(typeof(ApiResponse<EmployeeProfileDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -47,10 +77,49 @@ public class ProfileController : ControllerBase
     }
 
     /// <summary>
-    /// Actualiza el perfil del usuario autenticado
+    /// Actualiza o crea el perfil del usuario autenticado
     /// </summary>
-    /// <param name="request">Datos del perfil a actualizar</param>
+    /// <remarks>
+    /// Permite al usuario actualizar su información profesional. Si el perfil no existe, lo crea automáticamente.
+    /// 
+    /// **Ejemplo de Request:**
+    /// 
+    ///     PUT /api/profile/me
+    ///     {
+    ///         "bio": "Senior Full Stack Developer especializado en arquitecturas cloud-native",
+    ///         "yearsExperience": 8,
+    ///         "linkedinUrl": "https://linkedin.com/in/juan-martinez-dev",
+    ///         "githubUrl": "https://github.com/juanmartinez",
+    ///         "portfolioUrl": "https://juandev.io"
+    ///     }
+    /// 
+    /// **Ejemplo de Response (200 OK):**
+    /// 
+    ///     {
+    ///         "success": true,
+    ///         "message": "Perfil actualizado exitosamente",
+    ///         "data": "Perfil actualizado exitosamente"
+    ///     }
+    /// 
+    /// **Validaciones:**
+    /// - yearsExperience: Debe ser >= 0 y <= 70
+    /// - URLs: Formato válido (si se proporcionan)
+    /// - bio: Máximo 2000 caracteres
+    /// 
+    /// **Comportamiento (Upsert):**
+    /// - Si el perfil NO existe → Lo CREA (INSERT)
+    /// - Si el perfil ya existe → Lo ACTUALIZA (UPDATE)
+    /// 
+    /// **Casos de uso:**
+    /// - Completar perfil durante onboarding
+    /// - Actualización de experiencia/proyectos
+    /// - Enriquecimiento de perfil para matching
+    /// </remarks>
+    /// <param name="request">Datos del perfil a actualizar (bio, experiencia, URLs)</param>
     /// <returns>Resultado de la operación</returns>
+    /// <response code="200">Perfil actualizado exitosamente</response>
+    /// <response code="400">Datos inválidos (validación fallida)</response>
+    /// <response code="401">No autenticado</response>
     [HttpPut("me")]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

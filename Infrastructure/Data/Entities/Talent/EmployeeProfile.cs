@@ -44,4 +44,8 @@ public partial class EmployeeProfile
     [ForeignKey("UserId")]
     [InverseProperty("EmployeeProfile")]
     public virtual User User { get; set; } = null!;
+
+    // Navegación para cargar skills del empleado (sin InverseProperty porque viene de User)
+    [NotMapped]
+    public virtual ICollection<EmployeeSkill> EmployeeSkills { get; set; } = new List<EmployeeSkill>();
 }

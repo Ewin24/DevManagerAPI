@@ -1,203 +1,254 @@
-# DevManagerAPI - Instrucciones para Agentes IA
+# DevManagerAPI - AI Agent Instructions
 
-## Dominio del Negocio: Sistema Multi-tenant de Gestión de Talento y Proyectos
+## System Overview: Multi-tenant Talent & Project Management
 
-**DevManager** es un sistema de gestión de talento, habilidades y asignación de proyectos con multi-tenancy por organización. El esquema SQL completo define el modelo de datos en [Infrastructure/Database/DDL/DDL_Dev_Manager.sql](Infrastructure/Database/DDL/DDL_Dev_Manager.sql).
+**DevManager** is a talent management, skills tracking, and project assignment system with organization-level multi-tenancy and embedded AI agent capabilities (Google Gemini). Database schema: [Infrastructure/Database/DDL/DDL_Dev_Manager.sql](Infrastructure/Database/DDL/DDL_Dev_Manager.sql)
 
-### Agregados de Dominio (por esquema SQL)
-
-1. **IAM (Identity & Access)** - `iam.*`
-   - Organizations, Users, Roles, UserRoles
-   - Multi-tenant: `OrganizationId` en todas las tablas
-   - Auditoría completa: CreatedAt, UpdatedAt, IsDeleted, DeletedAt
-   - Seguridad: PasswordHash/Salt en Users
-
-2. **Talent** - `talent.*`
-   - EmployeeProfiles, Skills, EmployeeSkills (niveles 1-5), Certifications
-   - SkillEvaluations: sistema de tracking de evolución de skills con DeltaLevel
-
-3. **Projects** - `projects.*`
-   - Projects (Estados: Draft, Open, InProgress, Closed, Cancelled)
-   - ProjectSkillRequirements, ProjectRoles, ProjectApplications
-   - ProjectAssignments (asignaciones activas a proyectos)
-   - ProjectParticipation: historial de contribuciones
-
-4. **Reporting** - `reporting.*`
-   - ReportSnapshots (métricas en JSON), RecommendationRules, RecommendationLogs
-
-## Arquitectura Clean Architecture (.NET 8.0)
+## Architecture: Clean Architecture (.NET 8.0)
 
 ```
-API/               → Controllers, Program.cs, appsettings (Presentación)
-Application/       → Casos de uso, DTOs, interfaces (Lógica de aplicación)
-Domain/            → Entidades puras, reglas de negocio (Núcleo)
-Infrastructure/    → Repositorios, acceso a datos, servicios externos
+API/               → Controllers, middleware, DI registration (Presentation)
+Application/       → Use cases, DTOs, service interfaces (Business Logic)
+Domain/            → Pure entities, business rules, repository interfaces (Core)
+Infrastructure/    → EF Core repos, external services (AI, background jobs)
 ```
 
-**Reglas de dependencia**:
-- Domain: Sin dependencias externas
-- Application: Solo Domain
-- API/Infrastructure: Pueden referenciar Application + Domain
+**Dependency Rules (strictly enforced)**:
+- `Domain`: NO external dependencies (pure C# POCOs)
+- `Application`: References `Domain` only
+- `API` + `Infrastructure`: Can reference `Application` + `Domain`
 
-## Convenciones Críticas
+### Key Files
+- [Program.cs](API/Program.cs): Startup, middleware pipeline (order matters: exception handler → auth → CORS)
+- [ApplicationServiceExtensions.cs](API/Extensions/ApplicationServiceExtensions.cs): DI registration (services, repos, background jobs)
+- [DevManagerDbContext.cs](Infrastructure/Data/DevManagerDbContext.cs): EF Core context with automatic configuration discovery
 
-### Multi-tenancy
-- **TODA consulta/comando** debe filtrar por `OrganizationId`
-- Índices únicos incluyen `OrganizationId`: `UX_Users_Org_Email`, `UX_Projects_Org_Code`
-- Foreign keys siempre validados dentro del contexto de la organización
+## Critical Patterns (THIS PROJECT SPECIFIC)
 
-### Auditoría y Soft Delete
-- Todas las tablas transaccionales tienen: `CreatedAt`, `UpdatedAt`, `IsDeleted`, `DeletedAt`
-- **NO eliminar físicamente**: siempre usar `IsDeleted = 1`
-- Índices filtrados con `WHERE IsDeleted = 0`
+### 1. Multi-tenancy (MANDATORY)
+**Every query/command MUST filter by `OrganizationId`** extracted from JWT claims:
+```csharp
+// In Controllers - get from JWT claims
+private Guid GetOrganizationId() =>
+    Guid.Parse(User.FindFirst("OrganizationId")?.Value!);
 
-### Tipos de datos SQL Server
-- IDs: `uniqueidentifier` (Guid en C#)
-- Timestamps: `datetime2(3)` con precisión milisegundos
-- Defaults: `sysutcdatetime()` para timestamps
-- Enums almacenados como `tinyint` con CHECK constraints
+private Guid GetUserId() =>
+    Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
 
-### Convención de Nombres
-- Namespaces: `API.Controllers`, `Domain`, `Application`, `Infrastructure`
-- Controllers: Sufijo `Controller`, hereda `ControllerBase`
-- Entidades de dominio: Nombres singulares (User, Project, Skill)
+// In Repositories - ALWAYS add .Where()
+await _context.Users
+    .Where(u => u.OrganizationId == organizationId && !u.IsDeleted)
+    .FirstOrDefaultAsync();
+```
+Unique indexes include `OrganizationId`: `UX_Users_Org_Email`, `UX_Projects_Org_Code`
 
-## Setup y Desarrollo
+### 2. Soft Delete (NEVER physical delete)
+All entities inherit [AuditableEntity](Domain/Common/AuditableEntity.cs):
+```csharp
+public abstract class AuditableEntity {
+    public DateTime CreatedAt { get; set; }
+    public Guid? CreatedByUserId { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public bool IsDeleted { get; set; }  // ← Use this, never DELETE
+    public DateTime? DeletedAt { get; set; }
+}
+```
+**Always** use `.Where(x => !x.IsDeleted)` in queries
 
-### Prerequisitos
-- .NET 8.0 SDK
-- SQL Server (esquema en [DDL_Dev_Manager.sql](Infrastructure/Database/DDL/DDL_Dev_Manager.sql))
+### 3. Standardized API Responses
+Use [ApiResponse<T>](Application/Common/Models/ApiResponse.cs) for success:
+```csharp
+return Ok(new ApiResponse<UserDto> {
+    Success = true,
+    Message = "Usuario obtenido exitosamente",
+    Data = userDto
+});
+```
+Throw [custom exceptions](Application/Common/Exceptions/ApplicationExceptions.cs) for errors (middleware handles them):
+```csharp
+throw new NotFoundException("User", userId);
+throw new ConflictException("Email ya registrado");
+throw new UnauthorizedException("Token inválido");
+```
+[GlobalExceptionHandlerMiddleware](API/Middleware/GlobalExceptionHandlerMiddleware.cs) converts to ErrorResponse automatically.
 
-### Comandos
+### 4. Service Registration Pattern
+ALL services/repos registered in [ApplicationServiceExtensions.cs](API/Extensions/ApplicationServiceExtensions.cs):
+```csharp
+// Repos
+services.AddScoped<IUserRepository, UserRepository>();
+
+// Services
+services.AddScoped<IUserService, UserService>();
+
+// AI Services (HttpClient injected)
+services.AddHttpClient<IGeminiService, GeminiService>();
+
+// Background Services (IHostedService)
+services.AddHostedService<ReportSnapshotGeneratorService>();
+```
+
+### 5. EF Core Configuration
+- DbContext: [DevManagerDbContext.cs](Infrastructure/Data/DevManagerDbContext.cs)
+- Auto-discovers configurations: `modelBuilder.ApplyConfigurationsFromAssembly(typeof(DevManagerDbContext).Assembly)`
+- Entities in `Infrastructure.Data.Entities` (EF Core models)
+- Domain entities in `Domain/Entities/` (pure POCOs)
+- Repositories map between them
+
+## AI Agent Integration (Google Gemini)
+
+**5 Agent Endpoints** in [AgentController.cs](API/Controllers/AgentController.cs):
+- `POST /agent/query` - Natural language queries
+- `POST /agent/validate-skill` - Semantic skill validation
+- `POST /agent/match-candidates` - Intelligent candidate matching
+- `POST /agent/actions/{actionId}/approve` - HITL approval
+- `POST /agent/actions/{actionId}/reject` - HITL rejection
+
+[AgentService.cs](Application/Services/AgentService.cs) orchestrates MCP Tool Use pattern:
+1. Extract OrganizationId from JWT
+2. Call Gemini with Chain of Thought prompt
+3. Log action to `reporting.AgentActions` (audit trail)
+4. If `RequireApproval=true`, return `ActionId` for HITL workflow
+
+[GeminiService.cs](Infrastructure/Services/AI/GeminiService.cs):
+```csharp
+// Simple query
+var response = await _geminiService.QueryAsync(prompt);
+
+// With reasoning (CoT)
+var (response, reasoning) = await _geminiService.QueryWithReasoningAsync(prompt);
+```
+
+Background services run every 24 hours (configurable in appsettings):
+- [ReportSnapshotGeneratorService.cs](Infrastructure/BackgroundServices/ReportSnapshotGeneratorService.cs)
+- [RecommendationOptimizerService.cs](Infrastructure/BackgroundServices/RecommendationOptimizerService.cs)
+
+## Development Workflow
+
+### Build & Run
 ```bash
-# Build completo
+# Full solution build
 dotnet build DevManager.sln
 
-# Ejecutar API (HTTPS: 7265, HTTP: 5073)
+# Run API (https://localhost:7265)
 dotnet run --project API/API.csproj
 
 # Swagger UI
 https://localhost:7265/swagger
 ```
 
-### Ejecutar DDL (primera vez)
-```sql
--- Crear base de datos y ejecutar script completo
-CREATE DATABASE DevManager;
-GO
-USE DevManager;
-GO
--- Ejecutar Infrastructure/Database/DDL/DDL_Dev_Manager.sql
+### Database Setup
+1. Create database: `CREATE DATABASE DevManager;`
+2. Execute DDL: `Infrastructure/Database/DDL/DDL_Dev_Manager.sql`
+3. Execute Agent tables: `Infrastructure/Database/DDL/DDL_Agent_Tables.sql`
+4. Update connection string in `API/appsettings.json`
+
+### AI Agent Configuration
+```json
+{
+  "GoogleAI": {
+    "ApiKey": "YOUR_KEY_HERE",  // Get from https://aistudio.google.com/app/apikey
+    "Model": "gemini-1.5-flash"
+  },
+  "Agent": {
+    "EnableBackgroundServices": true,
+    "RequireHumanApproval": true
+  }
+}
 ```
 
-## Guía de Implementación
+### Testing Agent Endpoints
+See [API_EXAMPLES.md](API/API_EXAMPLES.md) for curl/PowerShell/C# examples.
+PowerShell script: [Scripts/Test-Agent.ps1](Scripts/Test-Agent.ps1)
 
-### Agregar un nuevo agregado (ejemplo: Organization CRUD)
+## Adding New Functionality
 
-1. **Domain** - Crear entidad siguiendo el modelo SQL:
+### Example: Add Organization CRUD
+
+1. **Domain** - Entity:
 ```csharp
-namespace Domain;
-
-public class Organization
-{
+namespace Domain.Entities.IAM;
+public class Organization {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;
-    public string? LegalName { get; set; }
-    public string? Nit { get; set; }
-    public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
-    // ... campos de auditoría
 }
 ```
 
-2. **Domain** - Interface de repositorio:
+2. **Domain** - Repository interface:
 ```csharp
-namespace Domain;
-public interface IOrganizationRepository
-{
+namespace Domain.Interfaces.Repositories;
+public interface IOrganizationRepository {
     Task<Organization?> GetByIdAsync(Guid id);
-    Task<IEnumerable<Organization>> GetAllAsync();
-    // ...
 }
 ```
 
-3. **Infrastructure** - Implementar repositorio (ADO.NET, Dapper o EF Core según se decida)
-
-4. **Application** - DTOs y servicios:
+3. **Infrastructure** - Repository implementation:
 ```csharp
-namespace Application;
-public record CreateOrganizationDto(string Name, string? LegalName, string? Nit);
+namespace Infrastructure.Repositories;
+public class OrganizationRepository : IOrganizationRepository {
+    private readonly DevManagerDbContext _context;
+    // Implementation using _context.Organizations...
+}
 ```
 
-5. **API** - Controller:
+4. **Application** - DTO:
+```csharp
+namespace Application.DTOs.Organizations;
+public record CreateOrganizationDto(string Name, string? LegalName);
+```
+
+5. **Application** - Service interface & implementation:
+```csharp
+namespace Application.Interfaces;
+public interface IOrganizationService {
+    Task<OrganizationDto> GetByIdAsync(Guid id, Guid organizationId);
+}
+
+namespace Application.Services;
+public class OrganizationService : IOrganizationService { /* ... */ }
+```
+
+6. **API** - Controller:
 ```csharp
 namespace API.Controllers;
-
 [ApiController]
 [Route("[controller]")]
-public class OrganizationsController : ControllerBase
-{
-    // Inyectar servicios de Application
+[Authorize]
+public class OrganizationsController : ControllerBase {
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id) {
+        var orgId = GetOrganizationId();  // ← Multi-tenancy!
+        var result = await _service.GetByIdAsync(id, orgId);
+        return Ok(ApiResponse<OrganizationDto>.SuccessResponse(result));
+    }
 }
 ```
 
-6. **Program.cs** - Registrar dependencias:
+7. **Registration** - [ApplicationServiceExtensions.cs](API/Extensions/ApplicationServiceExtensions.cs):
 ```csharp
-builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
+services.AddScoped<IOrganizationRepository, OrganizationRepository>();
+services.AddScoped<IOrganizationService, OrganizationService>();
 ```
 
-## Estado Actual del Proyecto (Actualizado: 6 Enero 2026)
+## SQL Server Conventions
+- IDs: `uniqueidentifier` (Guid in C#)
+- Timestamps: `datetime2(3)` with millisecond precision
+- Defaults: `sysutcdatetime()` for audit fields
+- Enums: `tinyint` with CHECK constraints
+- Indexes: Filtered with `WHERE IsDeleted = 0`
 
-### ✅ Completado (100% - MVP Base)
-- ✅ Clean Architecture implementada (4 capas)
-- ✅ Esquema SQL completo (541 líneas, 18 tablas, 4 esquemas)
-- ✅ Multi-tenancy implementado y funcional
-- ✅ Dapper 2.1.66 configurado con Stored Procedures
-- ✅ JWT Authentication (Bearer + Claims)
-- ✅ Password hashing (HMACSHA512 + Salt)
-- ✅ Manejo de errores global y estandarizado
-- ✅ Módulo IAM completo (Auth + Users)
-  - 18 entidades de dominio
-  - 5 enumeraciones
-  - 12 DTOs
-  - 3 servicios
-  - 3 repositorios con Dapper
-  - 2 controllers (7 endpoints)
-  - 7 stored procedures
-- ✅ Swagger UI con JWT authentication
-- ✅ Documentación completa (5 archivos markdown)
+## Reference Implementations
+- **Service pattern**: [AuthService.cs](Application/Services/AuthService.cs), [UserService.cs](Application/Services/UserService.cs), [AgentService.cs](Application/Services/AgentService.cs)
+- **Repository pattern**: [AuthRepository.cs](Infrastructure/Repositories/AuthRepository.cs), [UserRepository.cs](Infrastructure/Repositories/UserRepository.cs)
+- **Controller pattern**: [AuthController.cs](API/Controllers/AuthController.cs), [UsersController.cs](API/Controllers/UsersController.cs), [AgentController.cs](API/Controllers/AgentController.cs)
+- **AI Integration**: [GeminiService.cs](Infrastructure/Services/AI/GeminiService.cs), [AgentService.cs](Application/Services/AgentService.cs)
+- **Background Services**: [ReportSnapshotGeneratorService.cs](Infrastructure/BackgroundServices/ReportSnapshotGeneratorService.cs)
 
-### ⚠️ Pendiente (Siguientes fases)
-- ⚠️ Módulo Talent (tablas existen, falta implementar servicios)
-- ⚠️ Módulo Projects (tablas existen, falta implementar servicios)
-- ⚠️ Módulo Reporting (tablas existen, falta implementar servicios)
-- ⚠️ Tests unitarios e integración
-- ⚠️ FluentValidation
-- ⚠️ Paginación y filtros avanzados
-
-## Próximos Pasos Recomendados
-
-### Para implementar módulos Talent/Projects (seguir este patrón):
-1. Crear DTOs en `Application/DTOs/[Modulo]/`
-2. Crear interfaces de servicio en `Application/Interfaces/`
-3. Implementar servicios en `Application/Services/`
-4. Crear repositorios en `Infrastructure/Repositories/`
-5. Crear stored procedures en `Infrastructure/Database/StoredProcedures/`
-6. Crear controllers en `API/Controllers/`
-7. Registrar en `ApplicationServiceExtensions.cs`
-
-### Referencias de código existente:
-- **Service pattern:** `Application/Services/AuthService.cs` y `UserService.cs`
-- **Repository pattern:** `Infrastructure/Repositories/AuthRepository.cs` y `UserRepository.cs`
-- **Controller pattern:** `API/Controllers/AuthController.cs` y `UsersController.cs`
-- **Stored Procedures:** `Infrastructure/Database/StoredProcedures/01_IAM_Procedures.sql`
-- **DTOs:** `Application/DTOs/Auth/` y `Application/DTOs/Users/`
-- **Middleware:** `API/Middleware/GlobalExceptionHandlerMiddleware.cs`
-- **Extensions:** `API/Extensions/ApplicationServiceExtensions.cs`
-
-### Documentación de referencia:
-- `README.md` - Guía principal
-- `ESTADO_PROYECTO.md` - Estado detallado y checklist
-- `SETUP_DATABASE.md` - Configuración de base de datos
-- `API_EXAMPLES.md` - Ejemplos de uso con curl, PowerShell, C#
-- `RESUMEN_EJECUTIVO.md` - Overview ejecutivo del proyecto
+## Documentation
+- [README.md](README.md) - Main guide
+- [AGENT_GUIDE.md](AGENT_GUIDE.md) - Complete AI agent guide (500+ lines)
+- [AGENT_TESTING_GUIDE.md](AGENT_TESTING_GUIDE.md) - Testing guide
+- [HITL_WORKFLOW_GUIDE.md](HITL_WORKFLOW_GUIDE.md) - Human-in-the-loop workflow
+- [API_EXAMPLES.md](API/API_EXAMPLES.md) - curl, PowerShell, C# examples
+- [CHANGELOG.md](CHANGELOG.md) - Version history

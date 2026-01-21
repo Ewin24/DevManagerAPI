@@ -48,6 +48,11 @@ public partial class DevManagerDbContext : DbContext
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
 
+    // Agent (Reporting)
+    public virtual DbSet<Domain.Entities.Agent.AgentAction> AgentActions { get; set; }
+
+    public virtual DbSet<Domain.Entities.Agent.AgentConfiguration> AgentConfigurations { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Apply all entity configurations from the assembly

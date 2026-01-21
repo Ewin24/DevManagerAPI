@@ -13,6 +13,11 @@ public interface IProfileRepository
     Task<EmployeeProfile?> GetByUserIdAsync(Guid userId, Guid organizationId);
 
     /// <summary>
+    /// Obtiene todos los perfiles de una organización con sus skills
+    /// </summary>
+    Task<IEnumerable<EmployeeProfile>> GetAllAsync(Guid organizationId);
+
+    /// <summary>
     /// Crea o actualiza el perfil de un empleado
     /// </summary>
     Task<bool> UpsertAsync(EmployeeProfile profile);

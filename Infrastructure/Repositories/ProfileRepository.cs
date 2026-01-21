@@ -29,6 +29,36 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
         return efProfile != null ? MapToDomain(efProfile) : null;
     }
 
+    public async Task<IEnumerable<DomainEntities.EmployeeProfile>> GetAllAsync(Guid organizationId)
+    {
+        // Cargar perfiles
+        var efProfiles = await _context.EmployeeProfiles
+            .AsNoTracking()
+            .Where(p => p.OrganizationId == organizationId && !p.IsDeleted)
+            .ToListAsync();
+
+        if (!efProfiles.Any())
+            return Enumerable.Empty<DomainEntities.EmployeeProfile>();
+
+        var userIds = efProfiles.Select(p => p.UserId).ToList();
+
+        // Cargar skills de esos usuarios
+        var employeeSkills = await _context.EmployeeSkills
+            .AsNoTracking()
+            .Include(es => es.Skill)
+            .Where(es => userIds.Contains(es.UserId) 
+                      && es.OrganizationId == organizationId 
+                      && !es.IsDeleted)
+            .ToListAsync();
+
+        // Mapear perfiles con sus skills
+        return efProfiles.Select(profile =>
+        {
+            var profileSkills = employeeSkills.Where(es => es.UserId == profile.UserId).ToList();
+            return MapToDomainWithSkills(profile, profileSkills);
+        });
+    }
+
     public async Task<bool> UpsertAsync(DomainEntities.EmployeeProfile profile)
     {
         var existing = await _context.EmployeeProfiles
@@ -77,5 +107,37 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
             LinkedInUrl = ef.LinkedInUrl,
             PortfolioUrl = ef.PortfolioUrl
         };
+    }
+
+    private static DomainEntities.EmployeeProfile MapToDomainWithSkills(
+        EfEntities.EmployeeProfile ef, 
+        List<EfEntities.EmployeeSkill> employeeSkills)
+    {
+        var profile = MapToDomain(ef);
+        
+        // Agregar información de skills desde la lista proporcionada
+        if (employeeSkills?.Any() == true)
+        {
+            profile.EmployeeSkills = employeeSkills.Select(es => new DomainEntities.EmployeeSkill
+            {
+                Id = es.Id,
+                OrganizationId = es.OrganizationId,
+                UserId = es.UserId,
+                SkillId = es.SkillId,
+                Level = es.Level,
+                EvidenceUrl = es.EvidenceUrl,
+                LastValidatedAt = es.LastValidatedAt,
+                Skill = es.Skill != null ? new DomainEntities.Skill
+                {
+                    Id = es.Skill.Id,
+                    Name = es.Skill.Name,
+                    Category = es.Skill.Category,
+                    SkillType = es.Skill.SkillType,
+                    OrganizationId = es.Skill.OrganizationId
+                } : null
+            }).ToList();
+        }
+        
+        return profile;
     }
 }

@@ -7,6 +7,149 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [2.0.1] - 2026-01-20
+
+### 🔄 Migración Completa: Dapper → Entity Framework Core
+
+#### ❌ Eliminado
+- **Dapper 2.1.66** - Dependencia eliminada completamente del proyecto
+- **DapperContext.cs** - Archivo eliminado
+- **Stored Procedures** - Referencias eliminadas de toda la documentación
+- SQL raw en repositorios - Reemplazado por LINQ
+
+#### ✅ Agregado
+- **AgentConfiguration.cs** (Domain) - Nueva entidad de configuración del agente
+- **AgentConfiguration.cs** (Infrastructure/Configuration) - Configuraciones de EF
+- **DbSet para AgentActions y AgentConfigurations** en DevManagerDbContext
+
+#### 🔄 Modificado
+- **AgentRepository.cs** - Migrado de Dapper a Entity Framework Core
+- **DevManagerDbContext.cs** - Agregados DbSets para entidades del agente
+- **Infrastructure.csproj** - Eliminada referencia a Dapper
+- **Documentación** - 7+ archivos actualizados
+
+#### 📊 Resultado
+✅ Compilación exitosa (0 errores)  
+✅ Proyecto 100% Entity Framework Core  
+✅ Mayor type safety y mantenibilidad  
+
+**Referencia completa:** [MIGRATION_DAPPER_TO_EF.md](MIGRATION_DAPPER_TO_EF.md)
+
+---
+
+## [2.0.0] - 2026-01-19
+
+### 🤖 Agente Cognitivo de Orquestación de Talento
+
+#### ✨ Agregado
+
+**Integración con Google Gemini AI**
+- GeminiService implementado con soporte para gemini-1.5-flash
+- Integración mediante HTTP API con autenticación por API Key
+- Chain of Thought (CoT) reasoning implementado
+- Análisis estructurado de datos con JSON parsing robusto
+- Manejo de errores y fallbacks automáticos
+- Logging detallado de tokens y performance
+
+**AgentService - Orquestador Principal**
+- Consultas en lenguaje natural al agente
+- Validación semántica de skills con evidencia
+- Matching inteligente de candidatos para proyectos
+- Sistema de aprobación HITL (Human-in-the-loop)
+- Auditoría completa de acciones del agente
+- Multi-tenancy estricto con aislamiento por OrganizationId
+
+**Model Context Protocol (MCP) - Tool Use Pattern**
+- MCPTools: Definición de herramientas descubribles
+- 5 herramientas base implementadas:
+  - get_employee_profile
+  - get_project_requirements
+  - get_skills
+  - get_certifications
+  - get_project_history
+- Schema JSON para validación de parámetros
+- Handlers dinámicos con inyección de servicios
+
+**Background Services (Procesamiento Asíncrono)**
+- ReportSnapshotGeneratorService (cada 24 horas)
+  - Generación de snapshots predictivos
+  - Análisis de métricas de talento
+  - Identificación de brechas de capacitación
+- RecommendationOptimizerService (cada 6 horas)
+  - Análisis de feedback con NLP
+  - Optimización de reglas de recomendación
+  - Aprendizaje de patrones de éxito/fracaso
+
+**API Endpoints del Agente**
+- POST /agent/query - Consulta general en lenguaje natural
+- POST /agent/validate-skill - Validación semántica de skills
+- POST /agent/match-candidates - Matching inteligente de candidatos
+- POST /agent/approve/{actionId} - Aprobar acción (HITL)
+- POST /agent/reject/{actionId} - Rechazar acción
+
+**Base de Datos**
+- Tabla reporting.AgentActions para auditoría completa
+- Tabla reporting.AgentConfiguration por organización
+- Índices optimizados para queries del agente
+- Foreign keys con Users para trazabilidad
+
+**DTOs del Agente**
+- AgentQueryRequest/Response
+- SkillValidationRequest/Response
+- SkillMatchRequest/Response con CandidateMatch
+- ToolExecutionResult para tracking
+
+**Seguridad y Gobernanza**
+- Multi-tenancy garantizado en todas las operaciones
+- HITL obligatorio para acciones críticas
+- Umbral de confianza configurable (default 70%)
+- Auditoría completa con timestamps y responsables
+- Cumplimiento de Ley 1581 de 2012 (Habeas Data)
+
+**Configuración**
+- GoogleAI:ApiKey en appsettings.json
+- GoogleAI:Model configurable (default: gemini-1.5-flash)
+- Agent:EnableBackgroundServices (true/false)
+- Agent:RequireHumanApproval (true/false)
+- Agent:MinConfidenceThreshold (0-100)
+
+**Documentación**
+- AGENT_GUIDE.md - Guía completa de 500+ líneas
+- AgentClientExample.cs - Cliente C# de ejemplo
+- Ejemplos de curl, PowerShell y C#
+- Casos de uso avanzados documentados
+- Troubleshooting y FAQs
+
+**Infraestructura**
+- HttpClient configurado con IHttpClientFactory
+- Retry policies para llamadas a Gemini
+- Rate limiting preparado
+- Health checks del agente
+
+#### 🔒 Seguridad
+
+- Validación estricta de OrganizationId en claims JWT
+- Sanitización de inputs antes de enviar a Gemini
+- Prevención de inyección de prompts
+- Logs sin información sensible (PII redactada)
+- API Key de Google AI mediante variables de entorno
+
+#### 📊 Optimizaciones
+
+- Divulgación progresiva de datos (reducción 98.7% tokens)
+- Caching de resultados de background services
+- Índices de BD optimizados para queries del agente
+- Paralelización de llamadas independientes
+- JSON parsing con fallbacks robustos
+
+#### 🧪 Testing
+
+- Ejemplos de testing manual documentados
+- Cliente de prueba interactivo (AgentClientExample.cs)
+- Scripts de verificación incluidos
+
+---
+
 ## [1.0.0] - 2026-01-06
 
 ### 🎉 Versión Inicial - MVP Base Completo

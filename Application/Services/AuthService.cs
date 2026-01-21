@@ -37,7 +37,7 @@ public class AuthService : IAuthService
 
         // Nota: En un flujo real, necesitaríamos obtener OrganizationId del email o subdomain
         // Por ahora, usamos un OrganizationId fijo para desarrollo
-        var tempOrgId = Guid.Parse("B9E1BA94-9917-41B8-886E-117353BF3DE7"); // TODO: Implementar lógica de resolución de organización
+        var tempOrgId = Guid.Parse("11111111-1111-1111-1111-111111111111"); // TODO: Implementar lógica de resolución de organización
 
         var user = await _authRepository.GetUserByEmailAsync(request.Email, tempOrgId);
 
