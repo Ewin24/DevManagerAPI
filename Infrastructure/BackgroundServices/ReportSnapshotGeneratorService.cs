@@ -2,7 +2,6 @@ using Application.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Infrastructure.BackgroundServices;
 
@@ -51,7 +50,7 @@ public class ReportSnapshotGeneratorService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var geminiService = scope.ServiceProvider.GetRequiredService<IGeminiService>();
-        
+
         // TODO: Implementar cuando los servicios estén completos
         // var profileService = scope.ServiceProvider.GetRequiredService<IProfileService>();
         // var projectService = scope.ServiceProvider.GetRequiredService<IProjectService>();

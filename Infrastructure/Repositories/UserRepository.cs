@@ -1,6 +1,5 @@
 namespace Infrastructure.Repositories;
 
-using Domain.Entities.IAM;
 using Domain.Interfaces.Repositories;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -35,9 +34,9 @@ public class UserRepository : IUserRepository
     {
         var efUser = await _context.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => 
-                u.Id == id && 
-                u.OrganizationId == organizationId && 
+            .FirstOrDefaultAsync(u =>
+                u.Id == id &&
+                u.OrganizationId == organizationId &&
                 !u.IsDeleted);
 
         return efUser == null ? null : MapToDomain(efUser);
@@ -46,9 +45,9 @@ public class UserRepository : IUserRepository
     public async Task<bool> EmailExistsAsync(string email, Guid organizationId, Guid? excludeUserId = null)
     {
         return await _context.Users
-            .AnyAsync(u => 
-                u.Email == email && 
-                u.OrganizationId == organizationId && 
+            .AnyAsync(u =>
+                u.Email == email &&
+                u.OrganizationId == organizationId &&
                 !u.IsDeleted &&
                 (excludeUserId == null || u.Id != excludeUserId));
     }
@@ -79,9 +78,9 @@ public class UserRepository : IUserRepository
     public async Task<bool> UpdateAsync(Domain.Entities.IAM.User user)
     {
         var efUser = await _context.Users
-            .FirstOrDefaultAsync(u => 
-                u.Id == user.Id && 
-                u.OrganizationId == user.OrganizationId && 
+            .FirstOrDefaultAsync(u =>
+                u.Id == user.Id &&
+                u.OrganizationId == user.OrganizationId &&
                 !u.IsDeleted);
 
         if (efUser == null)
@@ -101,9 +100,9 @@ public class UserRepository : IUserRepository
     public async Task<bool> SoftDeleteAsync(Guid id, Guid organizationId, Guid deletedByUserId)
     {
         var efUser = await _context.Users
-            .FirstOrDefaultAsync(u => 
-                u.Id == id && 
-                u.OrganizationId == organizationId && 
+            .FirstOrDefaultAsync(u =>
+                u.Id == id &&
+                u.OrganizationId == organizationId &&
                 !u.IsDeleted);
 
         if (efUser == null)

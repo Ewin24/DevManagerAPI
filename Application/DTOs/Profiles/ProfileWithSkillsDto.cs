@@ -1,7 +1,4 @@
 namespace Application.DTOs.Profiles;
-
-using Application.DTOs.Skills;
-
 /// <summary>
 /// DTO para perfil de empleado con sus habilidades (usado por el agente)
 /// </summary>

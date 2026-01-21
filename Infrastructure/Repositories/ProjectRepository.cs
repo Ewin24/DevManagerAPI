@@ -1,10 +1,10 @@
 namespace Infrastructure.Repositories;
 
+using Domain.Enums;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Domain.Enums;
-using EfEntities = Infrastructure.Data.Entities;
 using DomainEntities = Domain.Entities.Projects;
+using EfEntities = Infrastructure.Data.Entities;
 
 /// <summary>
 /// Repositorio para proyectos usando EF Core
@@ -105,8 +105,8 @@ public class ProjectRepository : Domain.Interfaces.Repositories.IProjectReposito
         var efRequirements = await _context.ProjectSkillRequirements
             .AsNoTracking()
             .Include(r => r.Skill)
-            .Where(r => r.ProjectId == projectId 
-                        && r.OrganizationId == organizationId 
+            .Where(r => r.ProjectId == projectId
+                        && r.OrganizationId == organizationId
                         && !r.IsDeleted)
             .ToListAsync();
 

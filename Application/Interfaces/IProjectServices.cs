@@ -15,7 +15,7 @@ public interface IProjectService
     Task<Guid> CreateProjectAsync(CreateProjectRequest request, Guid organizationId);
     Task<Guid> AddSkillRequirementAsync(Guid projectId, Guid organizationId, AddSkillRequirementRequest request);
     Task<IEnumerable<SkillRequirementResponse>> GetSkillRequirementsAsync(Guid projectId, Guid organizationId);
-    
+
     // Métodos para el agente
     Task<ProjectDetailsDto?> GetProjectDetailsAsync(Guid projectId, Guid organizationId);
 }

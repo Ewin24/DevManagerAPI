@@ -1,7 +1,7 @@
+using System.Text.Json;
 using Application.DTOs.Agent;
 using Application.Interfaces;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Application.Services;
 
@@ -53,7 +53,7 @@ public class AgentService : IAgentService
         {
             // Determinar qué datos necesita la consulta y obtenerlos
             var contextData = await GatherContextDataAsync(organizationId, request.Query, cancellationToken);
-            
+
             if (contextData.Any())
             {
                 toolsExecuted.AddRange(contextData.Select(cd => new ToolExecutionResult
@@ -68,7 +68,7 @@ public class AgentService : IAgentService
             // Construir prompt con contexto del sistema y datos reales
             var systemPrompt = BuildSystemPrompt(organizationId);
             var dataContext = BuildDataContext(contextData);
-            
+
             var fullPrompt = $@"{systemPrompt}
 
 **DATOS DISPONIBLES DE LA ORGANIZACIÓN:**
@@ -120,8 +120,8 @@ public class AgentService : IAgentService
     }
 
     private async Task<Dictionary<string, object>> GatherContextDataAsync(
-        Guid organizationId, 
-        string query, 
+        Guid organizationId,
+        string query,
         CancellationToken cancellationToken)
     {
         var contextData = new Dictionary<string, object>();
@@ -130,12 +130,12 @@ public class AgentService : IAgentService
         try
         {
             // Detectar si la query es sobre habilidades
-            if (queryLower.Contains("habilidad") || queryLower.Contains("skill") || 
+            if (queryLower.Contains("habilidad") || queryLower.Contains("skill") ||
                 queryLower.Contains("competencia") || queryLower.Contains("capacidad"))
             {
                 var skills = await _skillService.GetAllSkillsAsync(organizationId);
                 var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
-                
+
                 // Agregar estadísticas de habilidades desde los perfiles
                 var allEmployeeSkills = profiles
                     .SelectMany(p => p.Skills.Select(s => new
@@ -174,14 +174,14 @@ public class AgentService : IAgentService
             }
 
             // Detectar si la query es sobre empleados/usuarios
-            if (queryLower.Contains("empleado") || queryLower.Contains("usuario") || 
+            if (queryLower.Contains("empleado") || queryLower.Contains("usuario") ||
                 queryLower.Contains("candidato") || queryLower.Contains("desarrollador") ||
                 queryLower.Contains("equipo") || queryLower.Contains("team") ||
                 queryLower.Contains("persona"))
             {
                 var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
                 var users = await _userService.GetAllAsync(organizationId);
-                
+
                 contextData["EmployeeProfiles"] = profiles;
                 contextData["Users"] = users;
             }
@@ -350,11 +350,11 @@ Responde en formato JSON:
 
             // 2. Obtener todos los perfiles con skills
             var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
-            
+
             // 3. Obtener información de usuarios para completar los datos
             var userIds = profiles.Select(p => p.UserId).ToList();
             var users = new Dictionary<Guid, (string FullName, string Email)>();
-            
+
             // Obtener información de todos los usuarios en batch
             try
             {
@@ -368,7 +368,7 @@ Responde en formato JSON:
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "No se pudo obtener la lista de usuarios, intentando uno por uno");
-                
+
                 // Fallback: obtener uno por uno
                 foreach (var userId in userIds)
                 {
@@ -387,7 +387,7 @@ Responde en formato JSON:
                     }
                 }
             }
-            
+
             // Construir estructura de candidatos para el análisis
             var candidates = profiles.Select(p => new
             {
@@ -426,7 +426,7 @@ Actúa como un experto en matching de talento para proyectos tecnológicos.
 **Complejidad:** {project.ComplexityLevel}/3
 
 **Requisitos de habilidades:**
-{string.Join("\n", requirements.Select(r => 
+{string.Join("\n", requirements.Select(r =>
     $"- {r.SkillName}: Nivel {r.RequiredLevel}/5 {(r.IsMandatory ? "(OBLIGATORIO)" : "(opcional)")}"))}
 
 **Candidatos disponibles:**
@@ -466,13 +466,13 @@ Ordena por matchScore descendente.";
 
             // Llamar a Gemini con el prompt de matching
             var geminiResponse = await _geminiService.QueryAsync(matchingPrompt, cancellationToken);
-            
+
             // Limpiar respuesta de markdown code blocks
             var cleanJson = geminiResponse.Trim()
                 .Replace("```json", "")
                 .Replace("```", "")
                 .Trim();
-            
+
             // Intentar extraer JSON si está embebido en texto
             if (!cleanJson.StartsWith("{"))
             {
@@ -510,7 +510,7 @@ Ordena por matchScore descendente.";
             if (matchResult.TryGetValue("candidates", out var candidatesElement))
             {
                 _logger.LogDebug("Candidates JSON: {CandidatesJson}", candidatesElement.GetRawText());
-                
+
                 try
                 {
                     // Intentar deserialización directa
@@ -521,7 +521,7 @@ Ordena por matchScore descendente.";
                 catch (JsonException ex)
                 {
                     _logger.LogWarning(ex, "No se pudo deserializar candidatos con el formato esperado. Intentando parseo manual...");
-                    
+
                     // Parseo manual como fallback
                     if (candidatesElement.ValueKind == JsonValueKind.Array)
                     {
@@ -529,29 +529,29 @@ Ordena por matchScore descendente.";
                         {
                             try
                             {
-                                var userId = candElement.TryGetProperty("userId", out var userIdProp) 
+                                var userId = candElement.TryGetProperty("userId", out var userIdProp)
                                     ? Guid.Parse(userIdProp.GetString() ?? Guid.Empty.ToString())
                                     : Guid.Empty;
-                                    
-                                var fullName = candElement.TryGetProperty("fullName", out var nameProp) 
+
+                                var fullName = candElement.TryGetProperty("fullName", out var nameProp)
                                     ? nameProp.GetString() ?? "Unknown"
                                     : "Unknown";
-                                    
-                                var email = candElement.TryGetProperty("email", out var emailProp) 
+
+                                var email = candElement.TryGetProperty("email", out var emailProp)
                                     ? emailProp.GetString() ?? ""
                                     : "";
-                                    
+
                                 var matchScore = candElement.TryGetProperty("matchScore", out var scoreProp)
                                     ? (scoreProp.ValueKind == JsonValueKind.Number ? scoreProp.GetDouble() : 0)
                                     : 0;
-                                    
+
                                 var reason = candElement.TryGetProperty("recommendationReason", out var reasonProp)
                                     ? reasonProp.GetString() ?? "Sin razón especificada"
                                     : "Sin razón especificada";
 
                                 // Parsear alignments
                                 var alignments = new List<SkillAlignment>();
-                                if (candElement.TryGetProperty("skillAlignments", out var alignmentsElement) 
+                                if (candElement.TryGetProperty("skillAlignments", out var alignmentsElement)
                                     && alignmentsElement.ValueKind == JsonValueKind.Array)
                                 {
                                     foreach (var alignElement in alignmentsElement.EnumerateArray())
@@ -633,7 +633,7 @@ Ordena por matchScore descendente.";
             actionId, approvedByUserId);
 
         var action = await _agentRepository.GetActionByIdAsync(actionId, organizationId);
-        
+
         if (action == null)
             throw new InvalidOperationException($"Acción {actionId} no encontrada");
 
@@ -657,7 +657,7 @@ Ordena por matchScore descendente.";
             actionId, rejectedByUserId, reason);
 
         var action = await _agentRepository.GetActionByIdAsync(actionId, organizationId);
-        
+
         if (action == null)
             throw new InvalidOperationException($"Acción {actionId} no encontrada");
 

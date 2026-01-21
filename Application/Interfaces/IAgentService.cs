@@ -11,42 +11,42 @@ public interface IAgentService
     /// Consulta general al agente en lenguaje natural
     /// </summary>
     Task<AgentQueryResponse> QueryAsync(
-        Guid organizationId, 
-        AgentQueryRequest request, 
+        Guid organizationId,
+        AgentQueryRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validación semántica de habilidades con evidencia
     /// </summary>
     Task<SkillValidationResponse> ValidateSkillAsync(
-        Guid organizationId, 
-        SkillValidationRequest request, 
+        Guid organizationId,
+        SkillValidationRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Matching inteligente de proyectos (tiempo real)
     /// </summary>
     Task<SkillMatchResponse> MatchCandidatesForProjectAsync(
-        Guid organizationId, 
-        SkillMatchRequest request, 
+        Guid organizationId,
+        SkillMatchRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Aprobar una acción del agente (HITL)
     /// </summary>
     Task ApproveAgentActionAsync(
-        Guid organizationId, 
-        Guid actionId, 
-        Guid approvedByUserId, 
+        Guid organizationId,
+        Guid actionId,
+        Guid approvedByUserId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Rechazar una acción del agente
     /// </summary>
     Task RejectAgentActionAsync(
-        Guid organizationId, 
-        Guid actionId, 
-        Guid rejectedByUserId, 
-        string reason, 
+        Guid organizationId,
+        Guid actionId,
+        Guid rejectedByUserId,
+        string reason,
         CancellationToken cancellationToken = default);
 }

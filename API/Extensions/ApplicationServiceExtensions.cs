@@ -31,12 +31,12 @@ public static class ApplicationServiceExtensions
         // Repositorios EF Core - IAM
         services.AddScoped<IAuthRepository, AuthRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        
+
         // Repositorios EF Core - Talent
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<ISkillRepository, SkillRepository>();
         services.AddScoped<IEmployeeSkillRepository, EmployeeSkillRepository>();
-        
+
         // Repositorios EF Core - Projects
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<IApplicationRepository, ApplicationRepository>();
@@ -46,12 +46,12 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ITokenService, TokenService>();
-        
+
         // Servicios de aplicación - Talent
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<ISkillService, SkillService>();
         services.AddScoped<IEmployeeSkillService, EmployeeSkillService>();
-        
+
         // Servicios de aplicación - Projects
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IApplicationService, ApplicationService>();
@@ -163,6 +163,14 @@ public static class ApplicationServiceExtensions
                     Email = "support@devmanager.com"
                 }
             });
+
+            // Incluir comentarios XML para documentación en Swagger
+            var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            if (File.Exists(xmlPath))
+            {
+                options.IncludeXmlComments(xmlPath);
+            }
 
             // Configuración de seguridad JWT en Swagger
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

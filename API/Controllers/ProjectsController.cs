@@ -7,7 +7,6 @@ using Application.Interfaces;
 using Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 /// <summary>
 /// Controller para gestión de proyectos

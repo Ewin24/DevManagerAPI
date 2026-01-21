@@ -15,7 +15,7 @@ public class CreateAssignmentRequest
     public Guid UserId { get; set; }
 
     public Guid? ProjectRoleId { get; set; }
-    
+
     /// <summary>
     /// ID de la aplicación previa (opcional)
     /// </summary>

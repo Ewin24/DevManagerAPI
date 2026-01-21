@@ -14,14 +14,14 @@ public interface IGeminiService
     /// Consulta con razonamiento estructurado (Chain of Thought)
     /// </summary>
     Task<(string Response, string Reasoning)> QueryWithReasoningAsync(
-        string prompt, 
+        string prompt,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Análisis de datos estructurados (JSON in/out)
     /// </summary>
     Task<T> AnalyzeStructuredDataAsync<T>(
-        string prompt, 
-        object inputData, 
+        string prompt,
+        object inputData,
         CancellationToken cancellationToken = default);
 }

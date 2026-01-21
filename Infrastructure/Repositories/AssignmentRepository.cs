@@ -1,10 +1,10 @@
 namespace Infrastructure.Repositories;
 
+using Domain.Enums;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Domain.Enums;
-using EfEntities = Infrastructure.Data.Entities;
 using DomainEntities = Domain.Entities.Projects;
+using EfEntities = Infrastructure.Data.Entities;
 
 /// <summary>
 /// Repositorio para asignaciones a proyectos usando EF Core
@@ -55,7 +55,7 @@ public class AssignmentRepository : Domain.Interfaces.Repositories.IAssignmentRe
     public async Task<bool> HasActiveAssignmentAsync(Guid projectId, Guid userId, Guid organizationId)
     {
         return await _context.ProjectAssignments
-            .Where(a => a.ProjectId == projectId 
+            .Where(a => a.ProjectId == projectId
                         && a.UserId == userId
                         && a.OrganizationId == organizationId
                         && a.Status != (byte)AssignmentStatus.Completed
@@ -119,8 +119,8 @@ public class AssignmentRepository : Domain.Interfaces.Repositories.IAssignmentRe
             .Include(a => a.Project)
             .Include(a => a.User)
             .Include(a => a.ProjectRole)
-            .Where(a => a.ProjectId == projectId 
-                        && a.OrganizationId == organizationId 
+            .Where(a => a.ProjectId == projectId
+                        && a.OrganizationId == organizationId
                         && !a.IsDeleted)
             .OrderByDescending(a => a.AssignedAt)
             .ToListAsync();

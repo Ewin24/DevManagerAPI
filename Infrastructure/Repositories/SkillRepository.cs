@@ -2,8 +2,8 @@ namespace Infrastructure.Repositories;
 
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using EfEntities = Infrastructure.Data.Entities;
 using DomainEntities = Domain.Entities.Talent;
+using EfEntities = Infrastructure.Data.Entities;
 
 /// <summary>
 /// Repositorio para catálogo de habilidades usando EF Core

@@ -122,7 +122,7 @@ public class ProjectService : IProjectService
     public async Task<ProjectDetailsDto?> GetProjectDetailsAsync(Guid projectId, Guid organizationId)
     {
         var project = await _projectRepository.GetByIdAsync(projectId, organizationId);
-        
+
         if (project == null)
             return null;
 
