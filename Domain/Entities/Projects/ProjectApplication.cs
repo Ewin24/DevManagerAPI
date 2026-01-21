@@ -19,7 +19,7 @@ public class ProjectApplication
     public string? ReviewNotes { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsDeleted { get; set; }
-    
+
     // Propiedades calculadas (usadas por servicios)
     public string ProjectName { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;

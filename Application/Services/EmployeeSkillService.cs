@@ -1,6 +1,5 @@
 namespace Application.Services;
 
-using Application.Common.Exceptions;
 using Application.DTOs.Skills;
 using Application.Interfaces;
 using Domain.Entities.Talent;

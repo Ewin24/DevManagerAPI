@@ -1,12 +1,12 @@
 namespace API.Controllers;
 
+using System.Security.Claims;
 using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.DTOs.Assignments;
 using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 /// <summary>
 /// Controller para gestión de asignaciones a proyectos
@@ -57,7 +57,7 @@ public class AssignmentsController : ControllerBase
     /// - projectId: Debe existir y pertenecer a la organización
     /// - userId: Debe existir y pertenecer a la organización
     /// - role: Requerido, máximo 100 caracteres
-    /// - hoursPerWeek: Debe ser > 0 y <= 168 (horas en una semana)
+    /// - hoursPerWeek: Debe ser mayor a 0 y menor o igual a 168 (horas en una semana)
     /// - No puede haber asignación activa previa del mismo usuario al mismo proyecto
     /// 
     /// **Diferencia con Applications:**

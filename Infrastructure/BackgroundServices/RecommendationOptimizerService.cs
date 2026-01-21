@@ -53,7 +53,7 @@ public class RecommendationOptimizerService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var geminiService = scope.ServiceProvider.GetRequiredService<IGeminiService>();
-        
+
         // TODO: Implementar cuando los servicios estén completos
         // var feedbackService = scope.ServiceProvider.GetRequiredService<IFeedbackService>();
 

@@ -1,10 +1,10 @@
 namespace Infrastructure.Repositories;
 
+using Domain.Enums;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Domain.Enums;
-using EfEntities = Infrastructure.Data.Entities;
 using DomainEntities = Domain.Entities.Projects;
+using EfEntities = Infrastructure.Data.Entities;
 
 /// <summary>
 /// Repositorio para postulaciones a proyectos usando EF Core
@@ -53,7 +53,7 @@ public class ApplicationRepository : Domain.Interfaces.Repositories.IApplication
     public async Task<bool> HasUserAppliedAsync(Guid projectId, Guid userId, Guid organizationId)
     {
         return await _context.ProjectApplications
-            .Where(a => a.ProjectId == projectId 
+            .Where(a => a.ProjectId == projectId
                         && a.UserId == userId
                         && a.OrganizationId == organizationId
                         && !a.IsDeleted)
@@ -87,8 +87,8 @@ public class ApplicationRepository : Domain.Interfaces.Repositories.IApplication
         var efApplications = await _context.ProjectApplications
             .AsNoTracking()
             .Include(a => a.User)
-            .Where(a => a.ProjectId == projectId 
-                        && a.OrganizationId == organizationId 
+            .Where(a => a.ProjectId == projectId
+                        && a.OrganizationId == organizationId
                         && !a.IsDeleted)
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
@@ -104,8 +104,8 @@ public class ApplicationRepository : Domain.Interfaces.Repositories.IApplication
             ProjectId = ef.ProjectId,
             ProjectName = ef.Project?.Name ?? string.Empty,
             UserId = ef.UserId,
-            UserName = ef.User?.FirstName != null 
-                ? $"{ef.User.FirstName} {ef.User.LastName}" 
+            UserName = ef.User?.FirstName != null
+                ? $"{ef.User.FirstName} {ef.User.LastName}"
                 : ef.User?.Email ?? string.Empty,
             Message = ef.Motivation,
             Status = (ApplicationStatus)ef.Status,

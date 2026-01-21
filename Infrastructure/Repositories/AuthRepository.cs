@@ -1,9 +1,7 @@
 namespace Infrastructure.Repositories;
 
-using Domain.Entities.IAM;
 using Domain.Interfaces.Repositories;
 using Infrastructure.Data;
-using Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -27,9 +25,9 @@ public class AuthRepository : IAuthRepository
         {
             var efUser = await _context.Users
                 .AsNoTracking()
-                .FirstOrDefaultAsync(u => 
-                    u.Email == email && 
-                    u.OrganizationId == organizationId && 
+                .FirstOrDefaultAsync(u =>
+                    u.Email == email &&
+                    u.OrganizationId == organizationId &&
                     !u.IsDeleted);
 
             return efUser == null ? null : MapToDomain(efUser);
@@ -46,7 +44,7 @@ public class AuthRepository : IAuthRepository
         Domain.Entities.IAM.User adminUser)
     {
         using var transaction = await _context.Database.BeginTransactionAsync();
-        
+
         try
         {
             // Mapear organización de dominio a EF

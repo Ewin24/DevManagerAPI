@@ -1,9 +1,9 @@
 namespace Infrastructure.Repositories;
 
 using Infrastructure.Data;
-using EfEntities = Infrastructure.Data.Entities;
-using DomainEntities = Domain.Entities.Talent;
 using Microsoft.EntityFrameworkCore;
+using DomainEntities = Domain.Entities.Talent;
+using EfEntities = Infrastructure.Data.Entities;
 
 /// <summary>
 /// Repositorio para habilidades de empleados usando EF Core
@@ -22,8 +22,8 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
         var efSkills = await _context.EmployeeSkills
             .AsNoTracking()
             .Include(es => es.Skill)
-            .Where(es => es.UserId == userId 
-                         && es.OrganizationId == organizationId 
+            .Where(es => es.UserId == userId
+                         && es.OrganizationId == organizationId
                          && !es.IsDeleted)
             .ToListAsync();
 
@@ -44,7 +44,7 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
     public async Task<Guid> UpsertAsync(DomainEntities.EmployeeSkill employeeSkill)
     {
         var existing = await _context.EmployeeSkills
-            .Where(es => es.UserId == employeeSkill.UserId 
+            .Where(es => es.UserId == employeeSkill.UserId
                          && es.SkillId == employeeSkill.SkillId
                          && es.OrganizationId == employeeSkill.OrganizationId
                          && !es.IsDeleted)
@@ -103,9 +103,9 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
     public async Task<bool> UpdateLevelAsync(Guid userId, Guid skillId, byte newLevel, Guid organizationId)
     {
         var skill = await _context.EmployeeSkills
-            .Where(es => es.UserId == userId 
-                         && es.SkillId == skillId 
-                         && es.OrganizationId == organizationId 
+            .Where(es => es.UserId == userId
+                         && es.SkillId == skillId
+                         && es.OrganizationId == organizationId
                          && !es.IsDeleted)
             .FirstOrDefaultAsync();
 

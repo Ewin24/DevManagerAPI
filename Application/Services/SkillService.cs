@@ -54,7 +54,7 @@ public class SkillService : ISkillService
     public async Task<SkillDto?> GetSkillByIdAsync(Guid skillId, Guid organizationId)
     {
         var skill = await _skillRepository.GetByIdAsync(skillId);
-        
+
         if (skill == null)
             return null;
 
@@ -71,7 +71,7 @@ public class SkillService : ISkillService
     {
         var skills = await _skillRepository.GetAllAsync(organizationId);
         var skill = skills.FirstOrDefault(s => s.Name.Equals(skillName, StringComparison.OrdinalIgnoreCase));
-        
+
         if (skill == null)
             return null;
 

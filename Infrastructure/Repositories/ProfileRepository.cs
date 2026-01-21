@@ -2,8 +2,8 @@ namespace Infrastructure.Repositories;
 
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using EfEntities = Infrastructure.Data.Entities;
 using DomainEntities = Domain.Entities.Talent;
+using EfEntities = Infrastructure.Data.Entities;
 
 /// <summary>
 /// Repositorio para perfiles de empleados usando EF Core
@@ -21,8 +21,8 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
     {
         var efProfile = await _context.EmployeeProfiles
             .AsNoTracking()
-            .Where(p => p.UserId == userId 
-                        && p.OrganizationId == organizationId 
+            .Where(p => p.UserId == userId
+                        && p.OrganizationId == organizationId
                         && !p.IsDeleted)
             .FirstOrDefaultAsync();
 
@@ -46,8 +46,8 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
         var employeeSkills = await _context.EmployeeSkills
             .AsNoTracking()
             .Include(es => es.Skill)
-            .Where(es => userIds.Contains(es.UserId) 
-                      && es.OrganizationId == organizationId 
+            .Where(es => userIds.Contains(es.UserId)
+                      && es.OrganizationId == organizationId
                       && !es.IsDeleted)
             .ToListAsync();
 
@@ -62,7 +62,7 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
     public async Task<bool> UpsertAsync(DomainEntities.EmployeeProfile profile)
     {
         var existing = await _context.EmployeeProfiles
-            .Where(p => p.UserId == profile.UserId 
+            .Where(p => p.UserId == profile.UserId
                         && p.OrganizationId == profile.OrganizationId)
             .FirstOrDefaultAsync();
 
@@ -110,11 +110,11 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
     }
 
     private static DomainEntities.EmployeeProfile MapToDomainWithSkills(
-        EfEntities.EmployeeProfile ef, 
+        EfEntities.EmployeeProfile ef,
         List<EfEntities.EmployeeSkill> employeeSkills)
     {
         var profile = MapToDomain(ef);
-        
+
         // Agregar información de skills desde la lista proporcionada
         if (employeeSkills?.Any() == true)
         {
@@ -137,7 +137,7 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
                 } : null
             }).ToList();
         }
-        
+
         return profile;
     }
 }

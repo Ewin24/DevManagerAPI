@@ -6,7 +6,6 @@ using Application.DTOs.Skills;
 using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 /// <summary>
 /// Controller para gestión de catálogo de habilidades
@@ -133,8 +132,8 @@ public class SkillsController : ControllerBase
             var skillId = await _skillService.CreateSkillAsync(skillDto, organizationId);
 
             return CreatedAtAction(
-                nameof(Create), 
-                new { id = skillId }, 
+                nameof(Create),
+                new { id = skillId },
                 ApiResponse<Guid>.SuccessResponse(skillId, "Habilidad creada exitosamente"));
         }
         catch (BusinessValidationException ex)

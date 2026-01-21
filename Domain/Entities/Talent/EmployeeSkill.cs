@@ -16,7 +16,7 @@ public class EmployeeSkill : AuditableEntity
     public string? EvidenceUrl { get; set; }
     public DateTime? LastValidatedAt { get; set; }
     public Guid? ValidatedByUserId { get; set; } // NULL = validado por sistema/agente
-    
+
     // Propiedades calculadas (usadas por servicios)
     public string SkillName { get; set; } = string.Empty;
     public string? SkillCategory { get; set; }

@@ -1,11 +1,11 @@
 namespace API.Controllers;
 
+using System.Security.Claims;
 using Application.Common.Models;
 using Application.DTOs.Profiles;
 using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 /// <summary>
 /// Controller para gestión de perfiles de empleados
@@ -102,7 +102,7 @@ public class ProfileController : ControllerBase
     ///     }
     /// 
     /// **Validaciones:**
-    /// - yearsExperience: Debe ser >= 0 y <= 70
+    /// - yearsExperience: Debe estar entre 0 y 70
     /// - URLs: Formato válido (si se proporcionan)
     /// - bio: Máximo 2000 caracteres
     /// 

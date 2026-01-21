@@ -64,7 +64,7 @@ public class ProfileService : IProfileService
     public async Task<IEnumerable<ProfileWithSkillsDto>> GetAllProfilesWithSkillsAsync(Guid organizationId)
     {
         var profiles = await _profileRepository.GetAllAsync(organizationId);
-        
+
         return profiles.Select(p => new ProfileWithSkillsDto
         {
             UserId = p.UserId,

@@ -88,9 +88,9 @@ public class AgentController : ControllerBase
     public async Task<IActionResult> Query([FromBody] AgentQueryRequest request)
     {
         var organizationId = GetOrganizationId();
-        
+
         _logger.LogInformation(
-            "Usuario {UserId} consultando agente: {Query}", 
+            "Usuario {UserId} consultando agente: {Query}",
             GetUserId(), request.Query);
 
         var response = await _agentService.QueryAsync(organizationId, request);
@@ -187,8 +187,8 @@ public class AgentController : ControllerBase
         return Ok(new ApiResponse<SkillValidationResponse>
         {
             Success = true,
-            Message = response.IsValid 
-                ? "Skill validado exitosamente" 
+            Message = response.IsValid
+                ? "Skill validado exitosamente"
                 : "Skill requiere revisión",
             Data = response
         });
@@ -416,7 +416,7 @@ public class AgentController : ControllerBase
     [HttpPost("reject/{actionId:guid}")]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> RejectAction(
-        Guid actionId, 
+        Guid actionId,
         [FromBody] RejectActionRequest request)
     {
         var organizationId = GetOrganizationId();

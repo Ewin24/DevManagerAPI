@@ -33,7 +33,7 @@ public class GeminiService : IGeminiService
     {
         _httpClient = httpClient;
         _logger = logger;
-        _apiKey = configuration["GoogleAI:ApiKey"] 
+        _apiKey = configuration["GoogleAI:ApiKey"]
             ?? throw new InvalidOperationException("GoogleAI:ApiKey no configurado");
         _model = configuration["GoogleAI:Model"] ?? "gemini-1.5-flash";
         _endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
@@ -65,7 +65,7 @@ public class GeminiService : IGeminiService
             var response = await SendRequestAsync(request, cancellationToken);
             var text = ExtractTextFromResponse(response);
 
-            _logger.LogInformation("Respuesta de Gemini: {TokenCount} tokens", 
+            _logger.LogInformation("Respuesta de Gemini: {TokenCount} tokens",
                 response.UsageMetadata?.TotalTokenCount ?? 0);
 
             return text;
@@ -78,7 +78,7 @@ public class GeminiService : IGeminiService
     }
 
     public async Task<(string Response, string Reasoning)> QueryWithReasoningAsync(
-        string prompt, 
+        string prompt,
         CancellationToken cancellationToken = default)
     {
         var enhancedPrompt = $@"
@@ -94,7 +94,7 @@ Solicitud: {prompt}
 Responde SOLO con el JSON, sin markdown ni texto adicional.";
 
         var result = await QueryAsync(enhancedPrompt, cancellationToken);
-        
+
         try
         {
             // Limpiar posibles markdown code blocks y saltos de línea problemáticos
@@ -102,52 +102,52 @@ Responde SOLO con el JSON, sin markdown ni texto adicional.";
                 .Replace("```json", "")
                 .Replace("```", "")
                 .Trim();
-            
+
             // Intentar encontrar el JSON si está embebido en texto
             var jsonStart = cleanJson.IndexOf('{');
             var jsonEnd = cleanJson.LastIndexOf('}');
-            
+
             if (jsonStart >= 0 && jsonEnd > jsonStart)
             {
                 cleanJson = cleanJson.Substring(jsonStart, jsonEnd - jsonStart + 1);
             }
-            
+
             _logger.LogDebug("JSON limpio a parsear: {Json}", cleanJson);
-            
+
             using var doc = JsonDocument.Parse(cleanJson);
             var root = doc.RootElement;
-            
+
             // Intentar obtener reasoning (puede ser string u objeto)
             string reasoning = "";
             if (root.TryGetProperty("reasoning", out var reasoningElement))
             {
-                reasoning = reasoningElement.ValueKind == JsonValueKind.String 
+                reasoning = reasoningElement.ValueKind == JsonValueKind.String
                     ? reasoningElement.GetString() ?? ""
                     : reasoningElement.ToString();
             }
-            
+
             // Intentar obtener response (puede ser string u objeto)
             string response = "";
             if (root.TryGetProperty("response", out var responseElement))
             {
-                response = responseElement.ValueKind == JsonValueKind.String 
+                response = responseElement.ValueKind == JsonValueKind.String
                     ? responseElement.GetString() ?? ""
                     : responseElement.ToString();
             }
-            
+
             // Si alguno está vacío, usar el resultado completo
             if (string.IsNullOrWhiteSpace(response))
             {
                 _logger.LogWarning("Response vacío en JSON, usando resultado completo");
                 return (result, reasoning);
             }
-            
+
             return (response, reasoning);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "No se pudo parsear respuesta estructurada, retornando texto completo");
-            
+
             // Fallback: dividir el texto en dos partes si es posible
             var lines = result.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             if (lines.Length > 1)
@@ -156,14 +156,14 @@ Responde SOLO con el JSON, sin markdown ni texto adicional.";
                 var response = string.Join("\n", lines.Skip(lines.Length / 2));
                 return (response, reasoning);
             }
-            
+
             return (result, "No se pudo extraer el razonamiento estructurado");
         }
     }
 
     public async Task<T> AnalyzeStructuredDataAsync<T>(
-        string prompt, 
-        object inputData, 
+        string prompt,
+        object inputData,
         CancellationToken cancellationToken = default)
     {
         var jsonData = JsonSerializer.Serialize(inputData, JsonOptions);
@@ -176,29 +176,29 @@ Datos de entrada:
 Responde SOLO con JSON válido que pueda parsearse directamente, sin markdown ni explicaciones adicionales.";
 
         var result = await QueryAsync(enhancedPrompt, cancellationToken);
-        
+
         // Limpiar markdown code blocks
         var cleanJson = result.Trim().Replace("```json", "").Replace("```", "").Trim();
-        
-        return JsonSerializer.Deserialize<T>(cleanJson, JsonOptions) 
+
+        return JsonSerializer.Deserialize<T>(cleanJson, JsonOptions)
             ?? throw new InvalidOperationException("No se pudo deserializar la respuesta de Gemini");
     }
 
     private async Task<GeminiResponse> SendRequestAsync(
-        GeminiRequest request, 
+        GeminiRequest request,
         CancellationToken cancellationToken)
     {
         var requestUrl = $"{_endpoint}?key={_apiKey}";
-        
+
         var json = JsonSerializer.Serialize(request, JsonOptions);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var response = await _httpClient.PostAsync(requestUrl, content, cancellationToken);
-        
+
         if (!response.IsSuccessStatusCode)
         {
             var error = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("Error de API Gemini ({StatusCode}): {Error}", 
+            _logger.LogError("Error de API Gemini ({StatusCode}): {Error}",
                 response.StatusCode, error);
             throw new HttpRequestException(
                 $"Error de API Gemini ({response.StatusCode}): {error}");
@@ -207,7 +207,7 @@ Responde SOLO con JSON válido que pueda parsearse directamente, sin markdown ni
         var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(
             JsonOptions, cancellationToken);
 
-        return geminiResponse 
+        return geminiResponse
             ?? throw new InvalidOperationException("Respuesta vacía de Gemini");
     }
 

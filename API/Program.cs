@@ -28,12 +28,12 @@ app.UseGlobalExceptionHandler();
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
 //{
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "DevManager API v1");
-        options.DocumentTitle = "DevManager API Documentation";
-    });
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "DevManager API v1");
+    options.DocumentTitle = "DevManager API Documentation";
+});
 //}
 
 app.UseHttpsRedirection();

@@ -79,8 +79,8 @@ public static class MCPTools
             }",
             Handler = async (parameters) =>
             {
-                var category = parameters.ContainsKey("category") 
-                    ? parameters["category"]?.ToString() 
+                var category = parameters.ContainsKey("category")
+                    ? parameters["category"]?.ToString()
                     : null;
                 return new { category, message = "Skills tool executed" };
             }
@@ -135,7 +135,7 @@ public static class MCPTools
     public static string GenerateToolsPrompt()
     {
         var tools = GetAvailableTools();
-        var toolDescriptions = string.Join("\n\n", tools.Select(t => 
+        var toolDescriptions = string.Join("\n\n", tools.Select(t =>
             $"**{t.Name}**: {t.Description}\nSchema: {t.Schema}"));
 
         return $@"

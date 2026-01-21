@@ -1,12 +1,12 @@
 namespace API.Controllers;
 
+using System.Security.Claims;
 using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.DTOs.Skills;
 using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 /// <summary>
 /// Controller para gestión de habilidades de empleados
@@ -20,7 +20,7 @@ public class EmployeeSkillsController : ControllerBase
     private readonly ILogger<EmployeeSkillsController> _logger;
 
     public EmployeeSkillsController(
-        IEmployeeSkillService employeeSkillService, 
+        IEmployeeSkillService employeeSkillService,
         ILogger<EmployeeSkillsController> logger)
     {
         _employeeSkillService = employeeSkillService;
