@@ -15,6 +15,7 @@ public class AgentService : IAgentService
     private readonly ISkillService _skillService;
     private readonly IEmployeeSkillService _employeeSkillService;
     private readonly IProjectService _projectService;
+    private readonly IUserService _userService;
     private readonly IAgentRepository _agentRepository;
     private readonly ILogger<AgentService> _logger;
 
@@ -24,6 +25,7 @@ public class AgentService : IAgentService
         ISkillService skillService,
         IEmployeeSkillService employeeSkillService,
         IProjectService projectService,
+        IUserService userService,
         IAgentRepository agentRepository,
         ILogger<AgentService> logger)
     {
@@ -32,6 +34,7 @@ public class AgentService : IAgentService
         _skillService = skillService;
         _employeeSkillService = employeeSkillService;
         _projectService = projectService;
+        _userService = userService;
         _agentRepository = agentRepository;
         _logger = logger;
     }
@@ -48,14 +51,44 @@ public class AgentService : IAgentService
 
         try
         {
-            // Construir prompt con contexto del sistema
+            // Determinar qué datos necesita la consulta y obtenerlos
+            var contextData = await GatherContextDataAsync(organizationId, request.Query, cancellationToken);
+            
+            if (contextData.Any())
+            {
+                toolsExecuted.AddRange(contextData.Select(cd => new ToolExecutionResult
+                {
+                    ToolName = cd.Key,
+                    Input = request.Query,
+                    Output = $"Obtenidos {(cd.Value as System.Collections.IEnumerable)?.Cast<object>().Count() ?? 1} registros",
+                    Success = true
+                }));
+            }
+
+            // Construir prompt con contexto del sistema y datos reales
             var systemPrompt = BuildSystemPrompt(organizationId);
-            var fullPrompt = $"{systemPrompt}\n\nConsulta del usuario: {request.Query}";
+            var dataContext = BuildDataContext(contextData);
+            
+            var fullPrompt = $@"{systemPrompt}
+
+**DATOS DISPONIBLES DE LA ORGANIZACIÓN:**
+{dataContext}
+
+**Consulta del usuario:** {request.Query}";
 
             if (!string.IsNullOrEmpty(request.Context))
             {
-                fullPrompt += $"\n\nContexto adicional: {request.Context}";
+                fullPrompt += $"\n\n**Contexto adicional:** {request.Context}";
             }
+
+            fullPrompt += @"
+
+**INSTRUCCIONES:**
+- Analiza los DATOS REALES proporcionados arriba
+- Proporciona respuestas específicas basadas en esos datos
+- Incluye números, nombres y métricas concretas
+- NO uses placeholders como '[Nombre de la habilidad]'
+- Si los datos no son suficientes, indícalo claramente";
 
             // Obtener respuesta con razonamiento (Chain of Thought)
             var (response, reasoning) = await _geminiService.QueryWithReasoningAsync(
@@ -84,6 +117,127 @@ public class AgentService : IAgentService
             _logger.LogError(ex, "Error procesando query del agente");
             throw;
         }
+    }
+
+    private async Task<Dictionary<string, object>> GatherContextDataAsync(
+        Guid organizationId, 
+        string query, 
+        CancellationToken cancellationToken)
+    {
+        var contextData = new Dictionary<string, object>();
+        var queryLower = query.ToLowerInvariant();
+
+        try
+        {
+            // Detectar si la query es sobre habilidades
+            if (queryLower.Contains("habilidad") || queryLower.Contains("skill") || 
+                queryLower.Contains("competencia") || queryLower.Contains("capacidad"))
+            {
+                var skills = await _skillService.GetAllSkillsAsync(organizationId);
+                var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
+                
+                // Agregar estadísticas de habilidades desde los perfiles
+                var allEmployeeSkills = profiles
+                    .SelectMany(p => p.Skills.Select(s => new
+                    {
+                        UserId = p.UserId,
+                        SkillName = s.SkillName,
+                        Level = s.CurrentLevel
+                    }))
+                    .ToList();
+
+                var skillStats = allEmployeeSkills
+                    .GroupBy(es => es.SkillName)
+                    .Select(g => new
+                    {
+                        SkillName = g.Key,
+                        EmployeeCount = g.Select(x => x.UserId).Distinct().Count(),
+                        AverageLevel = g.Average(x => (double)x.Level),
+                        MaxLevel = g.Max(x => x.Level),
+                        MinLevel = g.Min(x => x.Level),
+                        TotalOccurrences = g.Count()
+                    })
+                    .OrderByDescending(s => s.EmployeeCount)
+                    .ThenByDescending(s => s.AverageLevel)
+                    .ToList();
+
+                contextData["Skills"] = skills;
+                contextData["EmployeeSkills"] = allEmployeeSkills;
+                contextData["SkillStatistics"] = skillStats;
+            }
+
+            // Detectar si la query es sobre proyectos
+            if (queryLower.Contains("proyecto") || queryLower.Contains("project"))
+            {
+                var projects = await _projectService.GetAllProjectsAsync(organizationId);
+                contextData["Projects"] = projects;
+            }
+
+            // Detectar si la query es sobre empleados/usuarios
+            if (queryLower.Contains("empleado") || queryLower.Contains("usuario") || 
+                queryLower.Contains("candidato") || queryLower.Contains("desarrollador") ||
+                queryLower.Contains("equipo") || queryLower.Contains("team") ||
+                queryLower.Contains("persona"))
+            {
+                var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
+                var users = await _userService.GetAllAsync(organizationId);
+                
+                contextData["EmployeeProfiles"] = profiles;
+                contextData["Users"] = users;
+            }
+
+            _logger.LogInformation("Se obtuvieron {Count} conjuntos de datos para el contexto", contextData.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error obteniendo datos de contexto");
+        }
+
+        return contextData;
+    }
+
+    private static string BuildDataContext(Dictionary<string, object> contextData)
+    {
+        if (!contextData.Any())
+        {
+            return "No se encontraron datos relevantes en la base de datos.";
+        }
+
+        var context = new System.Text.StringBuilder();
+
+        if (contextData.ContainsKey("SkillStatistics"))
+        {
+            var stats = contextData["SkillStatistics"];
+            context.AppendLine("### ESTADÍSTICAS DE HABILIDADES:");
+            context.AppendLine(JsonSerializer.Serialize(stats, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("Skills"))
+        {
+            var skills = contextData["Skills"];
+            context.AppendLine("### CATÁLOGO DE HABILIDADES:");
+            context.AppendLine(JsonSerializer.Serialize(skills, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("Projects"))
+        {
+            var projects = contextData["Projects"];
+            context.AppendLine("### PROYECTOS:");
+            context.AppendLine(JsonSerializer.Serialize(projects, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("EmployeeProfiles"))
+        {
+            var profiles = contextData["EmployeeProfiles"];
+            context.AppendLine("### PERFILES DE EMPLEADOS:");
+            context.AppendLine(JsonSerializer.Serialize(profiles, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        return context.ToString();
     }
 
     public async Task<SkillValidationResponse> ValidateSkillAsync(
@@ -197,10 +351,49 @@ Responde en formato JSON:
             // 2. Obtener todos los perfiles con skills
             var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
             
+            // 3. Obtener información de usuarios para completar los datos
+            var userIds = profiles.Select(p => p.UserId).ToList();
+            var users = new Dictionary<Guid, (string FullName, string Email)>();
+            
+            // Obtener información de todos los usuarios en batch
+            try
+            {
+                var allUsers = await _userService.GetAllAsync(organizationId);
+                foreach (var user in allUsers)
+                {
+                    users[user.Id] = ($"{user.FirstName} {user.LastName}", user.Email);
+                }
+                _logger.LogInformation("Se obtuvieron {Count} usuarios para matching", users.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo obtener la lista de usuarios, intentando uno por uno");
+                
+                // Fallback: obtener uno por uno
+                foreach (var userId in userIds)
+                {
+                    try
+                    {
+                        var user = await _userService.GetByIdAsync(userId, organizationId);
+                        if (user != null)
+                        {
+                            users[userId] = ($"{user.FirstName} {user.LastName}", user.Email);
+                        }
+                    }
+                    catch
+                    {
+                        // Silenciar errores individuales para continuar con otros usuarios
+                        _logger.LogDebug("Usuario {UserId} no encontrado", userId);
+                    }
+                }
+            }
+            
             // Construir estructura de candidatos para el análisis
             var candidates = profiles.Select(p => new
             {
                 userId = p.UserId,
+                fullName = users.ContainsKey(p.UserId) ? users[p.UserId].FullName : "Usuario desconocido",
+                email = users.ContainsKey(p.UserId) ? users[p.UserId].Email : "",
                 bio = p.Bio ?? "Sin bio",
                 yearsExperience = p.YearsExperience ?? 0,
                 skills = p.Skills.Select(s => new
@@ -271,17 +464,138 @@ Retorna los TOP {request.MaxCandidates ?? 10} candidatos en formato JSON:
 
 Ordena por matchScore descendente.";
 
-            var matchResult = await _geminiService.AnalyzeStructuredDataAsync<Dictionary<string, object>>(
-                matchingPrompt,
-                new { project, requirements, candidates },
-                cancellationToken);
+            // Llamar a Gemini con el prompt de matching
+            var geminiResponse = await _geminiService.QueryAsync(matchingPrompt, cancellationToken);
+            
+            // Limpiar respuesta de markdown code blocks
+            var cleanJson = geminiResponse.Trim()
+                .Replace("```json", "")
+                .Replace("```", "")
+                .Trim();
+            
+            // Intentar extraer JSON si está embebido en texto
+            if (!cleanJson.StartsWith("{"))
+            {
+                var jsonStart = cleanJson.IndexOf("{");
+                var jsonEnd = cleanJson.LastIndexOf("}");
+                if (jsonStart >= 0 && jsonEnd > jsonStart)
+                {
+                    cleanJson = cleanJson.Substring(jsonStart, jsonEnd - jsonStart + 1);
+                }
+            }
 
-            // Parsear resultado
-            var candidatesList = JsonSerializer.Deserialize<List<CandidateMatch>>(
-                matchResult["candidates"].ToString()!);
+            _logger.LogInformation("JSON limpio de Gemini ({Length} caracteres): {Json}", cleanJson.Length, cleanJson.Substring(0, Math.Min(500, cleanJson.Length)));
 
-            var narrative = matchResult["analysisNarrative"].ToString() 
-                ?? "Análisis de matching completado";
+            // Deserializar la respuesta completa
+            Dictionary<string, JsonElement>? matchResult;
+            try
+            {
+                matchResult = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+                    cleanJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Error deserializando JSON de Gemini. JSON: {Json}", cleanJson);
+                throw new InvalidOperationException($"No se pudo deserializar la respuesta de Gemini: {ex.Message}");
+            }
+
+            if (matchResult == null)
+            {
+                throw new InvalidOperationException("Gemini devolvió null");
+            }
+
+            // Parsear candidatos con manejo de errores robusto
+            List<CandidateMatch> candidatesList = new();
+            if (matchResult.TryGetValue("candidates", out var candidatesElement))
+            {
+                _logger.LogDebug("Candidates JSON: {CandidatesJson}", candidatesElement.GetRawText());
+                
+                try
+                {
+                    // Intentar deserialización directa
+                    candidatesList = JsonSerializer.Deserialize<List<CandidateMatch>>(
+                        candidatesElement.GetRawText(),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<CandidateMatch>();
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "No se pudo deserializar candidatos con el formato esperado. Intentando parseo manual...");
+                    
+                    // Parseo manual como fallback
+                    if (candidatesElement.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var candElement in candidatesElement.EnumerateArray())
+                        {
+                            try
+                            {
+                                var userId = candElement.TryGetProperty("userId", out var userIdProp) 
+                                    ? Guid.Parse(userIdProp.GetString() ?? Guid.Empty.ToString())
+                                    : Guid.Empty;
+                                    
+                                var fullName = candElement.TryGetProperty("fullName", out var nameProp) 
+                                    ? nameProp.GetString() ?? "Unknown"
+                                    : "Unknown";
+                                    
+                                var email = candElement.TryGetProperty("email", out var emailProp) 
+                                    ? emailProp.GetString() ?? ""
+                                    : "";
+                                    
+                                var matchScore = candElement.TryGetProperty("matchScore", out var scoreProp)
+                                    ? (scoreProp.ValueKind == JsonValueKind.Number ? scoreProp.GetDouble() : 0)
+                                    : 0;
+                                    
+                                var reason = candElement.TryGetProperty("recommendationReason", out var reasonProp)
+                                    ? reasonProp.GetString() ?? "Sin razón especificada"
+                                    : "Sin razón especificada";
+
+                                // Parsear alignments
+                                var alignments = new List<SkillAlignment>();
+                                if (candElement.TryGetProperty("skillAlignments", out var alignmentsElement) 
+                                    && alignmentsElement.ValueKind == JsonValueKind.Array)
+                                {
+                                    foreach (var alignElement in alignmentsElement.EnumerateArray())
+                                    {
+                                        alignments.Add(new SkillAlignment
+                                        {
+                                            SkillName = alignElement.TryGetProperty("skillName", out var sn) ? sn.GetString() ?? "" : "",
+                                            RequiredLevel = alignElement.TryGetProperty("requiredLevel", out var rl) ? rl.GetInt32() : 0,
+                                            CurrentLevel = alignElement.TryGetProperty("currentLevel", out var cl) ? cl.GetInt32() : 0,
+                                            IsMandatory = alignElement.TryGetProperty("isMandatory", out var im) && im.GetBoolean(),
+                                            Meets = alignElement.TryGetProperty("meets", out var m) && m.GetBoolean()
+                                        });
+                                    }
+                                }
+
+                                candidatesList.Add(new CandidateMatch
+                                {
+                                    UserId = userId,
+                                    FullName = fullName,
+                                    Email = email,
+                                    MatchScore = matchScore,
+                                    RecommendationReason = reason,
+                                    SkillAlignments = alignments
+                                });
+                            }
+                            catch (Exception parseEx)
+                            {
+                                _logger.LogWarning(parseEx, "Error parseando candidato individual");
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogWarning("No se encontró la propiedad 'candidates' en la respuesta de Gemini");
+            }
+
+            // Parsear narrative
+            var narrative = "Análisis de matching completado";
+            if (matchResult.TryGetValue("analysisNarrative", out var narrativeElement))
+            {
+                narrative = narrativeElement.GetString() ?? narrative;
+            }
 
             var response = new SkillMatchResponse
             {

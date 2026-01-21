@@ -97,18 +97,66 @@ Responde SOLO con el JSON, sin markdown ni texto adicional.";
         
         try
         {
-            // Limpiar posibles markdown code blocks
-            var cleanJson = result.Trim().Replace("```json", "").Replace("```", "").Trim();
+            // Limpiar posibles markdown code blocks y saltos de línea problemáticos
+            var cleanJson = result.Trim()
+                .Replace("```json", "")
+                .Replace("```", "")
+                .Trim();
+            
+            // Intentar encontrar el JSON si está embebido en texto
+            var jsonStart = cleanJson.IndexOf('{');
+            var jsonEnd = cleanJson.LastIndexOf('}');
+            
+            if (jsonStart >= 0 && jsonEnd > jsonStart)
+            {
+                cleanJson = cleanJson.Substring(jsonStart, jsonEnd - jsonStart + 1);
+            }
+            
+            _logger.LogDebug("JSON limpio a parsear: {Json}", cleanJson);
             
             using var doc = JsonDocument.Parse(cleanJson);
-            var reasoning = doc.RootElement.GetProperty("reasoning").GetString() ?? "";
-            var response = doc.RootElement.GetProperty("response").GetString() ?? "";
+            var root = doc.RootElement;
+            
+            // Intentar obtener reasoning (puede ser string u objeto)
+            string reasoning = "";
+            if (root.TryGetProperty("reasoning", out var reasoningElement))
+            {
+                reasoning = reasoningElement.ValueKind == JsonValueKind.String 
+                    ? reasoningElement.GetString() ?? ""
+                    : reasoningElement.ToString();
+            }
+            
+            // Intentar obtener response (puede ser string u objeto)
+            string response = "";
+            if (root.TryGetProperty("response", out var responseElement))
+            {
+                response = responseElement.ValueKind == JsonValueKind.String 
+                    ? responseElement.GetString() ?? ""
+                    : responseElement.ToString();
+            }
+            
+            // Si alguno está vacío, usar el resultado completo
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                _logger.LogWarning("Response vacío en JSON, usando resultado completo");
+                return (result, reasoning);
+            }
             
             return (response, reasoning);
         }
-        catch (JsonException)
+        catch (Exception ex)
         {
-            _logger.LogWarning("No se pudo parsear respuesta estructurada, retornando texto completo");
+            _logger.LogWarning(ex, "No se pudo parsear respuesta estructurada, retornando texto completo");
+            
+            // Fallback: dividir el texto en dos partes si es posible
+            var lines = result.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            if (lines.Length > 1)
+            {
+                var reasoning = string.Join("\n", lines.Take(lines.Length / 2));
+                var response = string.Join("\n", lines.Skip(lines.Length / 2));
+                return (response, reasoning);
+            }
+            
             return (result, "No se pudo extraer el razonamiento estructurado");
         }
     }
