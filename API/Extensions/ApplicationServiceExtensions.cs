@@ -26,7 +26,7 @@ public static class ApplicationServiceExtensions
     {
         // Entity Framework Core DbContext
         services.AddDbContext<DevManagerDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(configuration.GetConnectionString("ConexionSQL")));
 
         // Repositorios EF Core - IAM
         services.AddScoped<IAuthRepository, AuthRepository>();
@@ -75,10 +75,10 @@ public static class ApplicationServiceExtensions
         {
             options.AddPolicy("DevManagerPolicy", builder =>
             {
-                builder
-                    .AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader();
+                builder.SetIsOriginAllowed(origin => true) // Permite cualquier origen (local o desplegado)
+                       .AllowAnyMethod()
+                       .AllowAnyHeader()
+                       .AllowCredentials(); // Permite credenciales (cookies, headers de auth)
             });
         });
 
