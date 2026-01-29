@@ -213,6 +213,85 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
+    /// Actualiza un proyecto existente
+    /// </summary>
+    /// <remarks>
+    /// Modifica la información de un proyecto. Solo se actualizan los campos enviados (partial update).
+    /// 
+    /// **Ejemplo de Request:**
+    /// 
+    ///     PUT /api/projects/eeeeeeee-0000-0000-0000-000000000001
+    ///     {
+    ///         "name": "Sistema de Gestión Hospitalaria v2",
+    ///         "description": "Versión mejorada con módulo de telemedicina",
+    ///         "status": 1,
+    ///         "endDate": "2026-06-30T00:00:00Z"
+    ///     }
+    /// 
+    /// **Estados de Proyecto (status):**
+    /// - 0 = Draft (borrador)
+    /// - 1 = Active (activo)
+    /// - 2 = OnHold (en pausa)
+    /// - 3 = Completed (completado)
+    /// - 4 = Cancelled (cancelado)
+    /// 
+    /// **Valores de Complexity:**
+    /// - 0 = Low (baja complejidad)
+    /// - 1 = Medium (complejidad media)
+    /// - 2 = High (alta complejidad)
+    /// 
+    /// **Ejemplo de Response (200 OK):**
+    /// 
+    ///     {
+    ///         "success": true,
+    ///         "message": "Proyecto actualizado exitosamente",
+    ///         "data": {
+    ///             "id": "eeeeeeee-0000-0000-0000-000000000001",
+    ///             "code": "SIST-HOSP-001",
+    ///             "name": "Sistema de Gestión Hospitalaria v2",
+    ///             "description": "Versión mejorada con módulo de telemedicina",
+    ///             "status": 1,
+    ///             "statusName": "Active",
+    ///             "startDate": "2024-03-01T00:00:00Z",
+    ///             "endDate": "2026-06-30T00:00:00Z",
+    ///             "complexity": 2,
+    ///             "complexityName": "High",
+    ///             "createdAt": "2024-02-15T10:00:00Z"
+    ///         }
+    ///     }
+    /// 
+    /// **Notas:**
+    /// - Solo se actualizan los campos enviados (partial update)
+    /// - El campo UpdatedAt se actualiza automáticamente
+    /// - No se puede cambiar el OrganizationId
+    /// 
+    /// **Casos de uso:**
+    /// - Cambiar estado del proyecto (ej: Draft → Active)
+    /// - Actualizar fechas o descripción
+    /// - Ajustar nivel de complejidad
+    /// - Pausar o cancelar proyecto
+    /// </remarks>
+    /// <param name="id">ID del proyecto a actualizar</param>
+    /// <param name="request">Campos a actualizar (code, name, description, fechas, complexity, status)</param>
+    /// <returns>Proyecto actualizado</returns>
+    /// <response code="200">Proyecto actualizado exitosamente</response>
+    /// <response code="404">Proyecto no encontrado</response>
+    /// <response code="400">Datos inválidos</response>
+    /// <response code="401">No autenticado</response>
+    /// <response code="403">Sin permisos (requiere rol Manager o Admin)</response>
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(ApiResponse<ProjectResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequest request)
+    {
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+
+        var project = await _projectService.UpdateProjectAsync(id, request, organizationId);
+
+        return Ok(ApiResponse<ProjectResponse>.SuccessResponse(project, "Proyecto actualizado exitosamente"));
+    }
+
+    /// <summary>
     /// Agrega un requisito de habilidad al proyecto
     /// </summary>
     /// <remarks>

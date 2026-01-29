@@ -77,6 +77,61 @@ public class ProjectService : IProjectService
         return await _projectRepository.CreateAsync(project);
     }
 
+    public async Task<ProjectResponse> UpdateProjectAsync(Guid id, UpdateProjectRequest request, Guid organizationId)
+    {
+        // Obtener el proyecto existente
+        var existingProject = await _projectRepository.GetByIdAsync(id, organizationId);
+        
+        if (existingProject == null)
+        {
+            throw new NotFoundException("Proyecto", id);
+        }
+
+        // Aplicar cambios (partial update - solo campos proporcionados)
+        if (request.Code != null)
+            existingProject.Code = request.Code;
+        
+        if (request.Name != null)
+            existingProject.Name = request.Name;
+        
+        if (request.Description != null)
+            existingProject.Description = request.Description;
+        
+        if (request.StartDate.HasValue)
+            existingProject.StartDate = request.StartDate;
+        
+        if (request.EndDate.HasValue)
+            existingProject.EndDate = request.EndDate;
+        
+        if (request.ComplexityLevel.HasValue)
+            existingProject.ComplexityLevel = request.ComplexityLevel.Value;
+        
+        if (request.Status.HasValue)
+            existingProject.Status = request.Status.Value;
+
+        // Guardar cambios
+        var updated = await _projectRepository.UpdateAsync(existingProject);
+        
+        if (!updated)
+        {
+            throw new BusinessValidationException("No se pudo actualizar el proyecto");
+        }
+
+        // Retornar el proyecto actualizado
+        return new ProjectResponse
+        {
+            Id = existingProject.Id,
+            Code = existingProject.Code,
+            Name = existingProject.Name,
+            Description = existingProject.Description,
+            StartDate = existingProject.StartDate,
+            EndDate = existingProject.EndDate,
+            ComplexityLevel = existingProject.ComplexityLevel,
+            Status = existingProject.Status,
+            CreatedAt = existingProject.CreatedAt
+        };
+    }
+
     public async Task<Guid> AddSkillRequirementAsync(Guid projectId, Guid organizationId, AddSkillRequirementRequest request)
     {
         // Verificar que el proyecto existe

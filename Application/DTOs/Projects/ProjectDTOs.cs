@@ -42,6 +42,28 @@ public class ProjectResponse
 }
 
 /// <summary>
+/// DTO para actualizar proyecto
+/// </summary>
+public class UpdateProjectRequest
+{
+    [MaxLength(40)]
+    public string? Code { get; set; }
+
+    [MaxLength(160)]
+    public string? Name { get; set; }
+
+    public string? Description { get; set; }
+
+    public DateTime? StartDate { get; set; }
+
+    public DateTime? EndDate { get; set; }
+
+    public ProjectComplexity? ComplexityLevel { get; set; }
+
+    public ProjectStatus? Status { get; set; }
+}
+
+/// <summary>
 /// DTO para agregar requisito de habilidad al proyecto
 /// </summary>
 public class AddSkillRequirementRequest
