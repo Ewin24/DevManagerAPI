@@ -24,6 +24,11 @@ public interface IProjectRepository
     Task<Guid> CreateAsync(Project project);
 
     /// <summary>
+    /// Actualiza un proyecto existente
+    /// </summary>
+    Task<bool> UpdateAsync(Project project);
+
+    /// <summary>
     /// Obtiene la complejidad de un proyecto (para lógica del agente)
     /// </summary>
     Task<ProjectComplexity?> GetComplexityAsync(Guid projectId, Guid organizationId);

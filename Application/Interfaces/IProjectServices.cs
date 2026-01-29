@@ -13,6 +13,7 @@ public interface IProjectService
     Task<IEnumerable<ProjectResponse>> GetAllProjectsAsync(Guid organizationId, ProjectStatus? status = null);
     Task<ProjectResponse?> GetProjectByIdAsync(Guid id, Guid organizationId);
     Task<Guid> CreateProjectAsync(CreateProjectRequest request, Guid organizationId);
+    Task<ProjectResponse> UpdateProjectAsync(Guid id, UpdateProjectRequest request, Guid organizationId);
     Task<Guid> AddSkillRequirementAsync(Guid projectId, Guid organizationId, AddSkillRequirementRequest request);
     Task<IEnumerable<SkillRequirementResponse>> GetSkillRequirementsAsync(Guid projectId, Guid organizationId);
 

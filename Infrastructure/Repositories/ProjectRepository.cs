@@ -69,6 +69,29 @@ public class ProjectRepository : Domain.Interfaces.Repositories.IProjectReposito
         return efProject.Id;
     }
 
+    public async Task<bool> UpdateAsync(DomainEntities.Project project)
+    {
+        var efProject = await _context.Projects
+            .FirstOrDefaultAsync(p => p.Id == project.Id 
+                && p.OrganizationId == project.OrganizationId 
+                && !p.IsDeleted);
+
+        if (efProject == null)
+            return false;
+
+        efProject.Code = project.Code;
+        efProject.Name = project.Name;
+        efProject.Description = project.Description;
+        efProject.StartDate = project.StartDate.HasValue ? DateOnly.FromDateTime(project.StartDate.Value) : null;
+        efProject.EndDate = project.EndDate.HasValue ? DateOnly.FromDateTime(project.EndDate.Value) : null;
+        efProject.ComplexityLevel = (byte)project.ComplexityLevel;
+        efProject.Status = (byte)project.Status;
+        efProject.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<ProjectComplexity?> GetComplexityAsync(Guid projectId, Guid organizationId)
     {
         var project = await _context.Projects
