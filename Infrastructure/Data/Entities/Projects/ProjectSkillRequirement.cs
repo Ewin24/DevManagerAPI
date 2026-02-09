@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Infrastructure.Data.Entities.Config;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Data.Entities;
@@ -36,4 +37,7 @@ public partial class ProjectSkillRequirement
     [ForeignKey("SkillId")]
     [InverseProperty("ProjectSkillRequirements")]
     public virtual Skill Skill { get; set; } = null!;
+
+    [ForeignKey("RequiredLevel")]
+    public virtual SkillLevelConfig RequiredLevelNavigation { get; set; } = null!;
 }

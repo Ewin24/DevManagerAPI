@@ -22,5 +22,15 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
         entity.HasOne(d => d.Organization).WithMany(p => p.Projects)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_Projects_Organizations");
+
+        entity.HasOne(d => d.ProjectStatusNavigation).WithMany(p => p.Projects)
+            .HasForeignKey(d => d.Status)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_Projects_Status");
+
+        entity.HasOne(d => d.ComplexityLevelNavigation).WithMany(p => p.Projects)
+            .HasForeignKey(d => d.ComplexityLevel)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_Projects_Complexity");
     }
 }

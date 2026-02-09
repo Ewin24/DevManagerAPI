@@ -37,5 +37,10 @@ public class ProjectAssignmentConfiguration : IEntityTypeConfiguration<ProjectAs
         entity.HasOne(d => d.User).WithMany(p => p.ProjectAssignmentUsers)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_ProjectAssignments_Users");
+
+        entity.HasOne(d => d.AssignmentStatusNavigation).WithMany(p => p.ProjectAssignments)
+            .HasForeignKey(d => d.Status)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_ProjectAssignments_Status");
     }
 }

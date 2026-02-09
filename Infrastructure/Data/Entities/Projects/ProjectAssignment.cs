@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Infrastructure.Data.Entities.Config;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Data.Entities;
@@ -49,4 +50,7 @@ public partial class ProjectAssignment
     [ForeignKey("UserId")]
     [InverseProperty("ProjectAssignmentUsers")]
     public virtual User User { get; set; } = null!;
+
+    [ForeignKey("Status")]
+    public virtual AssignmentStatusConfig AssignmentStatusNavigation { get; set; } = null!;
 }

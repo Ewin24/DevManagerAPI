@@ -33,5 +33,10 @@ public class ProjectApplicationConfiguration : IEntityTypeConfiguration<ProjectA
         entity.HasOne(d => d.User).WithMany(p => p.ProjectApplicationUsers)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_ProjectApplications_Users");
+
+        entity.HasOne(d => d.ApplicationStatusNavigation).WithMany(p => p.ProjectApplications)
+            .HasForeignKey(d => d.Status)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_ProjectApplications_Status");
     }
 }

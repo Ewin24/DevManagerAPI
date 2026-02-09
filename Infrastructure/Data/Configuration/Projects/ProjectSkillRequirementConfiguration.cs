@@ -30,5 +30,10 @@ public class ProjectSkillRequirementConfiguration : IEntityTypeConfiguration<Pro
         entity.HasOne(d => d.Skill).WithMany(p => p.ProjectSkillRequirements)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_ProjectSkillRequirements_Skills");
+
+        entity.HasOne(d => d.RequiredLevelNavigation).WithMany(p => p.ProjectSkillRequirements)
+            .HasForeignKey(d => d.RequiredLevel)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_ProjectSkillRequirements_Level");
     }
 }

@@ -1,7 +1,8 @@
 namespace Domain.Enums;
 
 /// <summary>
-/// Origen de una evaluación de habilidad
+/// Origen de una evaluación de habilidad.
+/// Valores alineados con config.EvaluationSources.
 /// </summary>
 public enum SkillEvaluationSource : byte
 {
@@ -18,5 +19,15 @@ public enum SkillEvaluationSource : byte
     /// <summary>
     /// Evaluación generada por regla del sistema/agente
     /// </summary>
-    SystemRule = 3
+    SystemRule = 3,
+
+    /// <summary>
+    /// Evaluación derivada de una certificación verificada
+    /// </summary>
+    Certification = 4,
+
+    /// <summary>
+    /// Autoevaluación declarada por el empleado (requiere validación)
+    /// </summary>
+    SelfAssessment = 5
 }

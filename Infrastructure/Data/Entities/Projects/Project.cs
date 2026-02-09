@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Infrastructure.Data.Entities.Config;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Data.Entities;
@@ -43,6 +44,12 @@ public partial class Project
     [ForeignKey("OrganizationId")]
     [InverseProperty("Projects")]
     public virtual Organization Organization { get; set; } = null!;
+
+    [ForeignKey("Status")]
+    public virtual ProjectStatusConfig ProjectStatusNavigation { get; set; } = null!;
+
+    [ForeignKey("ComplexityLevel")]
+    public virtual ProjectComplexityLevelConfig ComplexityLevelNavigation { get; set; } = null!;
 
     [InverseProperty("Project")]
     public virtual ICollection<ProjectApplication> ProjectApplications { get; set; } = new List<ProjectApplication>();
