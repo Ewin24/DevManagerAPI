@@ -1,6 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using Infrastructure.Data.Entities.Config;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Infrastructure.Data.Entities;
 
@@ -46,4 +47,7 @@ public partial class SkillEvaluation
     [ForeignKey("UserId")]
     [InverseProperty("SkillEvaluations")]
     public virtual User User { get; set; } = null!;
+
+    [ForeignKey("Source")]
+    public virtual EvaluationSourceConfig EvaluationSourceNavigation { get; set; } = null!;
 }

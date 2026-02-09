@@ -81,7 +81,7 @@ public class ProjectService : IProjectService
     {
         // Obtener el proyecto existente
         var existingProject = await _projectRepository.GetByIdAsync(id, organizationId);
-        
+
         if (existingProject == null)
         {
             throw new NotFoundException("Proyecto", id);
@@ -90,28 +90,28 @@ public class ProjectService : IProjectService
         // Aplicar cambios (partial update - solo campos proporcionados)
         if (request.Code != null)
             existingProject.Code = request.Code;
-        
+
         if (request.Name != null)
             existingProject.Name = request.Name;
-        
+
         if (request.Description != null)
             existingProject.Description = request.Description;
-        
+
         if (request.StartDate.HasValue)
             existingProject.StartDate = request.StartDate;
-        
+
         if (request.EndDate.HasValue)
             existingProject.EndDate = request.EndDate;
-        
+
         if (request.ComplexityLevel.HasValue)
             existingProject.ComplexityLevel = request.ComplexityLevel.Value;
-        
+
         if (request.Status.HasValue)
             existingProject.Status = request.Status.Value;
 
         // Guardar cambios
         var updated = await _projectRepository.UpdateAsync(existingProject);
-        
+
         if (!updated)
         {
             throw new BusinessValidationException("No se pudo actualizar el proyecto");

@@ -25,5 +25,10 @@ public class SkillEvaluationConfiguration : IEntityTypeConfiguration<SkillEvalua
         entity.HasOne(d => d.User).WithMany(p => p.SkillEvaluations)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_SkillEvaluations_Users");
+
+        entity.HasOne(d => d.EvaluationSourceNavigation).WithMany(p => p.SkillEvaluations)
+            .HasForeignKey(d => d.Source)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_SkillEvaluations_Source");
     }
 }

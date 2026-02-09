@@ -32,5 +32,10 @@ public class EmployeeSkillConfiguration : IEntityTypeConfiguration<EmployeeSkill
 
         entity.HasOne(d => d.ValidatedByUser).WithMany(p => p.EmployeeSkillValidatedByUsers)
             .HasConstraintName("FK_EmployeeSkills_Validator");
+
+        entity.HasOne(d => d.SkillLevelNavigation).WithMany(p => p.EmployeeSkills)
+            .HasForeignKey(d => d.Level)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_EmployeeSkills_Level");
     }
 }

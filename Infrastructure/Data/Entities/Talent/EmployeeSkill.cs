@@ -1,6 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using Infrastructure.Data.Entities.Config;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Infrastructure.Data.Entities;
 
@@ -53,4 +54,7 @@ public partial class EmployeeSkill
     [ForeignKey("ValidatedByUserId")]
     [InverseProperty("EmployeeSkillValidatedByUsers")]
     public virtual User? ValidatedByUser { get; set; }
+
+    [ForeignKey("Level")]
+    public virtual SkillLevelConfig SkillLevelNavigation { get; set; } = null!;
 }

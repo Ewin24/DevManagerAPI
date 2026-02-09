@@ -1,7 +1,7 @@
 namespace Application.DTOs.Applications;
 
-using System.ComponentModel.DataAnnotations;
 using Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 /// <summary>
 /// DTO para postular a un proyecto

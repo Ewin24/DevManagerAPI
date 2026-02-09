@@ -1,6 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using Infrastructure.Data.Entities.Config;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Infrastructure.Data.Entities;
 
@@ -49,4 +50,7 @@ public partial class ProjectApplication
     [ForeignKey("UserId")]
     [InverseProperty("ProjectApplicationUsers")]
     public virtual User User { get; set; } = null!;
+
+    [ForeignKey("Status")]
+    public virtual ApplicationStatusConfig ApplicationStatusNavigation { get; set; } = null!;
 }

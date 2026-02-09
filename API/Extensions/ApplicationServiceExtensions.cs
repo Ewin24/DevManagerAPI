@@ -1,6 +1,5 @@
 namespace API.Extensions;
 
-using System.Text;
 using Application.Interfaces;
 using Application.Services;
 using Domain.Interfaces.Repositories;
@@ -11,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Text;
 
 /// <summary>
 /// Extensiones para configurar servicios de la aplicación
@@ -26,7 +26,7 @@ public static class ApplicationServiceExtensions
     {
         // Entity Framework Core DbContext
         services.AddDbContext<DevManagerDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("ConexionSQL")));
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
         // Repositorios EF Core - IAM
         services.AddScoped<IAuthRepository, AuthRepository>();
@@ -56,6 +56,9 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IAssignmentService, AssignmentService>();
+
+        // Servicios de configuración/catálogos
+        services.AddScoped<IConfigService, Infrastructure.Services.ConfigService>();
 
         // Servicios de IA y Agente
         services.AddHttpClient<IGeminiService, Infrastructure.Services.AI.GeminiService>();

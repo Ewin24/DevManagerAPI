@@ -72,8 +72,8 @@ public class ProjectRepository : Domain.Interfaces.Repositories.IProjectReposito
     public async Task<bool> UpdateAsync(DomainEntities.Project project)
     {
         var efProject = await _context.Projects
-            .FirstOrDefaultAsync(p => p.Id == project.Id 
-                && p.OrganizationId == project.OrganizationId 
+            .FirstOrDefaultAsync(p => p.Id == project.Id
+                && p.OrganizationId == project.OrganizationId
                 && !p.IsDeleted);
 
         if (efProject == null)

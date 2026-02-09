@@ -24,5 +24,10 @@ public class ProjectParticipationConfiguration : IEntityTypeConfiguration<Projec
         entity.HasOne(d => d.User).WithMany(p => p.ProjectParticipations)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_ProjectParticipation_Users");
+
+        entity.HasOne(d => d.ContributionScoreNavigation).WithMany(p => p.ProjectParticipations)
+            .HasForeignKey(d => d.ContributionScore)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_ProjectParticipation_ContributionScore");
     }
 }
