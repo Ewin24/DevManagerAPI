@@ -169,7 +169,7 @@ CREATE TABLE talent.EmployeeSkills (
     UserId          uniqueidentifier NOT NULL,
     SkillId         uniqueidentifier NOT NULL,
 
-    Level           tinyint          NOT NULL, -- 1..5
+    Level           tinyint          NOT NULL, -- FK a config.SkillLevels
     EvidenceUrl     nvarchar(400)    NULL,
     LastValidatedAt datetime2(3)     NULL,
     ValidatedByUserId uniqueidentifier NULL, -- Necesario para auditoría: saber si lo validó el Sistema (Agente) o un Humano.
@@ -187,7 +187,8 @@ CREATE TABLE talent.EmployeeSkills (
         FOREIGN KEY (SkillId) REFERENCES talent.Skills(Id),
     CONSTRAINT FK_EmployeeSkills_Validator
         FOREIGN KEY (ValidatedByUserId) REFERENCES iam.Users(Id),
-    CONSTRAINT CK_EmployeeSkills_Level CHECK (Level BETWEEN 1 AND 5)
+    CONSTRAINT FK_EmployeeSkills_Level
+        FOREIGN KEY (Level) REFERENCES config.SkillLevels(Id)
 );
 
 
@@ -246,7 +247,7 @@ CREATE TABLE projects.Projects (
     EndDate          date             NULL,
 
     ComplexityLevel  tinyint          NOT NULL CONSTRAINT DF_Projects_Complexity DEFAULT(1), -- El sistema debe saber la dificultad del proyecto para calcular cuánta experiencia ganan los empleados. 
-    Status           tinyint          NOT NULL, -- 1 Draft, 2 Open, 3 InProgress, 4 Closed, 5 Cancelled
+    Status           tinyint          NOT NULL, -- FK a config.ProjectStatuses
 
     CreatedAt        datetime2(3)     NOT NULL CONSTRAINT DF_Projects_CreatedAt DEFAULT (sysutcdatetime()),
     CreatedByUserId  uniqueidentifier NULL,
@@ -256,8 +257,10 @@ CREATE TABLE projects.Projects (
 
     CONSTRAINT FK_Projects_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),
-    CONSTRAINT CK_Projects_Status CHECK (Status BETWEEN 1 AND 5),
-    CONSTRAINT CK_Projects_Complexity CHECK (ComplexityLevel BETWEEN 1 AND 3)
+    CONSTRAINT FK_Projects_Status
+        FOREIGN KEY (Status) REFERENCES config.ProjectStatuses(Id),
+    CONSTRAINT FK_Projects_Complexity
+        FOREIGN KEY (ComplexityLevel) REFERENCES config.ProjectComplexityLevels(Id)
 );
 
 
@@ -278,7 +281,7 @@ CREATE TABLE projects.ProjectSkillRequirements (
     ProjectId       uniqueidentifier NOT NULL,
     SkillId         uniqueidentifier NOT NULL,
 
-    RequiredLevel   tinyint          NOT NULL, -- 1..5
+    RequiredLevel   tinyint          NOT NULL, -- FK a config.SkillLevels
     IsMandatory     bit              NOT NULL CONSTRAINT DF_ProjectSkillRequirements_IsMandatory DEFAULT (1),
 
     CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_ProjectSkillRequirements_CreatedAt DEFAULT (sysutcdatetime()),
@@ -290,7 +293,8 @@ CREATE TABLE projects.ProjectSkillRequirements (
         FOREIGN KEY (ProjectId) REFERENCES projects.Projects(Id),
     CONSTRAINT FK_ProjectSkillRequirements_Skills
         FOREIGN KEY (SkillId) REFERENCES talent.Skills(Id),
-    CONSTRAINT CK_ProjectSkillRequirements_Level CHECK (RequiredLevel BETWEEN 1 AND 5)
+    CONSTRAINT FK_ProjectSkillRequirements_Level
+        FOREIGN KEY (RequiredLevel) REFERENCES config.SkillLevels(Id)
 );
 
 
@@ -336,7 +340,7 @@ CREATE TABLE projects.ProjectApplications (
     UserId          uniqueidentifier NOT NULL,
 
     Motivation      nvarchar(800)    NULL,
-    Status          tinyint          NOT NULL, -- 1 Applied, 2 Approved, 3 Rejected, 4 Withdrawn
+    Status          tinyint          NOT NULL, -- FK a config.ApplicationStatuses
 
     ReviewedByUserId uniqueidentifier NULL,
     ReviewedAt       datetime2(3)     NULL,
@@ -354,7 +358,8 @@ CREATE TABLE projects.ProjectApplications (
         FOREIGN KEY (UserId) REFERENCES iam.Users(Id),
     CONSTRAINT FK_ProjectApplications_ReviewedByUser
         FOREIGN KEY (ReviewedByUserId) REFERENCES iam.Users(Id),
-    CONSTRAINT CK_ProjectApplications_Status CHECK (Status BETWEEN 1 AND 4)
+    CONSTRAINT FK_ProjectApplications_Status
+        FOREIGN KEY (Status) REFERENCES config.ApplicationStatuses(Id)
 );
 
 
@@ -379,7 +384,7 @@ CREATE TABLE projects.ProjectAssignments (
     AssignedByUserId uniqueidentifier NOT NULL,
     AssignedAt       datetime2(3)     NOT NULL CONSTRAINT DF_ProjectAssignments_AssignedAt DEFAULT (sysutcdatetime()),
 
-    Status          tinyint          NOT NULL, -- 1 Active, 2 Removed, 3 Completed
+    Status          tinyint          NOT NULL, -- FK a config.AssignmentStatuses
     EndedAt         datetime2(3)     NULL,
 
     IsDeleted       bit              NOT NULL CONSTRAINT DF_ProjectAssignments_IsDeleted DEFAULT (0),
@@ -394,7 +399,8 @@ CREATE TABLE projects.ProjectAssignments (
         FOREIGN KEY (ProjectRoleId) REFERENCES projects.ProjectRoles(Id),
     CONSTRAINT FK_ProjectAssignments_AssignedByUser
         FOREIGN KEY (AssignedByUserId) REFERENCES iam.Users(Id),
-    CONSTRAINT CK_ProjectAssignments_Status CHECK (Status BETWEEN 1 AND 3)
+    CONSTRAINT FK_ProjectAssignments_Status
+        FOREIGN KEY (Status) REFERENCES config.AssignmentStatuses(Id)
 );
 
 
@@ -420,7 +426,7 @@ CREATE TABLE projects.ProjectParticipation (
     UserId          uniqueidentifier NOT NULL,
 
     RoleName        nvarchar(80)     NULL,
-    ContributionScore tinyint        NULL, -- 1..5
+    ContributionScore tinyint        NULL, -- FK a config.ContributionScores
     
     FeedbackComments nvarchar(max)   NULL,  -- Texto fundamental para el "Natural Language Processing" del Agente Inteligente. Sin texto, el agente es ciego a los matices.
 
@@ -435,7 +441,8 @@ CREATE TABLE projects.ProjectParticipation (
         FOREIGN KEY (ProjectId) REFERENCES projects.Projects(Id),
     CONSTRAINT FK_ProjectParticipation_Users
         FOREIGN KEY (UserId) REFERENCES iam.Users(Id),
-    CONSTRAINT CK_ProjectParticipation_ContributionScore CHECK (ContributionScore IS NULL OR ContributionScore BETWEEN 1 AND 5)
+    CONSTRAINT FK_ProjectParticipation_ContributionScore
+        FOREIGN KEY (ContributionScore) REFERENCES config.ContributionScores(Id)
 );
 
 
@@ -450,7 +457,7 @@ CREATE TABLE talent.SkillEvaluations (
     UserId          uniqueidentifier NOT NULL,
     SkillId         uniqueidentifier NOT NULL,
 
-    Source          tinyint          NOT NULL, -- 1 Project, 2 Manual, 3 SystemRule
+    Source          tinyint          NOT NULL, -- FK a config.EvaluationSources
     ProjectId       uniqueidentifier NULL,
 
     DeltaLevel      smallint         NOT NULL, -- ej: +1, -1
@@ -467,7 +474,8 @@ CREATE TABLE talent.SkillEvaluations (
         FOREIGN KEY (SkillId) REFERENCES talent.Skills(Id),
     CONSTRAINT FK_SkillEvaluations_Projects
         FOREIGN KEY (ProjectId) REFERENCES projects.Projects(Id),
-    CONSTRAINT CK_SkillEvaluations_Source CHECK (Source BETWEEN 1 AND 3),
+    CONSTRAINT FK_SkillEvaluations_Source
+        FOREIGN KEY (Source) REFERENCES config.EvaluationSources(Id),
     CONSTRAINT CK_SkillEvaluations_DeltaLevel CHECK (DeltaLevel BETWEEN -5 AND 5)
 );
 
