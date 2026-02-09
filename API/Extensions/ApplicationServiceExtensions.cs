@@ -57,6 +57,9 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IAssignmentService, AssignmentService>();
 
+        // Servicios de configuración/catálogos
+        services.AddScoped<IConfigService, Infrastructure.Services.ConfigService>();
+
         // Servicios de IA y Agente
         services.AddHttpClient<IGeminiService, Infrastructure.Services.AI.GeminiService>();
         services.AddScoped<IAgentService, AgentService>();
