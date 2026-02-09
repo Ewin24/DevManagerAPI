@@ -1,7 +1,7 @@
 namespace Application.DTOs.Projects;
 
-using System.ComponentModel.DataAnnotations;
 using Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 /// <summary>
 /// DTO para crear proyecto

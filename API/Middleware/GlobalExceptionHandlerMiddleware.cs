@@ -1,8 +1,8 @@
 namespace API.Middleware;
 
+using Application.Common.Models;
 using System.Net;
 using System.Text.Json;
-using Application.Common.Models;
 
 /// <summary>
 /// Middleware global para manejo centralizado de excepciones

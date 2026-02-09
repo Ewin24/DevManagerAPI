@@ -1,6 +1,5 @@
 namespace API.Controllers;
 
-using System.Security.Claims;
 using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.DTOs.Applications;
@@ -8,6 +7,7 @@ using Application.Interfaces;
 using Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 /// <summary>
 /// Controller para gestión de postulaciones a proyectos

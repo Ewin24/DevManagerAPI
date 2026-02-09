@@ -1,7 +1,7 @@
 namespace Application.DTOs.Assignments;
 
-using System.ComponentModel.DataAnnotations;
 using Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 /// <summary>
 /// DTO para asignar empleado a proyecto

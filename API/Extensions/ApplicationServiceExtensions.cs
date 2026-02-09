@@ -1,6 +1,5 @@
 namespace API.Extensions;
 
-using System.Text;
 using Application.Interfaces;
 using Application.Services;
 using Domain.Interfaces.Repositories;
@@ -11,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Text;
 
 /// <summary>
 /// Extensiones para configurar servicios de la aplicación

@@ -1,11 +1,11 @@
 namespace API.Controllers;
 
-using System.Security.Claims;
 using Application.Common.Models;
 using Application.DTOs.Users;
 using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 /// <summary>
 /// Controlador de gestión de usuarios
