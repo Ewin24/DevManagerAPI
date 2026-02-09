@@ -26,7 +26,7 @@ public static class ApplicationServiceExtensions
     {
         // Entity Framework Core DbContext
         services.AddDbContext<DevManagerDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("ConexionSQL")));
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
         // Repositorios EF Core - IAM
         services.AddScoped<IAuthRepository, AuthRepository>();

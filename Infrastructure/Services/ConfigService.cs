@@ -21,39 +21,20 @@ public class ConfigService : IConfigService
 
     public async Task<AllConfigCatalogsDto> GetAllCatalogsAsync()
     {
-        var projectStatusesTask = GetProjectStatusesAsync();
-        var complexityLevelsTask = GetComplexityLevelsAsync();
-        var applicationStatusesTask = GetApplicationStatusesAsync();
-        var assignmentStatusesTask = GetAssignmentStatusesAsync();
-        var skillLevelsTask = GetSkillLevelsAsync();
-        var contributionScoresTask = GetContributionScoresAsync();
-        var evaluationSourcesTask = GetEvaluationSourcesAsync();
-        var skillTypesTask = GetSkillTypesAsync();
-        var skillCategoriesTask = GetSkillCategoriesAsync();
-        var agentActionTypesTask = GetAgentActionTypesAsync();
-        var agentActionStatusesTask = GetAgentActionStatusesAsync();
-        var seniorityLevelsTask = GetSeniorityLevelsAsync();
-
-        await Task.WhenAll(
-            projectStatusesTask, complexityLevelsTask, applicationStatusesTask,
-            assignmentStatusesTask, skillLevelsTask, contributionScoresTask,
-            evaluationSourcesTask, skillTypesTask, skillCategoriesTask,
-            agentActionTypesTask, agentActionStatusesTask, seniorityLevelsTask);
-
         return new AllConfigCatalogsDto
         {
-            ProjectStatuses = await projectStatusesTask,
-            ComplexityLevels = await complexityLevelsTask,
-            ApplicationStatuses = await applicationStatusesTask,
-            AssignmentStatuses = await assignmentStatusesTask,
-            SkillLevels = await skillLevelsTask,
-            ContributionScores = await contributionScoresTask,
-            EvaluationSources = await evaluationSourcesTask,
-            SkillTypes = await skillTypesTask,
-            SkillCategories = await skillCategoriesTask,
-            AgentActionTypes = await agentActionTypesTask,
-            AgentActionStatuses = await agentActionStatusesTask,
-            SeniorityLevels = await seniorityLevelsTask
+            ProjectStatuses = await GetProjectStatusesAsync(),
+            ComplexityLevels = await GetComplexityLevelsAsync(),
+            ApplicationStatuses = await GetApplicationStatusesAsync(),
+            AssignmentStatuses = await GetAssignmentStatusesAsync(),
+            SkillLevels = await GetSkillLevelsAsync(),
+            ContributionScores = await GetContributionScoresAsync(),
+            EvaluationSources = await GetEvaluationSourcesAsync(),
+            SkillTypes = await GetSkillTypesAsync(),
+            SkillCategories = await GetSkillCategoriesAsync(),
+            AgentActionTypes = await GetAgentActionTypesAsync(),
+            AgentActionStatuses = await GetAgentActionStatusesAsync(),
+            SeniorityLevels = await GetSeniorityLevelsAsync()
         };
     }
 
