@@ -1,10 +1,8 @@
 -- Script para limpiar datos del seeder
 USE DevManager;
-GO
 
 SET QUOTED_IDENTIFIER ON;
 SET ANSI_NULLS ON;
-GO
 
 PRINT 'Limpiando datos de la base de datos...';
 
@@ -38,4 +36,3 @@ DELETE FROM [iam].[Organizations];
 EXEC sp_MSforeachtable 'ALTER TABLE ? CHECK CONSTRAINT ALL';
 
 PRINT '✓ Base de datos limpiada exitosamente';
-GO
