@@ -6,9 +6,6 @@ SET ANSI_NULLS ON;
 
 PRINT 'Limpiando datos de la base de datos...';
 
--- Desactivar constraints
-EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';
-
 -- Eliminar datos en orden inverso a dependencies
 DELETE FROM [reporting].[RecommendationLogs];
 DELETE FROM [reporting].[RecommendationRules];
@@ -31,8 +28,5 @@ DELETE FROM [iam].[UserRoles];
 DELETE FROM [iam].[Users];
 DELETE FROM [iam].[Roles];
 DELETE FROM [iam].[Organizations];
-
--- Reactivar constraints
-EXEC sp_MSforeachtable 'ALTER TABLE ? CHECK CONSTRAINT ALL';
 
 PRINT '✓ Base de datos limpiada exitosamente';

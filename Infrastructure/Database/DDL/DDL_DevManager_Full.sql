@@ -360,6 +360,52 @@ CREATE TABLE iam.UserRoles (
 CREATE INDEX IX_UserRoles_Org_User
 ON iam.UserRoles(OrganizationId, UserId);
 
+
+CREATE TABLE iam.Permissions (
+    Id              uniqueidentifier NOT NULL CONSTRAINT PK_Permissions PRIMARY KEY,
+    Code            nvarchar(100)    NOT NULL,
+    Name            nvarchar(160)    NOT NULL,
+    Description     nvarchar(400)    NULL,
+    Module          nvarchar(80)     NOT NULL,
+
+    CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_Permissions_CreatedAt DEFAULT (sysutcdatetime()),
+    IsDeleted       bit              NOT NULL CONSTRAINT DF_Permissions_IsDeleted DEFAULT (0)
+);
+
+CREATE UNIQUE INDEX UX_Permissions_Code
+ON iam.Permissions(Code)
+WHERE IsDeleted = 0;
+
+
+CREATE TABLE iam.RolePermissions (
+    RoleId          uniqueidentifier NOT NULL,
+    PermissionId    uniqueidentifier NOT NULL,
+
+    CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_RolePermissions_CreatedAt DEFAULT (sysutcdatetime()),
+
+    CONSTRAINT PK_RolePermissions PRIMARY KEY (RoleId, PermissionId),
+    CONSTRAINT FK_RolePermissions_Roles FOREIGN KEY (RoleId) REFERENCES iam.Roles(Id),
+    CONSTRAINT FK_RolePermissions_Permissions FOREIGN KEY (PermissionId) REFERENCES iam.Permissions(Id)
+);
+
+
+CREATE TABLE iam.UserPermissions (
+    UserId          uniqueidentifier NOT NULL,
+    PermissionId    uniqueidentifier NOT NULL,
+    OrganizationId  uniqueidentifier NOT NULL,
+    IsGranted       bit              NOT NULL CONSTRAINT DF_UserPermissions_IsGranted DEFAULT (1),
+
+    CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_UserPermissions_CreatedAt DEFAULT (sysutcdatetime()),
+
+    CONSTRAINT PK_UserPermissions PRIMARY KEY (UserId, PermissionId),
+    CONSTRAINT FK_UserPermissions_Users FOREIGN KEY (UserId) REFERENCES iam.Users(Id),
+    CONSTRAINT FK_UserPermissions_Permissions FOREIGN KEY (PermissionId) REFERENCES iam.Permissions(Id),
+    CONSTRAINT FK_UserPermissions_Organizations FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
+);
+
+CREATE INDEX IX_UserPermissions_Org_User
+ON iam.UserPermissions(OrganizationId, UserId);
+
 PRINT '==========================================';
 PRINT '2) Tablas IAM creadas';
 PRINT '==========================================';
