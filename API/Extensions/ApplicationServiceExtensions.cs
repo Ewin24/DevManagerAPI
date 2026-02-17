@@ -31,6 +31,7 @@ public static class ApplicationServiceExtensions
         // Repositorios EF Core - IAM
         services.AddScoped<IAuthRepository, AuthRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
 
         // Repositorios EF Core - Talent
         services.AddScoped<IProfileRepository, ProfileRepository>();
@@ -46,6 +47,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IRolePermissionService, RolePermissionService>();
 
         // Servicios de aplicación - Talent
         services.AddScoped<IProfileService, ProfileService>();
