@@ -764,6 +764,173 @@ VALUES
      'El empleado está asignado a más de 2 proyectos activos, considerar redistribución', 
      1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0);
 
+
+
+PRINT '==========================================';
+PRINT 'Seeder RBAC: Permisos y Asignaciones de Roles';
+PRINT '==========================================';
+
+-- =============
+-- 1) Permisos
+-- =============
+-- Convención: <module>.<action>
+
+-- IAM / Usuarios / Roles / Permisos
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'users.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'users.read', 'Ver Usuarios', 'Listar y ver usuarios de la organización', 'iam');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'users.write')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'users.write', 'Administrar Usuarios', 'Crear/editar usuarios', 'iam');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'users.assign_roles')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'users.assign_roles', 'Asignar Roles', 'Asignar/retirar roles a usuarios', 'iam');
+
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'roles.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'roles.read', 'Ver Roles', 'Listar y ver roles', 'iam');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'roles.write')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'roles.write', 'Administrar Roles', 'Crear/editar roles', 'iam');
+
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'permissions.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'permissions.read', 'Ver Permisos', 'Listar permisos del sistema', 'iam');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'permissions.write')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'permissions.write', 'Administrar Permisos', 'Crear/editar permisos del sistema', 'iam');
+
+-- Projects & Applications
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'projects.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'projects.read', 'Ver Proyectos', 'Listar y ver proyectos', 'projects');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'projects.write')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'projects.write', 'Administrar Proyectos', 'Crear/editar proyectos', 'projects');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'projects.publish')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'projects.publish', 'Publicar Proyectos', 'Marcar proyecto como visible/abierto para postulaciones', 'projects');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'projects.assign')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'projects.assign', 'Asignar Recursos', 'Asignar usuarios a proyectos', 'projects');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'projects.apply')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'projects.apply', 'Postular a Proyecto', 'Permite a un usuario aplicar a proyectos', 'projects');
+
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'applications.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'applications.read', 'Ver Postulaciones', 'Ver postulaciones a proyectos', 'projects');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'applications.review')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'applications.review', 'Revisar Postulaciones', 'Aprobar/Rechazar postulaciones', 'projects');
+
+-- Assignments
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'assignments.manage')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'assignments.manage', 'Gestionar Asignaciones', 'Crear/terminar asignaciones en proyectos', 'projects');
+
+-- Talent / Skills / Certifications
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'talent.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'talent.read', 'Ver Talento', 'Ver perfiles y skills', 'talent');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'talent.write')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'talent.write', 'Administrar Talento', 'Modificar perfiles y datos de talento', 'talent');
+
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'skills.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'skills.read', 'Ver Skills', 'Ver catálogo de skills', 'talent');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'skills.write')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'skills.write', 'Administrar Skills', 'Crear/editar skills del catálogo', 'talent');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'skills.validate')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'skills.validate', 'Validar Skills', 'Aprobar evidencias y validaciones de skill', 'talent');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'skills.self_update')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'skills.self_update', 'Actualizar Mis Skills', 'Permite al usuario actualizar sus propias habilidades', 'talent');
+
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'certifications.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'certifications.read', 'Ver Certificaciones', 'Ver certificaciones de empleados', 'talent');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'certifications.write')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'certifications.write', 'Administrar Certificaciones', 'Agregar/editar certificaciones', 'talent');
+
+-- Reporting & Agent
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'reports.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'reports.read', 'Ver Reportes', 'Acceso a reportes e indicadores', 'reporting');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'reports.generate')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'reports.generate', 'Generar Reportes', 'Generar snapshots y reportes', 'reporting');
+
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'agent.actions.execute')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'agent.actions.execute', 'Ejecutar Acciones del Agente', 'Permite ejecutar acciones automáticas del agente', 'agent');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'agent.actions.approve')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'agent.actions.approve', 'Aprobar Acciones del Agente', 'Aprobar acciones en flujo HITL', 'agent');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'agent.actions.view')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'agent.actions.view', 'Ver Acciones del Agente', 'Ver historial y logs del agente', 'agent');
+
+-- Config & System
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'config.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'config.read', 'Ver Configuración', 'Leer parámetros y catálogos del sistema', 'config');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'config.write')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'config.write', 'Administrar Configuración', 'Modificar catálogos y parámetros del sistema', 'config');
+
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'audit.read')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'audit.read', 'Ver Auditoría', 'Acceso a registros de auditoría del sistema', 'system');
+IF NOT EXISTS(SELECT 1 FROM iam.Permissions WHERE Code = 'system.manage')
+    INSERT INTO iam.Permissions (Id, Code, Name, Description, Module) VALUES (NEWID(), 'system.manage', 'Administrar Sistema', 'Permisos críticos / super-admin', 'system');
+
+PRINT '  ✓ Permisos insertados (si no existían)';
+
+-- =============
+-- 2) Asignación de Permisos a Roles (RolePermissions)
+-- =============
+PRINT 'Asignando permisos a roles...';
+
+-- 2.a Admin -> todos los permisos
+INSERT INTO iam.RolePermissions (RoleId, PermissionId)
+SELECT r.Id, p.Id
+FROM iam.Roles r
+CROSS JOIN iam.Permissions p
+WHERE r.Name = 'Admin'
+  AND NOT EXISTS (SELECT 1 FROM iam.RolePermissions rp WHERE rp.RoleId = r.Id AND rp.PermissionId = p.Id);
+
+-- 2.b Manager -> permisos operativos y de reporte/agent/config lectura
+INSERT INTO iam.RolePermissions (RoleId, PermissionId)
+SELECT r.Id, p.Id
+FROM iam.Roles r
+JOIN iam.Permissions p ON p.Code IN (
+    'projects.read','projects.write','projects.assign','projects.publish',
+    'applications.read','applications.review',
+    'assignments.manage',
+    'talent.read','talent.write','skills.read','skills.validate','certifications.read',
+    'reports.read','reports.generate',
+    'agent.actions.view','config.read','permissions.read','users.read','users.assign_roles'
+)
+WHERE r.Name = 'Manager'
+  AND NOT EXISTS (SELECT 1 FROM iam.RolePermissions rp WHERE rp.RoleId = r.Id AND rp.PermissionId = p.Id);
+
+-- 2.c Developer -> acceso de trabajo diario y a auto-servicio
+INSERT INTO iam.RolePermissions (RoleId, PermissionId)
+SELECT r.Id, p.Id
+FROM iam.Roles r
+JOIN iam.Permissions p ON p.Code IN (
+    'projects.read','projects.apply',
+    'applications.apply','applications.read',
+    'talent.read','skills.read','skills.self_update','certifications.read',
+    'reports.read'
+)
+WHERE r.Name = 'Developer'
+  AND NOT EXISTS (SELECT 1 FROM iam.RolePermissions rp WHERE rp.RoleId = r.Id AND rp.PermissionId = p.Id);
+
+PRINT '  ✓ RolePermissions aplicadas (Admin = all, Manager/Developer = subsets)';
+
+-- =============
+-- 3) Ejemplos de UserPermissions (overrides por usuario)
+-- =============
+PRINT 'Aplicando ejemplos de UserPermissions...';
+
+-- Ejemplo: otorgar a Juan (developer) permiso explícito para crear/editar proyectos (elevación puntual)
+INSERT INTO iam.UserPermissions (UserId, PermissionId, OrganizationId, IsGranted, CreatedAt)
+SELECT u.Id, p.Id, u.OrganizationId, 1, SYSUTCDATETIME()
+FROM iam.Users u
+JOIN iam.Permissions p ON p.Code = 'projects.write'
+WHERE u.Email = 'juan.martinez@techcorp.com'
+  AND NOT EXISTS (SELECT 1 FROM iam.UserPermissions up WHERE up.UserId = u.Id AND up.PermissionId = p.Id);
+
+-- Ejemplo: denegar (IsGranted = 0) permiso a un usuario específico (override negativo)
+INSERT INTO iam.UserPermissions (UserId, PermissionId, OrganizationId, IsGranted, CreatedAt)
+SELECT u.Id, p.Id, u.OrganizationId, 0, SYSUTCDATETIME()
+FROM iam.Users u
+JOIN iam.Permissions p ON p.Code = 'projects.assign'
+WHERE u.Email = 'maria.garcia@techcorp.com' -- ejemplo: Manager pero revocación puntual
+  AND NOT EXISTS (SELECT 1 FROM iam.UserPermissions up WHERE up.UserId = u.Id AND up.PermissionId = p.Id);
+
+PRINT '  ✓ UserPermissions de ejemplo aplicadas';
+
+PRINT '';
+PRINT 'Seeder RBAC completado.';
+PRINT '  - Permisos totales (estimado): revisar iam.Permissions';
+PRINT '  - RolePermissions: Admin = todos, Manager/Developer = subconjuntos realistas';
+
 PRINT '   ✓ 2 recommendation rules';
 
 PRINT '';
@@ -809,5 +976,3 @@ PRINT '  • POST /agent/query: "¿Cuántos desarrolladores tenemos con Java?"';
 PRINT '  • POST /agent/match-candidates: projectId del App Móvil Delivery';
 PRINT '  • POST /agent/validate-skill: userId de Ana + skillId de Java';
 PRINT '==========================================';
-
-
