@@ -137,4 +137,22 @@ public class ProfileController : ControllerBase
 
         return Ok(ApiResponse<object>.SuccessResponse("Perfil actualizado exitosamente"));
     }
+
+    /// <summary>
+    /// Elimina el perfil del usuario autenticado (soft delete)
+    /// </summary>
+    [HttpDelete("me")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteMyProfile()
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+
+        var result = await _profileService.DeleteMyProfileAsync(userId, organizationId, userId);
+        if (!result)
+            return NotFound();
+
+        return Ok(ApiResponse<object>.SuccessResponse("Perfil eliminado"));
+    }
 }
