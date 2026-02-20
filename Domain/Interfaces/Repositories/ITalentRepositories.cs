@@ -21,6 +21,11 @@ public interface IProfileRepository
     /// Crea o actualiza el perfil de un empleado
     /// </summary>
     Task<bool> UpsertAsync(EmployeeProfile profile);
+
+    /// <summary>
+    /// Elimina lógicamente el perfil de un empleado
+    /// </summary>
+    Task<bool> SoftDeleteAsync(Guid userId, Guid organizationId, Guid deletedByUserId);
 }
 
 /// <summary>
@@ -42,6 +47,16 @@ public interface ISkillRepository
     /// Crea una nueva habilidad
     /// </summary>
     Task<Guid> CreateAsync(Skill skill);
+
+    /// <summary>
+    /// Actualiza una habilidad existente
+    /// </summary>
+    Task<bool> UpdateAsync(Skill skill);
+
+    /// <summary>
+    /// Elimina lógicamente una habilidad
+    /// </summary>
+    Task<bool> SoftDeleteAsync(Guid id, Guid organizationId, Guid deletedByUserId);
 
     /// <summary>
     /// Verifica si una habilidad con el mismo nombre ya existe
@@ -73,6 +88,24 @@ public interface IEmployeeSkillRepository
     /// Actualiza el nivel de una habilidad (usado por el agente)
     /// </summary>
     Task<bool> UpdateLevelAsync(Guid userId, Guid skillId, byte newLevel, Guid organizationId);
+
+    /// <summary>
+    /// Elimina lógicamente una habilidad de empleado
+    /// </summary>
+    Task<bool> SoftDeleteAsync(Guid id, Guid organizationId, Guid deletedByUserId);
+
+}
+
+/// <summary>
+/// Repositorio para certificaciones
+/// </summary>
+public interface ICertificationRepository
+{
+    Task<IEnumerable<Certification>> GetCertificationsByUserIdAsync(Guid userId, Guid organizationId);
+    Task<Certification?> GetCertificationByIdAsync(Guid id);
+    Task<Guid> CreateCertificationAsync(Certification certification);
+    Task<bool> UpdateCertificationAsync(Certification certification);
+    Task<bool> SoftDeleteCertificationAsync(Guid id, Guid organizationId, Guid deletedByUserId);
 }
 
 /// <summary>

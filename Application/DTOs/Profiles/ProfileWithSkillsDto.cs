@@ -1,4 +1,5 @@
 namespace Application.DTOs.Profiles;
+
 /// <summary>
 /// DTO para perfil de empleado con sus habilidades (usado por el agente)
 /// </summary>
@@ -10,6 +11,7 @@ public record ProfileWithSkillsDto
     public string? LinkedInUrl { get; init; }
     public string? PortfolioUrl { get; init; }
     public required IEnumerable<EmployeeSkillSummary> Skills { get; init; } = Array.Empty<EmployeeSkillSummary>();
+    public IEnumerable<CertificationDto> Certifications { get; init; } = Array.Empty<CertificationDto>();
 }
 
 /// <summary>

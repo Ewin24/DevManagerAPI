@@ -22,6 +22,11 @@ public class EmployeeProfileDto
     [Url(ErrorMessage = "URL de portafolio inválida")]
     [MaxLength(300)]
     public string? PortfolioUrl { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+
+    public IEnumerable<CertificationDto> Certifications { get; set; } = Array.Empty<CertificationDto>();
 }
 
 /// <summary>
