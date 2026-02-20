@@ -20,9 +20,9 @@ public partial class Certification
     [StringLength(120)]
     public string? Issuer { get; set; }
 
-    public DateOnly? IssueDate { get; set; }
+    public DateTime? IssueDate { get; set; }
 
-    public DateOnly? ExpirationDate { get; set; }
+    public DateTime? ExpirationDate { get; set; }
 
     [StringLength(400)]
     public string? EvidenceUrl { get; set; }
@@ -38,6 +38,11 @@ public partial class Certification
     public Guid? UpdatedByUserId { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    [Precision(3)]
+    public DateTime? DeletedAt { get; set; }
+
+    public Guid? DeletedByUserId { get; set; }
 
     [ForeignKey("OrganizationId")]
     [InverseProperty("Certifications")]

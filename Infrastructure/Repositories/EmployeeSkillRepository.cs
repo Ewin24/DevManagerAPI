@@ -56,6 +56,7 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
             existing.Level = employeeSkill.Level;
             existing.EvidenceUrl = employeeSkill.EvidenceUrl;
             existing.UpdatedAt = DateTime.UtcNow;
+            existing.UpdatedByUserId = employeeSkill.UpdatedByUserId;
             await _context.SaveChangesAsync();
             return existing.Id;
         }
@@ -71,7 +72,9 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
                 Level = employeeSkill.Level,
                 EvidenceUrl = employeeSkill.EvidenceUrl,
                 CreatedAt = DateTime.UtcNow,
+                CreatedByUserId = employeeSkill.CreatedByUserId,
                 UpdatedAt = DateTime.UtcNow,
+                UpdatedByUserId = employeeSkill.UpdatedByUserId,
                 IsDeleted = false
             };
             await _context.EmployeeSkills.AddAsync(efSkill);
@@ -96,6 +99,7 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
             skill.Level = newLevel.Value;
         }
         skill.UpdatedAt = DateTime.UtcNow;
+        skill.UpdatedByUserId = validatorUserId;
 
         return await _context.SaveChangesAsync() > 0;
     }
@@ -118,6 +122,22 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
         return await _context.SaveChangesAsync() > 0;
     }
 
+    public async Task<bool> SoftDeleteAsync(Guid id, Guid organizationId, Guid deletedByUserId)
+    {
+        var efSkill = await _context.EmployeeSkills
+            .FirstOrDefaultAsync(es => es.Id == id && es.OrganizationId == organizationId && !es.IsDeleted);
+
+        if (efSkill == null)
+            return false;
+
+        efSkill.IsDeleted = true;
+        efSkill.DeletedAt = DateTime.UtcNow;
+        efSkill.DeletedByUserId = deletedByUserId;
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     private static DomainEntities.EmployeeSkill MapToDomain(EfEntities.EmployeeSkill ef)
     {
         return new DomainEntities.EmployeeSkill
@@ -131,7 +151,14 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
             Level = ef.Level,
             EvidenceUrl = ef.EvidenceUrl,
             LastValidatedAt = ef.LastValidatedAt,
-            ValidatedByUserId = ef.ValidatedByUserId
+            ValidatedByUserId = ef.ValidatedByUserId,
+            CreatedAt = ef.CreatedAt,
+            CreatedByUserId = ef.CreatedByUserId,
+            UpdatedAt = ef.UpdatedAt,
+            UpdatedByUserId = ef.UpdatedByUserId,
+            IsDeleted = ef.IsDeleted,
+            DeletedAt = ef.DeletedAt,
+            DeletedByUserId = ef.DeletedByUserId
         };
     }
 }
