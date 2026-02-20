@@ -53,7 +53,11 @@ public class EmployeeSkillService : IEmployeeSkillService
             SkillId = request.SkillId,
             OrganizationId = organizationId,
             Level = request.Level,
-            EvidenceUrl = request.EvidenceUrl
+            EvidenceUrl = request.EvidenceUrl,
+            CreatedAt = DateTime.UtcNow,
+            CreatedByUserId = userId,
+            UpdatedAt = DateTime.UtcNow,
+            UpdatedByUserId = userId
         };
 
         var id = await _employeeSkillRepository.UpsertAsync(employeeSkill);
@@ -62,6 +66,7 @@ public class EmployeeSkillService : IEmployeeSkillService
 
     public async Task<bool> ValidateSkillAsync(Guid employeeSkillId, Guid organizationId, Guid? validatorUserId, byte? newLevel = null)
     {
+        // repository already updates audit fields
         return await _employeeSkillRepository.ValidateSkillAsync(employeeSkillId, organizationId, validatorUserId, newLevel);
     }
 
@@ -69,4 +74,10 @@ public class EmployeeSkillService : IEmployeeSkillService
     {
         return await GetEmployeeSkillsAsync(userId, organizationId);
     }
+
+    public async Task<bool> DeleteEmployeeSkillAsync(Guid employeeSkillId, Guid organizationId, Guid deletedByUserId)
+    {
+        return await _employeeSkillRepository.SoftDeleteAsync(employeeSkillId, organizationId, deletedByUserId);
+    }
+
 }
