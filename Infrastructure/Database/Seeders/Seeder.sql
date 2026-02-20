@@ -515,17 +515,17 @@ PRINT '  ✓ 22 skills insertadas (21 globales + 1 organizacional)';
 -- =============================================
 PRINT '6. Insertando Employee Profiles...';
 
-INSERT INTO [talent].[EmployeeProfiles] (UserId, OrganizationId, Bio, YearsExperience, LinkedInUrl, PortfolioUrl, CreatedAt, IsDeleted)
+INSERT INTO [talent].[EmployeeProfiles] (UserId, OrganizationId, Bio, YearsExperience, LinkedInUrl, PortfolioUrl, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
 VALUES 
     ('11111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 
      'Ingeniera de software con 10 años de experiencia liderando equipos de desarrollo.', 
-     10, 'https://linkedin.com/in/mariagarcia', 'https://mariagarcia.dev', DATEADD(MONTH, -5, SYSUTCDATETIME()), 0),
+     10, 'https://linkedin.com/in/mariagarcia', 'https://mariagarcia.dev', DATEADD(MONTH, -5, SYSUTCDATETIME()), NULL, NULL, NULL, 0),
     ('11111111-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 
      'Desarrollador full stack especializado en .NET y React con 8 años de experiencia.', 
-     8, 'https://linkedin.com/in/juanmartinez', 'https://github.com/juandev', DATEADD(MONTH, -4, SYSUTCDATETIME()), 0),
+     8, 'https://linkedin.com/in/juanmartinez', 'https://github.com/juandev', DATEADD(MONTH, -4, SYSUTCDATETIME()), NULL, NULL, NULL, 0),
     ('11111111-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 
      'Desarrolladora backend con experiencia en arquitecturas de microservicios y cloud.', 
-     5, NULL, 'https://github.com/analopez', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0);
+     5, NULL, 'https://github.com/analopez', DATEADD(MONTH, -3, SYSUTCDATETIME()), NULL, NULL, NULL, 0);
 
 PRINT '  ✓ 3 perfiles de empleados insertados';
 
@@ -588,14 +588,14 @@ PRINT '  ✓ 13 employee skills insertadas';
 -- =============================================
 PRINT '8. Insertando Certifications...';
 
-INSERT INTO [talent].[Certifications] (Id, OrganizationId, UserId, Name, Issuer, IssueDate, ExpirationDate, EvidenceUrl, CreatedAt, IsDeleted)
+INSERT INTO [talent].[Certifications] (Id, OrganizationId, UserId, Name, Issuer, IssueDate, ExpirationDate, EvidenceUrl, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
 VALUES 
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', 
      'Microsoft Certified: Azure Developer Associate', 'Microsoft', '2023-06-15', '2025-06-15', 
-     'https://learn.microsoft.com/credentials/12345', DATEADD(MONTH, -8, SYSUTCDATETIME()), 0),
+     'https://learn.microsoft.com/credentials/12345', DATEADD(MONTH, -8, SYSUTCDATETIME()), NULL, NULL, NULL, 0),
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', 
      'AWS Certified Solutions Architect', 'Amazon Web Services', '2024-03-10', '2027-03-10', 
-     'https://aws.amazon.com/certification/67890', DATEADD(MONTH, -10, SYSUTCDATETIME()), 0);
+     'https://aws.amazon.com/certification/67890', DATEADD(MONTH, -10, SYSUTCDATETIME()), NULL, NULL, NULL, 0);
 
 PRINT '   ✓ 2 certifications';
 
