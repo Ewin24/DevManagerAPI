@@ -5,7 +5,7 @@
 -- Idempotente: Verifica existencia antes de insertar
 -- =========================================================
 
-USE DevManager;
+
 
 
 SET QUOTED_IDENTIFIER ON;
@@ -400,7 +400,7 @@ PRINT '==========================================';
 -- - Datos de prueba para el Agente IA
 -- =============================================
 
-USE DevManager;
+
 
 
 SET QUOTED_IDENTIFIER ON;
@@ -444,16 +444,18 @@ PRINT '  ✓ 3 roles insertados';
 -- =============================================
 PRINT '3. Insertando Usuarios...';
 
-DECLARE @PasswordSalt VARBINARY(512) = 0x73BBB749E8FADB426B239CCCCAC1E1E34D972F1153C8F9ED075746CD22F8A7A2E93B014F23B50C09F22A67223888CC145BA8B242EFF90B6DE40114E96003E52E64B17AC022084DEA2DD4958E74BCB4A59A8E0132FD2B8F4B6366701F8B21397BDB9C19376037D5D197CE43377648AF219BEEFDE214E1FFE0EBD0B1B55F2838F2;
-DECLARE @PasswordHash VARBINARY(512) = 0x3E4657E2784DE998AAABD30A65D3581085979A1967FB0349148C005EE4EBA5F8ABB2CECF645DB5A9063463F89E97B7C7120EBB41A916B904FCC98F790F2D16D0;
+BEGIN
+    DECLARE @PasswordSalt VARBINARY(512) = 0x73BBB749E8FADB426B239CCCCAC1E1E34D972F1153C8F9ED075746CD22F8A7A2E93B014F23B50C09F22A67223888CC145BA8B242EFF90B6DE40114E96003E52E64B17AC022084DEA2DD4958E74BCB4A59A8E0132FD2B8F4B6366701F8B21397BDB9C19376037D5D197CE43377648AF219BEEFDE214E1FFE0EBD0B1B55F2838F2;
+    DECLARE @PasswordHash VARBINARY(512) = 0x3E4657E2784DE998AAABD30A65D3581085979A1967FB0349148C005EE4EBA5F8ABB2CECF645DB5A9063463F89E97B7C7120EBB41A916B904FCC98F790F2D16D0;
 
-INSERT INTO [iam].[Users] (Id, OrganizationId, Email, FirstName, LastName, PasswordHash, PasswordSalt, IsActive, CreatedAt, IsDeleted)
-VALUES 
-    ('11111111-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'admin@techcorp.com', 'Carlos', 'Rodriguez', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
-    ('11111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'maria.garcia@techcorp.com', 'María', 'García', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -5, SYSUTCDATETIME()), 0),
-    ('11111111-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 'juan.martinez@techcorp.com', 'Juan', 'Martínez', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -4, SYSUTCDATETIME()), 0),
-    ('11111111-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'ana.lopez@techcorp.com', 'Ana', 'López', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
-    ('22222222-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'admin@innovatelab.com', 'Pedro', 'Ramírez', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -3, SYSUTCDATETIME()), 0);
+    INSERT INTO [iam].[Users] (Id, OrganizationId, Email, FirstName, LastName, PasswordHash, PasswordSalt, IsActive, CreatedAt, IsDeleted)
+    VALUES 
+        ('11111111-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'admin@techcorp.com', 'Carlos', 'Rodriguez', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -6, SYSUTCDATETIME()), 0),
+        ('11111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'maria.garcia@techcorp.com', 'María', 'García', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -5, SYSUTCDATETIME()), 0),
+        ('11111111-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 'juan.martinez@techcorp.com', 'Juan', 'Martínez', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -4, SYSUTCDATETIME()), 0),
+        ('11111111-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'ana.lopez@techcorp.com', 'Ana', 'López', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
+        ('22222222-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'admin@innovatelab.com', 'Pedro', 'Ramírez', @PasswordHash, @PasswordSalt, 1, DATEADD(MONTH, -3, SYSUTCDATETIME()), 0);
+END
 
 PRINT '   ✓ 5 usuarios';
 
@@ -462,14 +464,60 @@ PRINT '   ✓ 5 usuarios';
 -- =============================================
 PRINT '4. Asignando Roles...';
 
-INSERT INTO [iam].[UserRoles] (UserId, RoleId, OrganizationId)
-VALUES 
-    ('11111111-0000-0000-0000-000000000001', 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA', '11111111-1111-1111-1111-111111111111'), -- Carlos: Admin
-    ('11111111-0000-0000-0000-000000000001', 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB', '11111111-1111-1111-1111-111111111111'), -- Carlos: Manager
-    ('11111111-0000-0000-0000-000000000002', 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB', '11111111-1111-1111-1111-111111111111'), -- María: Manager
-    ('11111111-0000-0000-0000-000000000003', 'CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC', '11111111-1111-1111-1111-111111111111'), -- Juan: Developer
-    ('11111111-0000-0000-0000-000000000004', 'CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC', '11111111-1111-1111-1111-111111111111'), -- Ana: Developer
-    ('22222222-0000-0000-0000-000000000001', 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA', '22222222-2222-2222-2222-222222222222'); -- Pedro: Admin
+-- Only insert if the corresponding user still exists and the specific role assignment is missing
+IF NOT EXISTS(
+    SELECT 1 FROM iam.UserRoles ur
+    WHERE ur.UserId = '11111111-0000-0000-0000-000000000001'
+      AND ur.RoleId = 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA'
+      AND ur.OrganizationId = '11111111-1111-1111-1111-111111111111'
+) AND EXISTS(SELECT 1 FROM iam.Users u WHERE u.Id = '11111111-0000-0000-0000-000000000001')
+    INSERT INTO [iam].[UserRoles] (UserId, RoleId, OrganizationId)
+    VALUES ('11111111-0000-0000-0000-000000000001', 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA', '11111111-1111-1111-1111-111111111111'); -- Carlos: Admin
+
+IF NOT EXISTS(
+    SELECT 1 FROM iam.UserRoles ur
+    WHERE ur.UserId = '11111111-0000-0000-0000-000000000001'
+      AND ur.RoleId = 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB'
+      AND ur.OrganizationId = '11111111-1111-1111-1111-111111111111'
+) AND EXISTS(SELECT 1 FROM iam.Users u WHERE u.Id = '11111111-0000-0000-0000-000000000001')
+    INSERT INTO [iam].[UserRoles] (UserId, RoleId, OrganizationId)
+    VALUES ('11111111-0000-0000-0000-000000000001', 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB', '11111111-1111-1111-1111-111111111111'); -- Carlos: Manager
+
+IF NOT EXISTS(
+    SELECT 1 FROM iam.UserRoles ur
+    WHERE ur.UserId = '11111111-0000-0000-0000-000000000002'
+      AND ur.RoleId = 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB'
+      AND ur.OrganizationId = '11111111-1111-1111-1111-111111111111'
+) AND EXISTS(SELECT 1 FROM iam.Users u WHERE u.Id = '11111111-0000-0000-0000-000000000002')
+    INSERT INTO [iam].[UserRoles] (UserId, RoleId, OrganizationId)
+    VALUES ('11111111-0000-0000-0000-000000000002', 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB', '11111111-1111-1111-1111-111111111111'); -- María: Manager
+
+IF NOT EXISTS(
+    SELECT 1 FROM iam.UserRoles ur
+    WHERE ur.UserId = '11111111-0000-0000-0000-000000000003'
+      AND ur.RoleId = 'CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC'
+      AND ur.OrganizationId = '11111111-1111-1111-1111-111111111111'
+) AND EXISTS(SELECT 1 FROM iam.Users u WHERE u.Id = '11111111-0000-0000-0000-000000000003')
+    INSERT INTO [iam].[UserRoles] (UserId, RoleId, OrganizationId)
+    VALUES ('11111111-0000-0000-0000-000000000003', 'CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC', '11111111-1111-1111-1111-111111111111'); -- Juan: Developer
+
+IF NOT EXISTS(
+    SELECT 1 FROM iam.UserRoles ur
+    WHERE ur.UserId = '11111111-0000-0000-0000-000000000004'
+      AND ur.RoleId = 'CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC'
+      AND ur.OrganizationId = '11111111-1111-1111-1111-111111111111'
+) AND EXISTS(SELECT 1 FROM iam.Users u WHERE u.Id = '11111111-0000-0000-0000-000000000004')
+    INSERT INTO [iam].[UserRoles] (UserId, RoleId, OrganizationId)
+    VALUES ('11111111-0000-0000-0000-000000000004', 'CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC', '11111111-1111-1111-1111-111111111111'); -- Ana: Developer
+
+IF NOT EXISTS(
+    SELECT 1 FROM iam.UserRoles ur
+    WHERE ur.UserId = '22222222-0000-0000-0000-000000000001'
+      AND ur.RoleId = 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA'
+      AND ur.OrganizationId = '22222222-2222-2222-2222-222222222222'
+) AND EXISTS(SELECT 1 FROM iam.Users u WHERE u.Id = '22222222-0000-0000-0000-000000000001')
+    INSERT INTO [iam].[UserRoles] (UserId, RoleId, OrganizationId)
+    VALUES ('22222222-0000-0000-0000-000000000001', 'AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA', '22222222-2222-2222-2222-222222222222'); -- Pedro: Admin
 
 PRINT '   ✓ 6 asignaciones de roles';
 
@@ -515,17 +563,33 @@ PRINT '  ✓ 22 skills insertadas (21 globales + 1 organizacional)';
 -- =============================================
 PRINT '6. Insertando Employee Profiles...';
 
-INSERT INTO [talent].[EmployeeProfiles] (UserId, OrganizationId, Bio, YearsExperience, LinkedInUrl, PortfolioUrl, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
-VALUES 
-    ('11111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 
+-- guard insertion to avoid FK errors when user record is missing
+IF NOT EXISTS (SELECT 1 FROM [talent].[EmployeeProfiles] WHERE UserId = '11111111-0000-0000-0000-000000000002')
+    AND EXISTS (SELECT 1 FROM iam.Users WHERE Id = '11111111-0000-0000-0000-000000000002')
+BEGIN
+    INSERT INTO [talent].[EmployeeProfiles] (UserId, OrganizationId, Bio, YearsExperience, LinkedInUrl, PortfolioUrl, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
+    VALUES ('11111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 
      'Ingeniera de software con 10 años de experiencia liderando equipos de desarrollo.', 
-     10, 'https://linkedin.com/in/mariagarcia', 'https://mariagarcia.dev', DATEADD(MONTH, -5, SYSUTCDATETIME()), NULL, NULL, NULL, 0),
-    ('11111111-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 
+     10, 'https://linkedin.com/in/mariagarcia', 'https://mariagarcia.dev', DATEADD(MONTH, -5, SYSUTCDATETIME()), NULL, NULL, NULL, 0);
+END
+
+IF NOT EXISTS (SELECT 1 FROM [talent].[EmployeeProfiles] WHERE UserId = '11111111-0000-0000-0000-000000000003')
+    AND EXISTS (SELECT 1 FROM iam.Users WHERE Id = '11111111-0000-0000-0000-000000000003')
+BEGIN
+    INSERT INTO [talent].[EmployeeProfiles] (UserId, OrganizationId, Bio, YearsExperience, LinkedInUrl, PortfolioUrl, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
+    VALUES ('11111111-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 
      'Desarrollador full stack especializado en .NET y React con 8 años de experiencia.', 
-     8, 'https://linkedin.com/in/juanmartinez', 'https://github.com/juandev', DATEADD(MONTH, -4, SYSUTCDATETIME()), NULL, NULL, NULL, 0),
-    ('11111111-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 
+     8, 'https://linkedin.com/in/juanmartinez', 'https://github.com/juandev', DATEADD(MONTH, -4, SYSUTCDATETIME()), NULL, NULL, NULL, 0);
+END
+
+IF NOT EXISTS (SELECT 1 FROM [talent].[EmployeeProfiles] WHERE UserId = '11111111-0000-0000-0000-000000000004')
+    AND EXISTS (SELECT 1 FROM iam.Users WHERE Id = '11111111-0000-0000-0000-000000000004')
+BEGIN
+    INSERT INTO [talent].[EmployeeProfiles] (UserId, OrganizationId, Bio, YearsExperience, LinkedInUrl, PortfolioUrl, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
+    VALUES ('11111111-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 
      'Desarrolladora backend con experiencia en arquitecturas de microservicios y cloud.', 
      5, NULL, 'https://github.com/analopez', DATEADD(MONTH, -3, SYSUTCDATETIME()), NULL, NULL, NULL, 0);
+END
 
 PRINT '  ✓ 3 perfiles de empleados insertados';
 
@@ -534,53 +598,63 @@ PRINT '  ✓ 3 perfiles de empleados insertados';
 -- =============================================
 PRINT '7. Insertando Employee Skills...';
 
-DECLARE @CsharpId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'C#' AND OrganizationId IS NULL);
-DECLARE @JSId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'JavaScript' AND OrganizationId IS NULL);
-DECLARE @ReactId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'React' AND OrganizationId IS NULL);
-DECLARE @AzureId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Azure' AND OrganizationId IS NULL);
-DECLARE @LiderazgoId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Liderazgo' AND OrganizationId IS NULL);
-DECLARE @JavaId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Java' AND OrganizationId IS NULL);
-DECLARE @SpringBootId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Spring Boot' AND OrganizationId IS NULL);
-DECLARE @PostgreSQLId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'PostgreSQL' AND OrganizationId IS NULL);
+-- skill ids resolved inline to ensure variables are available in any execution context
 
 -- María García (Manager con skills técnicas)
+IF EXISTS(SELECT 1 FROM iam.Users WHERE Id='11111111-0000-0000-0000-000000000002')
 INSERT INTO [talent].[EmployeeSkills] (Id, OrganizationId, UserId, SkillId, Level, EvidenceUrl, LastValidatedAt, ValidatedByUserId, CreatedAt, IsDeleted)
 VALUES 
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000002', @CsharpId, 4, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000002',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'C#' AND OrganizationId IS NULL), 4, 
      'https://github.com/maria/csharp-projects', DATEADD(MONTH, -1, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000001', DATEADD(MONTH, -5, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000002', @LiderazgoId, 5, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000002',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Liderazgo' AND OrganizationId IS NULL), 5, 
      NULL, DATEADD(MONTH, -2, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000001', DATEADD(MONTH, -5, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000002', @AzureId, 4, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000002',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Azure' AND OrganizationId IS NULL), 4, 
      NULL, DATEADD(MONTH, -1, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000001', DATEADD(MONTH, -4, SYSUTCDATETIME()), 0);
 
 -- Juan Martínez (Full Stack Developer)
+IF EXISTS(SELECT 1 FROM iam.Users WHERE Id='11111111-0000-0000-0000-000000000003')
 INSERT INTO [talent].[EmployeeSkills] (Id, OrganizationId, UserId, SkillId, Level, EvidenceUrl, LastValidatedAt, ValidatedByUserId, CreatedAt, IsDeleted)
 VALUES 
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @CsharpId, 5, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'C#' AND OrganizationId IS NULL), 5, 
      'https://github.com/juan/dotnet-core', DATEADD(DAY, -15, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -4, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @JSId, 4, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'JavaScript' AND OrganizationId IS NULL), 4, 
      'https://github.com/juan/js-projects', DATEADD(DAY, -20, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -4, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @ReactId, 4, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'React' AND OrganizationId IS NULL), 4, 
      NULL, DATEADD(DAY, -10, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @JavaId, 4, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Java' AND OrganizationId IS NULL), 4, 
      'https://github.com/juan/java-microservices', DATEADD(DAY, -30, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @SpringBootId, 3, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Spring Boot' AND OrganizationId IS NULL), 3, 
      NULL, DATEADD(DAY, -30, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -2, SYSUTCDATETIME()), 0);
 
 -- Ana López (Backend Developer)
+IF EXISTS(SELECT 1 FROM iam.Users WHERE Id='11111111-0000-0000-0000-000000000004')
 INSERT INTO [talent].[EmployeeSkills] (Id, OrganizationId, UserId, SkillId, Level, EvidenceUrl, LastValidatedAt, ValidatedByUserId, CreatedAt, IsDeleted)
 VALUES 
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @CsharpId, 4, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'C#' AND OrganizationId IS NULL), 4, 
      'https://github.com/ana/backend-services', DATEADD(DAY, -5, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @AzureId, 3, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Azure' AND OrganizationId IS NULL), 3, 
      NULL, DATEADD(DAY, -7, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @JavaId, 5, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Java' AND OrganizationId IS NULL), 5, 
      'https://github.com/ana/java-enterprise', DATEADD(DAY, -10, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -3, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @SpringBootId, 5, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Spring Boot' AND OrganizationId IS NULL), 5, 
      'https://github.com/ana/springboot-apps', DATEADD(DAY, -10, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004', @PostgreSQLId, 4, 
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000004',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'PostgreSQL' AND OrganizationId IS NULL), 4, 
      NULL, DATEADD(DAY, -15, SYSUTCDATETIME()), '11111111-0000-0000-0000-000000000002', DATEADD(MONTH, -2, SYSUTCDATETIME()), 0);
 
+PRINT '  ✓ 13 employee skills insertadas';
 PRINT '  ✓ 13 employee skills insertadas';
 
 -- =============================================
@@ -588,6 +662,7 @@ PRINT '  ✓ 13 employee skills insertadas';
 -- =============================================
 PRINT '8. Insertando Certifications...';
 
+IF EXISTS(SELECT 1 FROM iam.Users WHERE Id='11111111-0000-0000-0000-000000000003')
 INSERT INTO [talent].[Certifications] (Id, OrganizationId, UserId, Name, Issuer, IssueDate, ExpirationDate, EvidenceUrl, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
 VALUES 
     (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', 
@@ -626,34 +701,42 @@ PRINT '   ✓ 3 proyectos';
 -- =============================================
 PRINT '10. Insertando Project Skill Requirements...';
 
-DECLARE @MicroservicesId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Microservicios' AND OrganizationId IS NULL);
-DECLARE @DotNetCoreId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = '.NET Core' AND OrganizationId IS NULL);
-DECLARE @DockerId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Docker' AND OrganizationId IS NULL);
-DECLARE @KubernetesId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Kubernetes' AND OrganizationId IS NULL);
 
 -- Sistema Hospitalario (requiere C# + Azure + .NET Core + Microservicios)
 INSERT INTO [projects].[ProjectSkillRequirements] (Id, OrganizationId, ProjectId, SkillId, RequiredLevel, IsMandatory, CreatedAt, IsDeleted)
 VALUES 
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', @CsharpId, 4, 1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', @AzureId, 3, 1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', @DotNetCoreId, 4, 1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', @MicroservicesId, 3, 0, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0);
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'C#' AND OrganizationId IS NULL), 4, 1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Azure' AND OrganizationId IS NULL), 3, 1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = '.NET Core' AND OrganizationId IS NULL), 4, 1, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Microservicios' AND OrganizationId IS NULL), 3, 0, DATEADD(MONTH, -2, SYSUTCDATETIME()), 0);
 
 -- E-commerce (requiere React + JavaScript + REST APIs)
 INSERT INTO [projects].[ProjectSkillRequirements] (Id, OrganizationId, ProjectId, SkillId, RequiredLevel, IsMandatory, CreatedAt, IsDeleted)
 VALUES 
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'BBBBBBBB-1111-1111-1111-111111111111', @ReactId, 4, 1, DATEADD(MONTH, -1, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'BBBBBBBB-1111-1111-1111-111111111111', @JSId, 3, 0, DATEADD(MONTH, -1, SYSUTCDATETIME()), 0);
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'BBBBBBBB-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'React' AND OrganizationId IS NULL), 4, 1, DATEADD(MONTH, -1, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'BBBBBBBB-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'JavaScript' AND OrganizationId IS NULL), 3, 0, DATEADD(MONTH, -1, SYSUTCDATETIME()), 0);
 
 -- App Móvil Delivery (requiere Java + Spring Boot + PostgreSQL + Microservicios)
 INSERT INTO [projects].[ProjectSkillRequirements] (Id, OrganizationId, ProjectId, SkillId, RequiredLevel, IsMandatory, CreatedAt, IsDeleted)
 VALUES 
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @JavaId, 4, 1, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @SpringBootId, 4, 1, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @PostgreSQLId, 3, 1, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @MicroservicesId, 3, 0, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @DockerId, 3, 0, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111', @KubernetesId, 2, 0, DATEADD(DAY, -10, SYSUTCDATETIME()), 0);
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Java' AND OrganizationId IS NULL), 4, 1, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Spring Boot' AND OrganizationId IS NULL), 4, 1, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'PostgreSQL' AND OrganizationId IS NULL), 3, 1, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Microservicios' AND OrganizationId IS NULL), 3, 0, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Docker' AND OrganizationId IS NULL), 3, 0, DATEADD(DAY, -10, SYSUTCDATETIME()), 0),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', 'CCCCCCCC-1111-1111-1111-111111111111',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Kubernetes' AND OrganizationId IS NULL), 2, 0, DATEADD(DAY, -10, SYSUTCDATETIME()), 0);
 
 PRINT '   ✓ 13 project skill requirements';
 
@@ -675,6 +758,7 @@ PRINT '   ✓ 3 project roles';
 -- =============================================
 PRINT '12. Insertando Project Applications...';
 
+IF EXISTS(SELECT 1 FROM iam.Users WHERE Id='11111111-0000-0000-0000-000000000003')
 INSERT INTO [projects].[ProjectApplications] (Id, OrganizationId, ProjectId, UserId, Motivation, Status, ReviewedByUserId, ReviewNotes, ReviewedAt, CreatedAt, IsDeleted)
 VALUES 
     (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', 
@@ -695,13 +779,15 @@ PRINT '   ✓ 3 project applications';
 -- =============================================
 PRINT '13. Insertando Project Assignments...';
 
-DECLARE @TechLeadRoleId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [projects].[ProjectRoles] 
-    WHERE ProjectId = 'AAAAAAAA-1111-1111-1111-111111111111' AND Name = 'Tech Lead');
+BEGIN
+    DECLARE @TechLeadRoleId UNIQUEIDENTIFIER = (SELECT TOP 1 Id FROM [projects].[ProjectRoles] 
+        WHERE ProjectId = 'AAAAAAAA-1111-1111-1111-111111111111' AND Name = 'Tech Lead');
 
-INSERT INTO [projects].[ProjectAssignments] (Id, OrganizationId, ProjectId, UserId, ProjectRoleId, AssignedByUserId, AssignedAt, Status, IsDeleted)
-VALUES 
-    (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', 
-     @TechLeadRoleId, '11111111-0000-0000-0000-000000000002', DATEADD(DAY, -5, SYSUTCDATETIME()), 1, 0); -- Status=1 (Active)
+    INSERT INTO [projects].[ProjectAssignments] (Id, OrganizationId, ProjectId, UserId, ProjectRoleId, AssignedByUserId, AssignedAt, Status, IsDeleted)
+    VALUES 
+        (NEWID(), '11111111-1111-1111-1111-111111111111', 'AAAAAAAA-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', 
+         @TechLeadRoleId, '11111111-0000-0000-0000-000000000002', DATEADD(DAY, -5, SYSUTCDATETIME()), 1, 0); -- Status=1 (Active)
+END
 
 PRINT '   ✓ 1 project assignment';
 
@@ -725,10 +811,10 @@ PRINT '15. Insertando Skill Evaluations...';
 
 INSERT INTO [talent].[SkillEvaluations] (Id, OrganizationId, UserId, SkillId, Source, ProjectId, DeltaLevel, Reason, CreatedAt)
 VALUES 
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @CsharpId, 
-     1, 'AAAAAAAA-1111-1111-1111-111111111111', 1, 'Mejora por liderazgo en proyecto hospitalario', DATEADD(DAY, -10, SYSUTCDATETIME())),
-    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003', @LiderazgoId, 
-     1, 'AAAAAAAA-1111-1111-1111-111111111111', 2, 'Excelente gestión de equipo durante la crisis del proyecto', DATEADD(DAY, -8, SYSUTCDATETIME()));
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'C#' AND OrganizationId IS NULL), 1, 'AAAAAAAA-1111-1111-1111-111111111111', 1, 'Mejora por liderazgo en proyecto hospitalario', DATEADD(DAY, -10, SYSUTCDATETIME())),
+    (NEWID(), '11111111-1111-1111-1111-111111111111', '11111111-0000-0000-0000-000000000003',
+        (SELECT TOP 1 Id FROM [talent].[Skills] WHERE Name = 'Liderazgo' AND OrganizationId IS NULL), 1, 'AAAAAAAA-1111-1111-1111-111111111111', 2, 'Excelente gestión de equipo durante la crisis del proyecto', DATEADD(DAY, -8, SYSUTCDATETIME()));
 
 PRINT '   ✓ 2 skill evaluations';
 
