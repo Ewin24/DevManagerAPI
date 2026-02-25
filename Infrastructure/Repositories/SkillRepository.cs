@@ -48,7 +48,8 @@ public class SkillRepository : Domain.Interfaces.Repositories.ISkillRepository
             Category = skill.Category,
             SkillType = skill.SkillType,
             OrganizationId = skill.OrganizationId,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = skill.CreatedAt == default ? DateTime.UtcNow : skill.CreatedAt,
+            CreatedByUserId = skill.CreatedByUserId,
             IsDeleted = false
         };
 
@@ -67,6 +68,40 @@ public class SkillRepository : Domain.Interfaces.Repositories.ISkillRepository
             .AnyAsync();
     }
 
+    public async Task<bool> UpdateAsync(DomainEntities.Skill skill)
+    {
+        var efSkill = await _context.Skills
+            .FirstOrDefaultAsync(s => s.Id == skill.Id && !s.IsDeleted);
+
+        if (efSkill == null)
+            return false;
+
+        efSkill.Name = skill.Name;
+        efSkill.Category = skill.Category;
+        efSkill.SkillType = skill.SkillType;
+        efSkill.UpdatedAt = DateTime.UtcNow;
+        efSkill.UpdatedByUserId = skill.UpdatedByUserId;
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> SoftDeleteAsync(Guid id, Guid organizationId, Guid deletedByUserId)
+    {
+        var efSkill = await _context.Skills
+            .FirstOrDefaultAsync(s => s.Id == id && s.OrganizationId == organizationId && !s.IsDeleted);
+
+        if (efSkill == null)
+            return false;
+
+        efSkill.IsDeleted = true;
+        efSkill.DeletedAt = DateTime.UtcNow;
+        efSkill.DeletedByUserId = deletedByUserId;
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     private static DomainEntities.Skill MapToDomain(EfEntities.Skill ef)
     {
         return new DomainEntities.Skill
@@ -75,7 +110,14 @@ public class SkillRepository : Domain.Interfaces.Repositories.ISkillRepository
             Name = ef.Name,
             Category = ef.Category,
             SkillType = ef.SkillType,
-            OrganizationId = ef.OrganizationId
+            OrganizationId = ef.OrganizationId,
+            CreatedAt = ef.CreatedAt,
+            CreatedByUserId = ef.CreatedByUserId,
+            UpdatedAt = ef.UpdatedAt,
+            UpdatedByUserId = ef.UpdatedByUserId,
+            IsDeleted = ef.IsDeleted,
+            DeletedAt = ef.DeletedAt,
+            DeletedByUserId = ef.DeletedByUserId
         };
     }
 }

@@ -74,6 +74,7 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
             existing.LinkedInUrl = profile.LinkedInUrl;
             existing.PortfolioUrl = profile.PortfolioUrl;
             existing.UpdatedAt = DateTime.UtcNow;
+            existing.UpdatedByUserId = profile.UpdatedByUserId;
         }
         else
         {
@@ -87,11 +88,31 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
                 LinkedInUrl = profile.LinkedInUrl,
                 PortfolioUrl = profile.PortfolioUrl,
                 CreatedAt = DateTime.UtcNow,
+                CreatedByUserId = profile.CreatedByUserId,
                 UpdatedAt = DateTime.UtcNow,
+                UpdatedByUserId = profile.UpdatedByUserId,
                 IsDeleted = false
             };
             await _context.EmployeeProfiles.AddAsync(efProfile);
         }
+
+        return await _context.SaveChangesAsync() > 0;
+    }
+
+    public async Task<bool> SoftDeleteAsync(Guid userId, Guid organizationId, Guid deletedByUserId)
+    {
+        var efProfile = await _context.EmployeeProfiles
+            .FirstOrDefaultAsync(p =>
+                p.UserId == userId &&
+                p.OrganizationId == organizationId &&
+                !p.IsDeleted);
+
+        if (efProfile == null)
+            return false;
+
+        efProfile.IsDeleted = true;
+        efProfile.DeletedAt = DateTime.UtcNow;
+        efProfile.DeletedByUserId = deletedByUserId;
 
         return await _context.SaveChangesAsync() > 0;
     }
@@ -105,10 +126,16 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
             Bio = ef.Bio,
             YearsExperience = ef.YearsExperience,
             LinkedInUrl = ef.LinkedInUrl,
-            PortfolioUrl = ef.PortfolioUrl
+            PortfolioUrl = ef.PortfolioUrl,
+            CreatedAt = ef.CreatedAt,
+            CreatedByUserId = ef.CreatedByUserId,
+            UpdatedAt = ef.UpdatedAt,
+            UpdatedByUserId = ef.UpdatedByUserId,
+            IsDeleted = ef.IsDeleted,
+            DeletedAt = ef.DeletedAt,
+            DeletedByUserId = ef.DeletedByUserId
         };
     }
-
     private static DomainEntities.EmployeeProfile MapToDomainWithSkills(
         EfEntities.EmployeeProfile ef,
         List<EfEntities.EmployeeSkill> employeeSkills)

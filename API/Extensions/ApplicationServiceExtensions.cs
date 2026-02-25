@@ -37,6 +37,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<ISkillRepository, SkillRepository>();
         services.AddScoped<IEmployeeSkillRepository, EmployeeSkillRepository>();
+        services.AddScoped<ICertificationRepository, CertificationRepository>();
 
         // Repositorios EF Core - Projects
         services.AddScoped<IProjectRepository, ProjectRepository>();
@@ -53,6 +54,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<ISkillService, SkillService>();
         services.AddScoped<IEmployeeSkillService, EmployeeSkillService>();
+        services.AddScoped<ICertificationService, CertificationService>();
 
         // Servicios de aplicación - Projects
         services.AddScoped<IProjectService, ProjectService>();

@@ -153,7 +153,7 @@ public class EmployeeSkillsController : ControllerBase
 
             return Ok(ApiResponse<object>.SuccessResponse("Habilidad guardada exitosamente"));
         }
-        catch (NotFoundException ex)
+        catch (NotFoundException)
         {
             return NotFound();
         }
@@ -228,5 +228,21 @@ public class EmployeeSkillsController : ControllerBase
         }
 
         return Ok(ApiResponse<object>.SuccessResponse("Habilidad validada exitosamente"));
+    }
+
+    /// <summary>
+    /// Elimina una habilidad del empleado (soft delete)
+    /// </summary>
+    [HttpDelete("skills/{id}")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteSkill(Guid id)
+    {
+        var deletedByUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+
+        var success = await _employeeSkillService.DeleteEmployeeSkillAsync(id, organizationId, deletedByUserId);
+        if (!success) return NotFound();
+        return Ok(ApiResponse<object>.SuccessResponse("Habilidad del empleado eliminada"));
     }
 }

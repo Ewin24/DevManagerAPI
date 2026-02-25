@@ -31,7 +31,7 @@ public class SkillService : ISkillService
         });
     }
 
-    public async Task<Guid> CreateSkillAsync(SkillDto skillDto, Guid organizationId)
+    public async Task<Guid> CreateSkillAsync(SkillDto skillDto, Guid organizationId, Guid createdByUserId)
     {
         // Validar que no exista una skill con el mismo nombre (case insensitive)
         var exists = await _skillRepository.ExistsByNameAsync(skillDto.Name, organizationId);
@@ -45,10 +45,39 @@ public class SkillService : ISkillService
             Name = skillDto.Name,
             Category = skillDto.Category,
             SkillType = skillDto.SkillType,
-            OrganizationId = organizationId
+            OrganizationId = organizationId,
+            CreatedAt = DateTime.UtcNow,
+            CreatedByUserId = createdByUserId
         };
 
         return await _skillRepository.CreateAsync(skill);
+    }
+
+    public async Task<bool> UpdateSkillAsync(SkillDto skillDto, Guid organizationId, Guid updatedByUserId)
+    {
+        var skill = await _skillRepository.GetByIdAsync(skillDto.Id);
+        if (skill == null || (skill.OrganizationId != null && skill.OrganizationId != organizationId))
+            return false;
+
+        if (!string.Equals(skill.Name, skillDto.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            var exists = await _skillRepository.ExistsByNameAsync(skillDto.Name, organizationId);
+            if (exists)
+                throw new BusinessValidationException($"Ya existe una habilidad con el nombre '{skillDto.Name}'");
+        }
+
+        skill.Name = skillDto.Name;
+        skill.Category = skillDto.Category;
+        skill.SkillType = skillDto.SkillType;
+        skill.UpdatedAt = DateTime.UtcNow;
+        skill.UpdatedByUserId = updatedByUserId;
+
+        return await _skillRepository.UpdateAsync(skill);
+    }
+
+    public async Task<bool> DeleteSkillAsync(Guid skillId, Guid organizationId, Guid deletedByUserId)
+    {
+        return await _skillRepository.SoftDeleteAsync(skillId, organizationId, deletedByUserId);
     }
 
     public async Task<SkillDto?> GetSkillByIdAsync(Guid skillId, Guid organizationId)

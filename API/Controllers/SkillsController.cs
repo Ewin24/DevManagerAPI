@@ -6,6 +6,7 @@ using Application.DTOs.Skills;
 using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 /// <summary>
 /// Controller para gestión de catálogo de habilidades
@@ -126,19 +127,63 @@ public class SkillsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] SkillDto skillDto)
     {
         var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
 
         try
         {
-            var skillId = await _skillService.CreateSkillAsync(skillDto, organizationId);
+            var skillId = await _skillService.CreateSkillAsync(skillDto, organizationId, userId);
 
             return CreatedAtAction(
                 nameof(Create),
                 new { id = skillId },
                 ApiResponse<Guid>.SuccessResponse(skillId, "Habilidad creada exitosamente"));
         }
-        catch (BusinessValidationException ex)
+        catch (BusinessValidationException)
         {
             return BadRequest();
         }
+    }
+
+    /// <summary>
+    /// Actualiza una habilidad existente
+    /// </summary>
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] SkillDto skillDto)
+    {
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+
+        if (id != skillDto.Id)
+            return BadRequest();
+
+        try
+        {
+            var success = await _skillService.UpdateSkillAsync(skillDto, organizationId, userId);
+            if (!success) return NotFound();
+            return Ok(ApiResponse<object>.SuccessResponse("Habilidad actualizada exitosamente"));
+        }
+        catch (BusinessValidationException)
+        {
+            return BadRequest();
+        }
+    }
+
+    /// <summary>
+    /// Elimina una habilidad (soft delete)
+    /// </summary>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+
+        var success = await _skillService.DeleteSkillAsync(id, organizationId, userId);
+        if (!success) return NotFound();
+        return Ok(ApiResponse<object>.SuccessResponse("Habilidad eliminada"));
     }
 }

@@ -428,6 +428,8 @@ CREATE TABLE talent.EmployeeProfiles (
     UpdatedAt         datetime2(3)     NULL,
     UpdatedByUserId   uniqueidentifier NULL,
     IsDeleted         bit              NOT NULL CONSTRAINT DF_EmployeeProfiles_IsDeleted DEFAULT (0),
+    DeletedAt         datetime2(3)     NULL,
+    DeletedByUserId   uniqueidentifier NULL,
 
     CONSTRAINT FK_EmployeeProfiles_Users
         FOREIGN KEY (UserId) REFERENCES iam.Users(Id),
@@ -448,7 +450,12 @@ CREATE TABLE talent.Skills (
     SkillType       nvarchar(20)     NULL, -- 'Hard', 'Soft', 'Language' tipo de skill para reportes y análisis
 
     CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_Skills_CreatedAt DEFAULT (sysutcdatetime()),
+    CreatedByUserId uniqueidentifier NULL,
+    UpdatedAt       datetime2(3)     NULL,
+    UpdatedByUserId uniqueidentifier NULL,
     IsDeleted       bit              NOT NULL CONSTRAINT DF_Skills_IsDeleted DEFAULT (0),
+    DeletedAt       datetime2(3)     NULL,
+    DeletedByUserId uniqueidentifier NULL,
 
     CONSTRAINT FK_Skills_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
@@ -474,6 +481,8 @@ CREATE TABLE talent.EmployeeSkills (
     UpdatedAt       datetime2(3)     NULL,
     UpdatedByUserId uniqueidentifier NULL,
     IsDeleted       bit              NOT NULL CONSTRAINT DF_EmployeeSkills_IsDeleted DEFAULT (0),
+    DeletedAt       datetime2(3)     NULL,
+    DeletedByUserId uniqueidentifier NULL,
 
     CONSTRAINT FK_EmployeeSkills_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),
@@ -512,6 +521,8 @@ CREATE TABLE talent.Certifications (
     UpdatedAt       datetime2(3)     NULL,
     UpdatedByUserId uniqueidentifier NULL,
     IsDeleted       bit              NOT NULL CONSTRAINT DF_Certifications_IsDeleted DEFAULT (0),
+    DeletedAt       datetime2(3)     NULL,
+    DeletedByUserId uniqueidentifier NULL,
 
     CONSTRAINT FK_Certifications_Organizations
         FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),

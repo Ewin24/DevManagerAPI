@@ -39,6 +39,11 @@ public partial class EmployeeSkill
 
     public bool IsDeleted { get; set; }
 
+    [Precision(3)]
+    public DateTime? DeletedAt { get; set; }
+
+    public Guid? DeletedByUserId { get; set; }
+
     [ForeignKey("OrganizationId")]
     [InverseProperty("EmployeeSkills")]
     public virtual Organization Organization { get; set; } = null!;
