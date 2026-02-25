@@ -365,6 +365,244 @@ Elimina (soft delete) una certificación propia.
 
 ## 🎯 Habilidades (Catálogo)
 
+## ⚙️ Configuración / Catálogos
+### GET `/api/config`
+Obtiene todos los catálogos de configuración en una sola llamada (uso para dropdowns iniciales).
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "projectStatuses": [
+      { "id": 1, "code": "DRAFT", "name": "Borrador", "description": "Proyecto en creación", "displayOrder": 1, "isActive": true, "allowsApplications": false },
+      { "id": 2, "code": "OPEN", "name": "Abierto", "description": "Aceptando postulaciones", "displayOrder": 2, "isActive": true, "allowsApplications": true }
+    ],
+    "complexityLevels": [
+      { "id": 1, "code": "LOW", "name": "Baja", "description": "Requiere poco esfuerzo", "displayOrder": 1, "isActive": true, "experienceMultiplier": 0.75 },
+      { "id": 2, "code": "MEDIUM", "name": "Media", "description": "Complejidad estándar", "displayOrder": 2, "isActive": true, "experienceMultiplier": 1.0 }
+    ],
+    "applicationStatuses": [
+      { "id": 1, "code": "APPLIED", "name": "Postulado", "description": "Candidato postulado", "displayOrder": 1, "isActive": true, "requiresReviewNotes": false, "isFinalState": false },
+      { "id": 2, "code": "APPROVED", "name": "Aprobado", "description": "Postulación aceptada", "displayOrder": 2, "isActive": true, "requiresReviewNotes": true, "isFinalState": true }
+    ],
+    "assignmentStatuses": [
+      { "id": 1, "code": "ASSIGNED", "name": "Asignado", "description": "Empleado asignado", "displayOrder": 1, "isActive": true, "isFinalState": false }
+    ],
+    "skillLevels": [
+      { "id": 1, "code": "NOVICE", "name": "Novato", "description": "Conocimientos básicos", "displayOrder": 1, "isActive": true, "minYearsExperience": 0 },
+      { "id": 5, "code": "EXPERT", "name": "Experto", "description": "Referencia técnica", "displayOrder": 5, "isActive": true, "minYearsExperience": 7 }
+    ],
+    "contributionScores": [
+      { "id": 1, "code": "LOW", "name": "Bajo", "description": "Contribución mínima", "displayOrder": 1, "isActive": true, "experienceBonus": 0.0 }
+    ],
+    "evaluationSources": [
+      { "id": 1, "code": "SELF", "name": "Autoevaluación", "description": "Declarado por el empleado", "displayOrder": 1, "isActive": true, "isAutomated": false }
+    ],
+    "skillTypes": [
+      { "id": 1, "code": "HARD", "name": "Técnica", "description": "Habilidades técnicas", "displayOrder": 1, "isActive": true }
+    ],
+    "skillCategories": [
+      { "id": 1, "code": "PROGRAMMING", "name": "Lenguajes de Programación", "description": "Categoría principal", "displayOrder": 1, "isActive": true, "parentCategoryId": null, "parentCategoryName": null }
+    ],
+    "agentActionTypes": [
+      { "id": 1, "code": "SKILL_VALIDATION", "name": "Validación de Skill", "description": "Acción automática del agente", "displayOrder": 1, "isActive": true, "requiresApproval": false }
+    ],
+    "agentActionStatuses": [
+      { "id": 1, "code": "SUCCESS", "name": "Exitoso", "description": "Acción completada", "displayOrder": 1, "isActive": true, "isFinalState": true }
+    ],
+    "seniorityLevels": [
+      { "id": 1, "code": "INTERN", "name": "Practicante", "description": "Nivel inicial", "displayOrder": 1, "isActive": true, "minYearsExperience": 0, "maxYearsExperience": 1 },
+      { "id": 7, "code": "ARCHITECT", "name": "Arquitecto", "description": "Máxima seniority técnica", "displayOrder": 7, "isActive": true, "minYearsExperience": 12, "maxYearsExperience": null }
+    ]
+  }
+}
+```
+
+---
+
+### GET `/api/config/project-statuses`
+Listar estados de proyecto (respuesta por catálogo, útil para menús desplegables).
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "code": "DRAFT",
+      "name": "Borrador",
+      "description": "Proyecto en creación",
+      "displayOrder": 1,
+      "isActive": true,
+      "allowsApplications": false
+    },
+    {
+      "id": 2,
+      "code": "OPEN",
+      "name": "Abierto",
+      "description": "Aceptando postulaciones",
+      "displayOrder": 2,
+      "isActive": true,
+      "allowsApplications": true
+    }
+  ]
+}
+```
+
+### GET `/api/config/complexity-levels`
+Listar niveles de complejidad.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "LOW", "name": "Baja", "description": "Requiere poco esfuerzo", "displayOrder": 1, "isActive": true, "experienceMultiplier": 0.75 },
+    { "id": 2, "code": "MEDIUM", "name": "Media", "description": "Complejidad estándar", "displayOrder": 2, "isActive": true, "experienceMultiplier": 1.0 }
+  ]
+}
+```
+
+### GET `/api/config/application-statuses`
+Listar estados de postulación.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "APPLIED", "name": "Postulado", "requiresReviewNotes": false, "isFinalState": false, "displayOrder": 1, "isActive": true },
+    { "id": 2, "code": "APPROVED", "name": "Aprobado", "requiresReviewNotes": true, "isFinalState": true, "displayOrder": 2, "isActive": true }
+  ]
+}
+```
+
+### GET `/api/config/assignment-statuses`
+Listar estados de asignación.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "ASSIGNED", "name": "Asignado", "isFinalState": false, "displayOrder": 1, "isActive": true }
+  ]
+}
+```
+
+### GET `/api/config/skill-levels`
+Listar niveles de habilidad.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "NOVICE", "name": "Novato", "minYearsExperience": 0, "displayOrder": 1, "isActive": true },
+    { "id": 5, "code": "EXPERT", "name": "Experto", "minYearsExperience": 7, "displayOrder": 5, "isActive": true }
+  ]
+}
+```
+
+### GET `/api/config/contribution-scores`
+Listar puntajes de contribución.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "LOW", "name": "Bajo", "experienceBonus": 0.0, "displayOrder": 1, "isActive": true }
+  ]
+}
+```
+
+### GET `/api/config/evaluation-sources`
+Listar fuentes de evaluación.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "SELF", "name": "Autoevaluación", "isAutomated": false, "displayOrder": 1, "isActive": true }
+  ]
+}
+```
+
+### GET `/api/config/skill-types`
+Listar tipos de habilidad.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "HARD", "name": "Técnica", "displayOrder": 1, "isActive": true },
+    { "id": 2, "code": "SOFT", "name": "Blanda", "displayOrder": 2, "isActive": true }
+  ]
+}
+```
+
+### GET `/api/config/skill-categories`
+Listar categorías de habilidad (incluye parent si aplica).
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "PROGRAMMING", "name": "Lenguajes de Programación", "parentCategoryId": null, "parentCategoryName": null, "displayOrder": 1, "isActive": true }
+  ]
+}
+```
+
+### GET `/api/config/agent-action-types`
+Listar tipos de acción del agente.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "SKILL_VALIDATION", "name": "Validación de Skill", "requiresApproval": false, "displayOrder": 1, "isActive": true }
+  ]
+}
+```
+
+### GET `/api/config/agent-action-statuses`
+Listar estados de acción del agente.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "SUCCESS", "name": "Exitoso", "isFinalState": true, "displayOrder": 1, "isActive": true }
+  ]
+}
+```
+
+### GET `/api/config/seniority-levels`
+Listar niveles de seniority.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "code": "INTERN", "name": "Practicante", "minYearsExperience": 0, "maxYearsExperience": 1, "displayOrder": 1, "isActive": true },
+    { "id": 7, "code": "ARCHITECT", "name": "Arquitecto", "minYearsExperience": 12, "maxYearsExperience": null, "displayOrder": 7, "isActive": true }
+  ]
+}
+```
+
+
+
+## 🎯 Habilidades (Catálogo)
+
 ### GET `/api/skills`
 
 Obtiene el catálogo de habilidades (globales + organizacionales).
