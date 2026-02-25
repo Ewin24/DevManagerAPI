@@ -602,10 +602,15 @@ Listar niveles de seniority.
 
 
 ## 🎯 Habilidades (Catálogo)
-
 ### GET `/api/skills`
+Obtiene el catálogo de habilidades (globales + organizacionales). Filtra automáticamente por `OrganizationId` para skills organizacionales.
 
-Obtiene el catálogo de habilidades (globales + organizacionales).
+Headers:
+- `Authorization: Bearer {token}`
+
+Query params (opcionales):
+- `q` (string): búsqueda por nombre o categoría
+- `skillType` (0|1): filtra por tipo (Global u Organizational)
 
 **Response (200 OK):**
 ```json
@@ -630,19 +635,44 @@ Obtiene el catálogo de habilidades (globales + organizacionales).
 }
 ```
 
-**Tipos de Skill:**
-| Valor | Tipo | Descripción |
-|-------|------|-------------|
-| 0 | Global | Disponible para todas las organizaciones |
-| 1 | Organizational | Específico de la organización |
+Campos devueltos (por item):
+- `id` (GUID)
+- `name` (string)
+- `category` (string?)
+- `skillType` (int): 0 = Global, 1 = Organizational
+- `organizationId` (GUID?): presente si `skillType` = 1
+
+---
+
+### GET `/api/skills/{id}`
+Obtiene una habilidad por su `id`.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "aaaaaaaa-0000-0000-0000-000000000001",
+    "name": "C#",
+    "category": "Backend",
+    "skillType": 0,
+    "organizationId": null
+  }
+}
+```
+
+**Errores:**
+- `404 Not Found` si la skill no existe o no pertenece a la organización.
 
 ---
 
 ### POST `/api/skills`
-
 Crea una nueva habilidad organizacional. Requiere rol Admin o Manager.
 
-**Request:**
+Headers:
+- `Authorization: Bearer {token}`
+
+**Request (application/json):**
 ```json
 {
   "name": "SAP ERP",
@@ -650,6 +680,11 @@ Crea una nueva habilidad organizacional. Requiere rol Admin o Manager.
   "skillType": 1
 }
 ```
+
+Validaciones (DTO - `SkillDto`):
+- `name`: requerido, máximo 120 caracteres, único por organización.
+- `category`: opcional, máximo 80 caracteres.
+- `skillType`: sólo `1` para creación vía API (organisational).
 
 **Response (201 Created):**
 ```json
@@ -660,13 +695,65 @@ Crea una nueva habilidad organizacional. Requiere rol Admin o Manager.
 }
 ```
 
+**Errores:**
+- `400 Bad Request` → payload inválido o validación fallida.
+- `403 Forbidden` → rol insuficiente.
+- `409 Conflict` → nombre duplicado.
+
+---
+
+### PUT `/api/skills/{id}`
+Actualiza datos de una habilidad existente. Requiere rol Admin o Manager.
+
+**Request (application/json):** (mismo `SkillDto`, `id` en ruta debe coincidir con `id` en body)
+```json
+{
+  "id": "cccccccc-0000-0000-0000-000000000001",
+  "name": "SAP ERP",
+  "category": "Sistemas Empresariales",
+  "skillType": 1
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Habilidad actualizada exitosamente"
+}
+```
+
+**Errores:**
+- `400 Bad Request` → `id` discordante o validación.
+- `404 Not Found` → skill no encontrada.
+
+---
+
+### DELETE `/api/skills/{id}`
+Elimina lógicamente una skill (soft delete). Requiere rol Admin o Manager.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Habilidad eliminada"
+}
+```
+
+**Errores:**
+- `404 Not Found` → skill no encontrada.
+
 ---
 
 ## 💼 Habilidades de Empleados
 
-### GET `/api/employees/{id}/skills`
+Endpoints para gestionar las habilidades de un empleado (auto-declaradas y validadas por managers).
 
-Obtiene todas las habilidades de un empleado específico.
+### GET `/api/employees/{id}/skills`
+Obtiene todas las habilidades de un empleado específico (incluye metadata de validación).
+
+Headers:
+- `Authorization: Bearer {token}`
 
 **Response (200 OK):**
 ```json
@@ -688,22 +775,22 @@ Obtiene todas las habilidades de un empleado específico.
 }
 ```
 
-**Niveles de Proficiencia:**
-| Nivel | Descripción |
-|-------|-------------|
-| 1 | Básico - Conocimiento teórico |
-| 2 | Intermedio - Puede trabajar con supervisión |
-| 3 | Competente - Trabajo autónomo |
-| 4 | Avanzado - Puede enseñar a otros |
-| 5 | Experto - Referente técnico |
+Niveles de Proficiencia (valor del campo `level`):
+- `1` Básico
+- `2` Intermedio
+- `3` Competente
+- `4` Avanzado
+- `5` Experto
 
 ---
 
 ### POST `/api/employees/skills`
+Crea o actualiza (upsert) la habilidad del usuario autenticado. `OrganizationId` y `userId` se toman del JWT.
 
-Crea o actualiza una habilidad del usuario autenticado (auto-declaración, upsert).
+Headers:
+- `Authorization: Bearer {token}`
 
-**Request:**
+**Request (application/json) — DTO `UpsertEmployeeSkillRequest`:**
 ```json
 {
   "skillId": "aaaaaaaa-0000-0000-0000-000000000008",
@@ -711,6 +798,11 @@ Crea o actualiza una habilidad del usuario autenticado (auto-declaración, upser
   "evidenceUrl": "https://github.com/myuser/kubernetes-project"
 }
 ```
+
+Validaciones:
+- `skillId`: requerido (GUID) y debe existir en catálogo.
+- `level`: obligatorio, valor entre 1 y 5.
+- `evidenceUrl`: opcional, si se envía debe ser URL válida.
 
 **Response (200 OK):**
 ```json
@@ -720,25 +812,26 @@ Crea o actualiza una habilidad del usuario autenticado (auto-declaración, upser
 }
 ```
 
+Errores:
+- `400 Bad Request`: validación de payload fallida.
+- `404 Not Found`: `skillId` no existe.
+
 ---
 
 ### PUT `/api/employees/skills/{id}/validate`
+Endpoint para que un Manager/Admin valide la habilidad declarada por un empleado.
 
-Valida una habilidad de un empleado. Requiere rol Manager o Admin.
+Headers:
+- `Authorization: Bearer {token}` (requiere rol Manager o Admin)
 
-**Request - Solo validar:**
-```json
-{
-  "newLevel": null
-}
-```
-
-**Request - Validar y ajustar nivel:**
+**Request (application/json) — DTO `ValidateSkillRequest`:**
 ```json
 {
   "newLevel": 3
 }
 ```
+
+- `newLevel`: opcional (null = solo marcar como validada sin cambiar nivel). Si se proporciona, debe estar en 1-5.
 
 **Response (200 OK):**
 ```json
@@ -747,6 +840,11 @@ Valida una habilidad de un empleado. Requiere rol Manager o Admin.
   "message": "Habilidad validada exitosamente"
 }
 ```
+
+Errores:
+- `400 Bad Request`: `newLevel` fuera de rango.
+- `403 Forbidden`: rol insuficiente.
+- `404 Not Found`: skill del empleado no encontrada.
 
 ---
 
