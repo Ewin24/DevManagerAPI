@@ -109,6 +109,7 @@ public class ProfileController : ControllerBase
     /// **Comportamiento (Upsert):**
     /// - Si el perfil NO existe → Lo CREA (INSERT)
     /// - Si el perfil ya existe → Lo ACTUALIZA (UPDATE)
+    /// - Si el perfil fue eliminado → Lo REACTIVA y ACTUALIZA
     /// 
     /// **Casos de uso:**
     /// - Completar perfil durante onboarding
@@ -136,6 +137,70 @@ public class ProfileController : ControllerBase
         }
 
         return Ok(ApiResponse<object>.SuccessResponse("Perfil actualizado exitosamente"));
+    }
+
+    /// <summary>
+    /// Crea el perfil del usuario autenticado
+    /// </summary>
+    /// <remarks>
+    /// Crea un nuevo perfil profesional para el usuario. Si el perfil ya existe (activo), retorna 409 Conflict.
+    /// Si el perfil fue eliminado anteriormente, lo reactiva con los nuevos datos.
+    /// 
+    /// **Ejemplo de Request:**
+    /// 
+    ///     POST /api/profile/me
+    ///     {
+    ///         "bio": "Senior Full Stack Developer especializado en arquitecturas cloud-native",
+    ///         "yearsExperience": 8,
+    ///         "linkedinUrl": "https://linkedin.com/in/juan-martinez-dev",
+    ///         "githubUrl": "https://github.com/juanmartinez",
+    ///         "portfolioUrl": "https://juandev.io"
+    ///     }
+    /// 
+    /// **Ejemplo de Response (201 Created):**
+    /// 
+    ///     {
+    ///         "success": true,
+    ///         "message": "Perfil creado exitosamente",
+    ///         "data": "Perfil creado exitosamente"
+    ///     }
+    /// 
+    /// **Casos de uso:**
+    /// - Crear perfil durante onboarding
+    /// - Reactivar perfil eliminado anteriormente
+    /// 
+    /// **Diferencia con PUT:**
+    /// - POST: Solo crea/reactiva, retorna error si ya existe perfil activo
+    /// - PUT: Crea, actualiza o reactiva cualquier perfil existente
+    /// </remarks>
+    /// <param name="request">Datos del perfil a crear (bio, experiencia, URLs)</param>
+    /// <returns>Resultado de la operación</returns>
+    /// <response code="201">Perfil creado exitosamente</response>
+    /// <response code="400">Datos inválidos (validación fallida)</response>
+    /// <response code="409">Perfil ya existe (usar PUT para actualizar)</response>
+    /// <response code="401">No autenticado</response>
+    [HttpPost("me")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CreateMyProfile([FromBody] UpdateProfileRequest request)
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+
+        var result = await _profileService.CreateMyProfileAsync(userId, organizationId, request);
+
+        if (!result)
+        {
+            return Conflict(new ErrorResponse
+            {
+                Success = false,
+                Message = "Ya existe un perfil activo. Use PUT para actualizar.",
+                ErrorCode = "CONFLICT"
+            });
+        }
+
+        return CreatedAtAction(nameof(GetMyProfile), ApiResponse<object>.SuccessResponse("Perfil creado exitosamente"));
     }
 
     /// <summary>

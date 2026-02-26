@@ -9,6 +9,7 @@ using Application.DTOs.Skills;
 public interface IProfileService
 {
     Task<EmployeeProfileDto?> GetMyProfileAsync(Guid userId, Guid organizationId);
+    Task<bool> CreateMyProfileAsync(Guid userId, Guid organizationId, UpdateProfileRequest request);
     Task<bool> UpdateMyProfileAsync(Guid userId, Guid organizationId, UpdateProfileRequest request);
     Task<bool> DeleteMyProfileAsync(Guid userId, Guid organizationId, Guid deletedByUserId);
 

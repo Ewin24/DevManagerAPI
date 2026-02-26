@@ -18,6 +18,11 @@ public interface IProfileRepository
     Task<IEnumerable<EmployeeProfile>> GetAllAsync(Guid organizationId);
 
     /// <summary>
+    /// Crea un nuevo perfil (retorna false si ya existe uno activo)
+    /// </summary>
+    Task<bool> CreateAsync(EmployeeProfile profile);
+
+    /// <summary>
     /// Crea o actualiza el perfil de un empleado
     /// </summary>
     Task<bool> UpsertAsync(EmployeeProfile profile);
