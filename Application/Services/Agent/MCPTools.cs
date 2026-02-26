@@ -14,11 +14,29 @@ public static class MCPTools
     {
         return new List<AgentTool>
         {
+            GetCurrentUserContextTool(),
             GetEmployeeProfileTool(),
             GetProjectRequirementsTool(),
             GetSkillsTool(),
             GetCertificationsTool(),
             GetProjectHistoryTool()
+        };
+    }
+
+    private static AgentTool GetCurrentUserContextTool()
+    {
+        return new AgentTool
+        {
+            Name = "get_current_user_context",
+            Description = "Obtiene el contexto del usuario actual que está interactuando con el agente. Esta herramienta no requiere parámetros y retorna el perfil, habilidades, certificaciones e historial de proyectos del usuario que hace la consulta.",
+            Schema = @"{
+                ""type"": ""object"",
+                ""properties"": {}
+            }",
+            Handler = async (parameters) =>
+            {
+                return new { message = "Use the current user context from the conversation. This tool is called automatically when the query refers to 'yo', 'mi', 'mis' or similar pronouns." };
+            }
         };
     }
 

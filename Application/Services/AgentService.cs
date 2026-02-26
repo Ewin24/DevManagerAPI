@@ -41,18 +41,19 @@ public class AgentService : IAgentService
 
     public async Task<AgentQueryResponse> QueryAsync(
         Guid organizationId,
+        Guid userId,
         AgentQueryRequest request,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Procesando query del agente para org {OrgId}: {Query}",
-            organizationId, request.Query);
+        _logger.LogInformation("Procesando query del agente para org {OrgId}, usuario {UserId}: {Query}",
+            organizationId, userId, request.Query);
 
         var toolsExecuted = new List<ToolExecutionResult>();
 
         try
         {
             // Determinar qué datos necesita la consulta y obtenerlos
-            var contextData = await GatherContextDataAsync(organizationId, request.Query, cancellationToken);
+            var contextData = await GatherContextDataAsync(organizationId, userId, request.Query, cancellationToken);
 
             if (contextData.Any())
             {
@@ -121,12 +122,21 @@ public class AgentService : IAgentService
 
     private async Task<Dictionary<string, object>> GatherContextDataAsync(
         Guid organizationId,
+        Guid userId,
         string query,
         CancellationToken cancellationToken)
     {
         var contextData = new Dictionary<string, object>();
         var queryLower = query.ToLowerInvariant();
 
+        var isCurrentUserQuery = queryLower.Contains("yo") || 
+                                  queryLower.Contains("mi ") || 
+                                  queryLower.Contains("mis ") ||
+                                  queryLower.Contains("mí") ||
+                                  queryLower.Contains("para mí") ||
+                                  queryLower.Contains("para mi") ||
+                                  queryLower.Contains("que me ") ||
+                                  queryLower.Contains("me recomi");
         try
         {
             // Detectar si la query es sobre habilidades
@@ -186,6 +196,57 @@ public class AgentService : IAgentService
                 contextData["Users"] = users;
             }
 
+            // Detectar si la query es sobre el usuario actual
+            if (isCurrentUserQuery)
+            {
+                try
+                {
+                    var currentUserProfile = await _profileService.GetMyProfileAsync(userId, organizationId);
+                    var currentUser = await _userService.GetByIdAsync(userId, organizationId);
+                    
+                    var profilesWithSkills = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
+                    var currentProfileWithSkills = profilesWithSkills.FirstOrDefault(p => p.UserId == userId);
+
+                    if (currentUserProfile != null)
+                    {
+                        List<object> skillsList = new List<object>();
+                        if (currentProfileWithSkills != null)
+                        {
+                            skillsList = currentProfileWithSkills.Skills.Select(s => (object)new
+                            {
+                                skillName = s.SkillName,
+                                level = s.CurrentLevel,
+                                validated = s.LastValidatedAt.HasValue
+                            }).ToList();
+                        }
+
+                        List<object> certsList = currentUserProfile.Certifications.Select(c => (object)new
+                        {
+                            name = c.Name,
+                            issuer = c.Issuer,
+                            issueDate = c.IssueDate
+                        }).ToList();
+
+                        contextData["CurrentUserProfile"] = new
+                        {
+                            userId = currentUserProfile.UserId,
+                            fullName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Usuario",
+                            email = currentUser?.Email ?? "",
+                            bio = currentUserProfile.Bio,
+                            yearsExperience = currentUserProfile.YearsExperience,
+                            skills = skillsList,
+                            certifications = certsList
+                        };
+                    }
+
+                    _logger.LogInformation("Se obtuvo contexto del usuario actual {UserId}", userId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error obteniendo perfil del usuario actual {UserId}", userId);
+                }
+            }
+
             _logger.LogInformation("Se obtuvieron {Count} conjuntos de datos para el contexto", contextData.Count);
         }
         catch (Exception ex)
@@ -234,6 +295,14 @@ public class AgentService : IAgentService
             var profiles = contextData["EmployeeProfiles"];
             context.AppendLine("### PERFILES DE EMPLEADOS:");
             context.AppendLine(JsonSerializer.Serialize(profiles, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("CurrentUserProfile"))
+        {
+            var currentUser = contextData["CurrentUserProfile"];
+            context.AppendLine("### PERFIL DEL USUARIO ACTUAL:");
+            context.AppendLine(JsonSerializer.Serialize(currentUser, new JsonSerializerOptions { WriteIndented = true }));
             context.AppendLine();
         }
 

@@ -279,7 +279,83 @@ curl -X POST http://localhost:5073/agent/match-candidates \
 
 ---
 
-### 4. Aprobar/Rechazar Acciones (HITL)
+### 4. Consultas Personalizadas del Usuario Actual
+
+**Endpoint:** `POST /agent/query`  
+**Autenticación:** Bearer Token requerido
+
+El agente ahora puede responder preguntas personalizadas sobre TI sin necesidad de especificar tu userId. El sistema extrae automáticamente tu identidad del token JWT.
+
+#### Cómo Funciona
+
+El sistema detecta automáticamente cuando la consulta se refiere al usuario actual mediante pronombres:
+- **Español:** "yo", "mi", "mis", "mí", "para mí", "para mi", "me recomi"
+- **Inglés:** "my", "me", "I would like"
+- **Otros idiomas:** "me适合" (chino)
+
+#### Ejemplo: Recomendaciones de Habilidades
+
+```bash
+curl -X POST http://localhost:5073/agent/query \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "¿Qué habilidades me recomiendan aprender basándome en mi perfil actual?",
+    "requireApproval": false
+  }'
+```
+
+#### Ejemplo: Proyectos que Encajan con Mis Habilidades
+
+```bash
+curl -X POST http://localhost:5073/agent/query \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "¿Qué proyectos activos encajan mejor con mis habilidades?",
+    "requireApproval": false
+  }'
+```
+
+#### Ejemplo: Análisis de Perfil Profesional
+
+```bash
+curl -X POST http://localhost:5073/agent/query \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Analiza mi perfil y dame recomendaciones para desarrollar mi carrera",
+    "requireApproval": false
+  }'
+```
+
+#### Respuesta
+
+```json
+{
+  "success": true,
+  "message": "Consulta procesada exitosamente",
+  "data": {
+    "response": "Basado en tu perfil actual:\n\n**Tus fortalezas:**\n- C# nivel 4 (Avanzado)\n- .NET Core nivel 4\n- SQL Server nivel 4\n\n**Oportunidades de mejora:**\n- Kubernetes nivel 2 → 3 (requerido para proyectos cloud\n- Angular/React nivel 3 (alta demanda)\n\n**Recomendaciones:**\n1. Considerar certificación Azure Developer Associate\n2. Participar en el proyecto SIST-HOSP-001 para ganar experiencia cloud\n3. Tomar el curso de Microservicios en la plataforma de capacitación",
+    "reasoningSteps": "1. Obtuve tu perfil del token JWT\n2. Recuperé tus skills: C#(4), .NET Core(4), SQL(4)\n3. Comparé con requisitos de proyectos activos\n4. Identifiqué gaps y oportunidades",
+    "toolsExecuted": ["get_current_user_context"],
+    "requiresHumanApproval": false,
+    "actionId": null,
+    "confidence": 85
+  }
+}
+```
+
+#### Datos Obtenidos Automáticamente
+
+Cuando detectas una consulta personalizada, el sistema obtiene:
+- **Perfil:** Bio, años de experiencia
+- **Habilidades:** Nombre, nivel, si está validada
+- **Certificaciones:** Nombre, emissor, fecha de emisión
+
+---
+
+### 5. Aprobar/Rechazar Acciones (HITL)
 
 #### Aprobar una Acción
 
