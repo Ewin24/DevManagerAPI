@@ -474,6 +474,7 @@ CREATE TABLE talent.EmployeeSkills (
 
     Level           tinyint          NOT NULL, -- FK a config.SkillLevels
     EvidenceUrl     nvarchar(400)    NULL,
+    ExperienceDescription nvarchar(1000) NULL, -- Descripción libre de experiencia (opcional)
     LastValidatedAt datetime2(3)     NULL,
     ValidatedByUserId uniqueidentifier NULL, -- Auditoría: si lo validó el Sistema (Agente) o un Humano
     CreatedAt       datetime2(3)     NOT NULL CONSTRAINT DF_EmployeeSkills_CreatedAt DEFAULT (sysutcdatetime()),
