@@ -14,6 +14,7 @@ public class EmployeeSkill : AuditableEntity
     public Guid SkillId { get; set; }
     public byte Level { get; set; } // 1-5 (Novato a Experto)
     public string? EvidenceUrl { get; set; }
+    public string? ExperienceDescription { get; set; } // Descripción libre de experiencia
     public DateTime? LastValidatedAt { get; set; }
     public Guid? ValidatedByUserId { get; set; } // NULL = validado por sistema/agente
 

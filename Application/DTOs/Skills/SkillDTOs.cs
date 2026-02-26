@@ -33,6 +33,9 @@ public class UpsertEmployeeSkillRequest
 
     [MaxLength(400)]
     public string? EvidenceUrl { get; set; }
+
+    [MaxLength(1000)]
+    public string? ExperienceDescription { get; set; }
 }
 
 /// <summary>
@@ -46,6 +49,7 @@ public class EmployeeSkillResponse
     public string? Category { get; set; }
     public byte Level { get; set; }
     public string? EvidenceUrl { get; set; }
+    public string? ExperienceDescription { get; set; }
     public DateTime? LastValidatedAt { get; set; }
     public Guid? ValidatedByUserId { get; set; }
 }

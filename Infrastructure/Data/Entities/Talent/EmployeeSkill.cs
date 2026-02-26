@@ -22,6 +22,9 @@ public partial class EmployeeSkill
     [StringLength(400)]
     public string? EvidenceUrl { get; set; }
 
+    [StringLength(1000)]
+    public string? ExperienceDescription { get; set; }
+
     [Precision(3)]
     public DateTime? LastValidatedAt { get; set; }
 

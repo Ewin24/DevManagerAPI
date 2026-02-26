@@ -357,6 +357,7 @@ Analiza si el siguiente nivel de habilidad es coherente con la evidencia proporc
 {(certifications.Any() ? string.Join("\n", certifications) : "Ninguna")}
 
 **Evidencia URL:** {request.EvidenceUrl ?? "No proporcionada"}
+**Descripción de experiencia:** {request.ExperienceDescription ?? "No proporcionada"}
 
 Evalúa:
 1. ¿El nivel declarado es coherente con la experiencia y certificaciones?
