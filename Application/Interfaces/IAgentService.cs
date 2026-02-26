@@ -12,6 +12,7 @@ public interface IAgentService
     /// </summary>
     Task<AgentQueryResponse> QueryAsync(
         Guid organizationId,
+        Guid userId,
         AgentQueryRequest request,
         CancellationToken cancellationToken = default);
 

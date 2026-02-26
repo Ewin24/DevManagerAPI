@@ -59,6 +59,49 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
         });
     }
 
+    public async Task<bool> CreateAsync(DomainEntities.EmployeeProfile profile)
+    {
+        var existing = await _context.EmployeeProfiles
+            .Where(p => p.UserId == profile.UserId
+                        && p.OrganizationId == profile.OrganizationId)
+            .FirstOrDefaultAsync();
+
+        if (existing != null)
+        {
+            if (existing.IsDeleted)
+            {
+                existing.IsDeleted = false;
+                existing.DeletedAt = null;
+                existing.DeletedByUserId = null;
+                existing.Bio = profile.Bio;
+                existing.YearsExperience = profile.YearsExperience;
+                existing.LinkedInUrl = profile.LinkedInUrl;
+                existing.PortfolioUrl = profile.PortfolioUrl;
+                existing.UpdatedAt = DateTime.UtcNow;
+                existing.UpdatedByUserId = profile.UpdatedByUserId;
+                return await _context.SaveChangesAsync() > 0;
+            }
+            return false;
+        }
+
+        var efProfile = new EfEntities.EmployeeProfile
+        {
+            UserId = profile.UserId,
+            OrganizationId = profile.OrganizationId,
+            Bio = profile.Bio,
+            YearsExperience = profile.YearsExperience,
+            LinkedInUrl = profile.LinkedInUrl,
+            PortfolioUrl = profile.PortfolioUrl,
+            CreatedAt = DateTime.UtcNow,
+            CreatedByUserId = profile.CreatedByUserId,
+            UpdatedAt = DateTime.UtcNow,
+            UpdatedByUserId = profile.UpdatedByUserId,
+            IsDeleted = false
+        };
+        await _context.EmployeeProfiles.AddAsync(efProfile);
+        return await _context.SaveChangesAsync() > 0;
+    }
+
     public async Task<bool> UpsertAsync(DomainEntities.EmployeeProfile profile)
     {
         var existing = await _context.EmployeeProfiles
@@ -68,7 +111,12 @@ public class ProfileRepository : Domain.Interfaces.Repositories.IProfileReposito
 
         if (existing != null)
         {
-            // Update
+            if (existing.IsDeleted)
+            {
+                existing.IsDeleted = false;
+                existing.DeletedAt = null;
+                existing.DeletedByUserId = null;
+            }
             existing.Bio = profile.Bio;
             existing.YearsExperience = profile.YearsExperience;
             existing.LinkedInUrl = profile.LinkedInUrl;

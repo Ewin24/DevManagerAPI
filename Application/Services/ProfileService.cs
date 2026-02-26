@@ -76,6 +76,32 @@ public class ProfileService : IProfileService
         return await _profileRepository.UpsertAsync(profile);
     }
 
+    public async Task<bool> CreateMyProfileAsync(Guid userId, Guid organizationId, UpdateProfileRequest request)
+    {
+        var existingProfile = await _profileRepository.GetByUserIdAsync(userId, organizationId);
+
+        if (existingProfile != null)
+        {
+            return false;
+        }
+
+        var profile = new EmployeeProfile
+        {
+            UserId = userId,
+            OrganizationId = organizationId,
+            Bio = request.Bio,
+            YearsExperience = request.YearsExperience,
+            LinkedInUrl = request.LinkedInUrl,
+            PortfolioUrl = request.PortfolioUrl,
+            CreatedAt = DateTime.UtcNow,
+            CreatedByUserId = userId,
+            UpdatedAt = DateTime.UtcNow,
+            UpdatedByUserId = userId
+        };
+
+        return await _profileRepository.CreateAsync(profile);
+    }
+
     public async Task<bool> DeleteMyProfileAsync(Guid userId, Guid organizationId, Guid deletedByUserId)
     {
         return await _profileRepository.SoftDeleteAsync(userId, organizationId, deletedByUserId);

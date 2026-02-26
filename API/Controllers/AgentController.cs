@@ -31,7 +31,7 @@ public class AgentController : ControllerBase
     /// <remarks>
     /// Permite hacer preguntas al agente sobre talento, proyectos, skills, etc. El agente responderá con análisis inteligente y recomendaciones usando Google Gemini.
     /// 
-    /// **Ejemplos de Queries:**
+    /// **Ejemplos de Queries - Consultas Organizacionales:**
     /// 
     ///     POST /agent/query
     ///     {
@@ -50,6 +50,43 @@ public class AgentController : ControllerBase
     ///         "query": "¿Qué skills están más demandadas en los proyectos activos?",
     ///         "requireApproval": false
     ///     }
+    /// 
+    /// **Ejemplos de Queries - Contexto del Usuario Actual:**
+    /// El agente ahora puede responder preguntas personalizadas sobre TI usando pronombres como "yo", "mi", "mis". No necesitas especificar tu userId.
+    /// 
+    ///     POST /agent/query
+    ///     {
+    ///         "query": "¿Qué habilidades me recomiendan aprender?",
+    ///         "requireApproval": false
+    ///     }
+    /// 
+    ///     POST /agent/query
+    ///     {
+    ///         "query": "¿Qué proyectos encajan con mis habilidades?",
+    ///         "requireApproval": false
+    ///     }
+    /// 
+    ///     POST /agent/query
+    ///     {
+    ///         "query": "Analiza mi perfil y dime en qué proyectos puedo contribuir",
+    ///         "requireApproval": false
+    ///     }
+    /// 
+    ///     POST /agent/query
+    ///     {
+    ///         "query": "Dame recomendaciones para mejorar mi carrera profesional",
+    ///         "requireApproval": false
+    ///     }
+    /// 
+    /// **Detección Automática de Contexto:**
+    /// El sistema detecta automáticamente cuando la consulta se refiere al usuario actual mediante pronombres:
+    /// - "yo", "mi", "mis", "mí"
+    /// - "para mí", "me recomi", "me适合" (chino)
+    /// 
+    /// Cuando se detecta, el agente obtiene automáticamente:
+    /// - Perfil del empleado (bio, años de experiencia)
+    /// - Habilidades declaradas con niveles
+    /// - Certificaciones obtenidas
     /// 
     /// **Ejemplo de Response (200 OK):**
     /// 
@@ -73,12 +110,15 @@ public class AgentController : ControllerBase
     /// - El agente SOLO accede a datos de la OrganizationId del JWT (multi-tenancy)
     /// - Cada consulta se registra en reporting.AgentActions (auditoría)
     /// - El campo reasoning muestra el proceso de razonamiento del agente (Chain of Thought)
+    /// - El userId se extrae automáticamente del token JWT para consultas personales
     /// 
     /// **Casos de uso:**
     /// - Consultas ad-hoc sobre talento
     /// - Análisis de brechas de skills
     /// - Reportes conversacionales
-    /// - Recomendaciones inteligentes
+    /// - Recomendaciones personalizadas al usuario actual
+    /// - Análisis de compatibilidad con proyectos
+    /// - Recomendaciones de capacitación
     /// </remarks>
     /// <param name="request">Consulta en lenguaje natural con opción de requerir aprobación</param>
     /// <response code="200">Consulta procesada exitosamente con respuesta del agente</response>
@@ -88,12 +128,13 @@ public class AgentController : ControllerBase
     public async Task<IActionResult> Query([FromBody] AgentQueryRequest request)
     {
         var organizationId = GetOrganizationId();
+        var userId = GetUserId();
 
         _logger.LogInformation(
             "Usuario {UserId} consultando agente: {Query}",
-            GetUserId(), request.Query);
+            userId, request.Query);
 
-        var response = await _agentService.QueryAsync(organizationId, request);
+        var response = await _agentService.QueryAsync(organizationId, userId, request);
 
         return Ok(new ApiResponse<AgentQueryResponse>
         {
