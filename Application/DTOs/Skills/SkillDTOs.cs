@@ -31,7 +31,6 @@ public class UpsertEmployeeSkillRequest
     [Range(1, 5, ErrorMessage = "El nivel debe estar entre 1 y 5")]
     public byte Level { get; set; }
 
-    [Url]
     [MaxLength(400)]
     public string? EvidenceUrl { get; set; }
 }
