@@ -153,6 +153,7 @@ public class AgentController : ControllerBase
     /// **Criterios de Validación:**
     /// - Coherencia entre años de experiencia y nivel declarado
     /// - Análisis semántico de evidencia (si se proporciona URL)
+    /// - Análisis de descripción textual de experiencia
     /// - Comparación con perfiles similares en la organización
     /// - Detección de patrones avanzados vs básicos
     /// 
@@ -164,7 +165,7 @@ public class AgentController : ControllerBase
     ///         "skillId": "aaaaaaaa-0000-0000-0000-000000000001",
     ///         "level": 5,
     ///         "evidenceUrl": "https://github.com/juan/dotnet-microservices-framework",
-    ///         "yearsExperience": 8
+    ///         "experienceDescription": "He desarrollado aplicaciones enterprise con .NET Core por más de 5 años, incluyendo microservicios y arquitecturas serverless. He liderado equipos de 10+ desarrolladores y definido estándares de código..."
     ///     }
     /// 
     /// **Ejemplo de Response (200 OK - Válido):**
@@ -175,7 +176,7 @@ public class AgentController : ControllerBase
     ///         "data": {
     ///             "isValid": true,
     ///             "confidence": 92,
-    ///             "reasoning": "El nivel 5 declarado es coherente con:\n- 8 años de experiencia en el campo\n- Evidencia de repositorio con framework completo de microservicios\n- Patrones avanzados: CQRS, Event Sourcing, DDD",
+    ///             "reasoning": "El nivel 5 declarado es coherente con:\n- 5+ años de experiencia en el campo\n- Evidencia de repositorio con framework completo de microservicios\n- Liderazgo de equipo mencionado en la descripción\n- Patrones avanzados: CQRS, Event Sourcing, DDD",
     ///             "recommendations": [
     ///                 "Considerar certificación Microsoft Certified: Azure Solutions Architect Expert",
     ///                 "Potencial mentor para desarrolladores junior en .NET"

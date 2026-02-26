@@ -192,9 +192,7 @@ curl -X POST http://localhost:5073/agent/validate-skill \
     "skillId": "guid-de-skill-dotnet-architecture",
     "level": 4,
     "evidenceUrl": "https://github.com/user/netcore-project",
-    "relatedCertificationIds": [
-      "guid-certificacion-microsoft-azure"
-    ]
+    "experienceDescription": "He liderado la migración de una aplicación monolítica a microservicios usando .NET Core 6, implementando CQRS y Event Sourcing. Coordiné un equipo de 8 desarrolladores y definí los estándares de arquitectura de la empresa..."
   }'
 ```
 
@@ -207,7 +205,7 @@ curl -X POST http://localhost:5073/agent/validate-skill \
   "data": {
     "isValid": true,
     "confidenceScore": 85.5,
-    "validationReasoning": "El nivel 4/5 es coherente con:\n- 5 años de experiencia en .NET\n- Certificación Microsoft Azure Solutions Architect\n- Portfolio con proyectos complejos en GitHub",
+    "validationReasoning": "El nivel 4/5 es coherente con:\n- 5 años de experiencia en .NET\n- Liderazgo de equipo de 8 desarrolladores\n- Implementación de patrones avanzados (CQRS, DDD)\n- Certificación Microsoft Azure Solutions Architect\n- Portfolio con proyectos complejos en GitHub",
     "recommendations": [
       "Considerar certificación en Azure DevOps para complementar el perfil",
       "Documentar más proyectos de microservicios"
@@ -217,6 +215,8 @@ curl -X POST http://localhost:5073/agent/validate-skill \
   }
 }
 ```
+
+**Nota:** El campo `experienceDescription` permite al empleado describir su experiencia de forma libre. El agente IA analiza tanto la URL de evidencia como esta descripción para validar el nivel declarado.
 
 ---
 
