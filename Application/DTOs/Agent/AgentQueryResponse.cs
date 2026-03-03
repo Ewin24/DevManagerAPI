@@ -19,8 +19,11 @@ public record AgentQueryResponse
     [JsonPropertyName("summary")]
     public required string Summary { get; init; }
 
+    [JsonPropertyName("markdown")]
+    public required string Markdown { get; init; }
+
     [JsonPropertyName("payload")]
-    public required ResponsePayload Payload { get; init; }
+    public ResponsePayload? Payload { get; init; }
 
     [JsonPropertyName("metadata")]
     public ResponseMetadata Metadata { get; init; } = new();
