@@ -158,21 +158,227 @@ curl -X POST http://localhost:5073/agent/query \
   }'
 ```
 
-#### Respuesta:
+#### Respuesta (Nuevo Formato UI-Driven):
 
 ```json
 {
   "success": true,
   "message": "Consulta procesada exitosamente",
   "data": {
-    "response": "Basado en el análisis del equipo de backend, se identificaron las siguientes brechas...",
-    "reasoningSteps": "1. Analicé los 3 proyectos activos de .NET Core\n2. Identifiqué las skills requeridas...",
-    "toolsExecuted": [],
-    "requiresHumanApproval": false,
-    "actionId": "guid-de-la-accion"
+    "response_type": "mixed",
+    "summary": "Se identificaron 3 gaps principales de capacitación...",
+    "payload": {
+      "text": "Basado en el análisis del equipo de backend, se identificaron las siguientes brechas de capacitación:",
+      "table": {
+        "headers": ["Skill", "Empleados con la skill", "Nivel Promedio", "Nivel Requerido"],
+        "rows": [
+          ["Kubernetes", "2", "2.5", "4"],
+          ["Docker", "5", "3.0", "4"],
+          ["AWS", "1", "2.0", "4"]
+        ]
+      }
+    },
+    "metadata": {
+      "reasoning": "1. Analicé los 3 proyectos activos de .NET Core\n2. Identifiqué las skills requeridas...\n3. Comparé con el perfil del equipo actual",
+      "tools_executed": [
+        {
+          "tool_name": "GetEmployeeSkills",
+          "input": "query sobre habilidades",
+          "output": "Obtenidos 25 registros",
+          "success": true
+        }
+      ],
+      "requires_human_approval": false,
+      "action_id": null
+    },
+    "suggested_actions": [
+      {
+        "label": "Ver detalles por empleado",
+        "query": "muéstrame qué empleados tienen kubernetes nivel 3+"
+      },
+      {
+        "label": "Plan de capacitación",
+        "query": "genera un plan de capacitación para cerrar los gaps"
+      }
+    ]
   }
 }
 ```
+
+---
+
+## 📊 Nuevo Formato de Respuesta UI-Driven
+
+El agente ahora retorna respuestas estructuradas diseñadas para consumo directo por interfaces de usuario (UI/Frontend).
+
+### Esquema General
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `response_type` | string | Tipo de respuesta: "text", "table", "list", "mixed", "error" |
+| `summary` | string | Mensaje amigable para el usuario (máx ~200 chars) |
+| `payload` | object | Contenido principal adaptado al response_type |
+| `metadata` | object | Información técnica (reasoning, tools, etc.) |
+| `suggested_actions` | array | Acciones sugeridas para quick replies (opcional) |
+
+### Tipos de Respuesta
+
+#### 1. Text Response (response_type: "text")
+
+```json
+{
+  "response_type": "text",
+  "summary": "El empleado Juan Pérez tiene 5 años de experiencia en .NET...",
+  "payload": {
+    "text": "Juan Pérez es un desarrollador senior con más de 5 años de experiencia en el ecosistema .NET..."
+  },
+  "metadata": {
+    "reasoning": "Analicé el perfil del empleado y su historial de proyectos...",
+    "requires_human_approval": false
+  },
+  "suggested_actions": [
+    {
+      "label": "Ver habilidades",
+      "query": "muéstrame las habilidades de Juan Pérez"
+    }
+  ]
+}
+```
+
+#### 2. Table Response (response_type: "table")
+
+```json
+{
+  "response_type": "table",
+  "summary": "Top 5 habilidades más demandadas en la organización",
+  "payload": {
+    "table": {
+      "headers": ["Habilidad", "Empleados", "Nivel Promedio", "Nivel Máximo"],
+      "rows": [
+        ["C#", "12", "3.8", "5"],
+        [".NET Core", "10", "3.5", "5"],
+        ["SQL Server", "8", "3.2", "4"],
+        ["JavaScript", "15", "3.0", "5"],
+        ["React", "7", "2.9", "4"]
+      ]
+    }
+  },
+  "metadata": {
+    "reasoning": "Calculé estadísticas desde la tabla de EmployeeSkills...",
+    "tools_executed": [...]
+  },
+  "suggested_actions": [
+    {
+      "label": "Ver empleados",
+      "query": "dame la lista de empleados con C# nivel 4+"
+    }
+  ]
+}
+```
+
+#### 3. List Response (response_type: "list")
+
+```json
+{
+  "response_type": "list",
+  "summary": "3 recomendaciones de habilidades para aprender",
+  "payload": {
+    "list": {
+      "items": [
+        {
+          "id": "skill-001",
+          "label": "Kubernetes",
+          "value": "Alta demanda en proyectos cloud"
+        },
+        {
+          "id": "skill-002",
+          "label": "Azure DevOps",
+          "value": "2 proyectos lo requieren"
+        },
+        {
+          "id": "skill-003",
+          "label": "Python",
+          "value": "Tendencia creciente en la industria"
+        }
+      ]
+    }
+  },
+  "metadata": {...},
+  "suggested_actions": [...]
+}
+```
+
+#### 4. Mixed Response (response_type: "mixed")
+
+```json
+{
+  "response_type": "mixed",
+  "summary": "Análisis de brechas completado",
+  "payload": {
+    "text": "Se identificaron 3 brechas críticas de capacitación...",
+    "table": {
+      "headers": ["Skill", "Gap"],
+      "rows": [
+        ["Kubernetes", "Alto"],
+        ["AWS", "Medio"],
+        ["Docker", "Bajo"]
+      ]
+    },
+    "list": {
+      "items": [
+        {"label": "Ver plan de capacitación", "query": "genera plan para kubernetes"},
+        {"label": "Ver cursos recomendados", "query": "qué cursos de kubernetes me recomiendas"}
+      ]
+    }
+  },
+  "metadata": {...},
+  "suggested_actions": [...]
+}
+```
+
+#### 5. Error Response (response_type: "error")
+
+```json
+{
+  "response_type": "error",
+  "summary": "No se pudo completar la consulta",
+  "payload": {
+    "text": "Error: No se encontraron datos de empleados para la organización"
+  },
+  "metadata": {
+    "reasoning": "Intenté obtener los perfiles de empleados pero la query retornó vacío",
+    "requires_human_approval": false
+  }
+}
+```
+
+---
+
+### Suggested Actions
+
+Las acciones sugeridas permiten implementar quick replies en el UI:
+
+```json
+"suggested_actions": [
+  {
+    "label": "Ver más detalles",
+    "query": "dame más información sobre...",
+    "icon": "info"
+  },
+  {
+    "label": "Generar reporte",
+    "query": "genera un reporte de...",
+    "icon": "download"
+  }
+]
+```
+
+### Beneficios del Nuevo Formato
+
+- **UI-Friendly:** El frontend puede renderizar directamente sin procesar texto
+- **Type-Specific Rendering:** Renderizado óptimo por tipo (tabla, lista, texto)
+- **Quick Replies:** Acciones sugeridas para mejorar UX
+- **Separación de Concerns:** Metadata separado del contenido principal
 
 ---
 
@@ -329,19 +535,48 @@ curl -X POST http://localhost:5073/agent/query \
   }'
 ```
 
-#### Respuesta
+#### Respuesta (Nuevo Formato):
 
 ```json
 {
   "success": true,
   "message": "Consulta procesada exitosamente",
   "data": {
-    "response": "Basado en tu perfil actual:\n\n**Tus fortalezas:**\n- C# nivel 4 (Avanzado)\n- .NET Core nivel 4\n- SQL Server nivel 4\n\n**Oportunidades de mejora:**\n- Kubernetes nivel 2 → 3 (requerido para proyectos cloud\n- Angular/React nivel 3 (alta demanda)\n\n**Recomendaciones:**\n1. Considerar certificación Azure Developer Associate\n2. Participar en el proyecto SIST-HOSP-001 para ganar experiencia cloud\n3. Tomar el curso de Microservicios en la plataforma de capacitación",
-    "reasoningSteps": "1. Obtuve tu perfil del token JWT\n2. Recuperé tus skills: C#(4), .NET Core(4), SQL(4)\n3. Comparé con requisitos de proyectos activos\n4. Identifiqué gaps y oportunidades",
-    "toolsExecuted": ["get_current_user_context"],
-    "requiresHumanApproval": false,
-    "actionId": null,
-    "confidence": 85
+    "response_type": "mixed",
+    "summary": "Análisis de tu perfil completado: 3 fortalezas y 2 oportunidades de mejora identificadas",
+    "payload": {
+      "text": "Basado en tu perfil actual:\n\n**Tus fortalezas:**\n- C# nivel 4 (Avanzado)\n- .NET Core nivel 4\n- SQL Server nivel 4\n\n**Oportunidades de mejora:**\n- Kubernetes nivel 2 → 3 (requerido para proyectos cloud)\n- Angular/React nivel 3 (alta demanda)",
+      "list": {
+        "items": [
+          {"label": "Certificación Azure", "value": "Considerar Azure Developer Associate"},
+          {"label": "Proyecto Cloud", "value": "Participar en SIST-HOSP-001"},
+          {"label": "Curso Microservicios", "value": "Tomar curso en plataforma de capacitación"}
+        ]
+      }
+    },
+    "metadata": {
+      "reasoning": "1. Obtuve tu perfil del token JWT\n2. Recuperé tus skills: C#(4), .NET Core(4), SQL(4)\n3. Comparé con requisitos de proyectos activos\n4. Identifiqué gaps y oportunidades",
+      "tools_executed": [
+        {
+          "tool_name": "GetCurrentUserProfile",
+          "input": "query personalizada con 'mi'",
+          "output": "Obtenidos 15 skills",
+          "success": true
+        }
+      ],
+      "requires_human_approval": false,
+      "action_id": null
+    },
+    "suggested_actions": [
+      {
+        "label": "Ver proyectos disponibles",
+        "query": "qué proyectos activos encajan con mis habilidades"
+      },
+      {
+        "label": "Plan de carrera",
+        "query": "dame un plan de desarrollo profesional"
+      }
+    ]
   }
 }
 ```

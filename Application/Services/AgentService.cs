@@ -106,11 +106,17 @@ public class AgentService : IAgentService
 
             return new AgentQueryResponse
             {
-                Response = response,
-                ReasoningSteps = reasoning,
-                ToolsExecuted = toolsExecuted,
-                RequiresHumanApproval = request.RequireApproval,
-                ActionId = actionId
+                ResponseType = DetermineResponseType(response, contextData),
+                Summary = BuildSummary(response, request.Query),
+                Payload = BuildPayload(response, contextData),
+                Metadata = new ResponseMetadata
+                {
+                    Reasoning = reasoning,
+                    ToolsExecuted = toolsExecuted,
+                    RequiresHumanApproval = request.RequireApproval,
+                    ActionId = actionId
+                },
+                SuggestedActions = GenerateSuggestedActions(request.Query, response)
             };
         }
         catch (Exception ex)
@@ -118,6 +124,150 @@ public class AgentService : IAgentService
             _logger.LogError(ex, "Error procesando query del agente");
             throw;
         }
+    }
+
+    private static string DetermineResponseType(string response, Dictionary<string, object> contextData)
+    {
+        var responseLower = response.ToLowerInvariant();
+
+        if (contextData.ContainsKey("SkillStatistics") || 
+            contextData.ContainsKey("EmployeeProfiles") ||
+            contextData.ContainsKey("Projects"))
+        {
+            if (responseLower.Contains("tabla") || responseLower.Contains("tabla de") ||
+                responseLower.Contains("nivel") || responseLower.Contains("empleado"))
+            {
+                return "table";
+            }
+            if (responseLower.Contains("lista") || responseLower.Contains("listado") ||
+                responseLower.Contains("recomendaciones"))
+            {
+                return "list";
+            }
+            return "mixed";
+        }
+
+        if (responseLower.Contains("recomendación") || responseLower.Contains("opciones") ||
+            responseLower.Contains("alternativas"))
+        {
+            return "list";
+        }
+
+        return "text";
+    }
+
+    private static string BuildSummary(string response, string query)
+    {
+        var firstLines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Take(3)
+            .Select(l => l.Trim())
+            .Where(l => !string.IsNullOrEmpty(l) && !l.StartsWith("**"))
+            .ToList();
+
+        if (firstLines.Count == 0)
+        {
+            return $"Resultado para: {query}";
+        }
+
+        var summary = string.Join(" ", firstLines);
+        return summary.Length > 200 ? summary.Substring(0, 197) + "..." : summary;
+    }
+
+    private static ResponsePayload BuildPayload(string response, Dictionary<string, object> contextData)
+    {
+        var payload = new ResponsePayload { Text = response };
+
+        if (contextData.ContainsKey("SkillStatistics"))
+        {
+            var stats = contextData["SkillStatistics"] as List<dynamic>;
+            if (stats != null && stats.Any())
+            {
+                payload = payload with
+                {
+                    Table = new TablePayload
+                    {
+                        Headers = new List<string> { "Habilidad", "Empleados", "Nivel Promedio", "Nivel Máximo" },
+                        Rows = stats.Take(10).Select(s => new List<string>
+                        {
+                            s.SkillName?.ToString() ?? "",
+                            s.EmployeeCount?.ToString() ?? "0",
+                            s.AverageLevel?.ToString("F1") ?? "0",
+                            s.MaxLevel?.ToString() ?? "0"
+                        }).ToList()
+                    }
+                };
+            }
+        }
+
+        if (contextData.ContainsKey("EmployeeProfiles"))
+        {
+            var profiles = contextData["EmployeeProfiles"] as List<dynamic>;
+            if (profiles != null && profiles.Any() && payload.Table == null)
+            {
+                var profileList = profiles.Take(10).Select(p => new ListItem
+                {
+                    Id = p.UserId?.ToString(),
+                    Label = $"{p.FirstName} {p.LastName}",
+                    Value = $"Años exp: {p.YearsExperience ?? 0}"
+                }).ToList();
+
+                payload = payload with
+                {
+                    List = new ListPayload { Items = profileList }
+                };
+            }
+        }
+
+        return payload;
+    }
+
+    private static List<SuggestedAction> GenerateSuggestedActions(string query, string response)
+    {
+        var actions = new List<SuggestedAction>();
+        var queryLower = query.ToLowerInvariant();
+
+        if (queryLower.Contains("habilidad") || queryLower.Contains("skill"))
+        {
+            actions.Add(new SuggestedAction
+            {
+                Label = "Ver empleados con esta habilidad",
+                Query = "dame la lista de empleados por habilidad"
+            });
+            actions.Add(new SuggestedAction
+            {
+                Label = "Estadísticas de skills",
+                Query = "muéstrame las estadísticas de habilidades"
+            });
+        }
+
+        if (queryLower.Contains("proyecto") || queryLower.Contains("proyect"))
+        {
+            actions.Add(new SuggestedAction
+            {
+                Label = "Buscar candidatos",
+                Query = "busca candidatos para este proyecto"
+            });
+        }
+
+        if (!queryLower.Contains("mi perfil") && !queryLower.Contains("mis habilidades"))
+        {
+            actions.Add(new SuggestedAction
+            {
+                Label = "Mi perfil",
+                Query = "muéstrame mi perfil"
+            });
+        }
+
+        if (actions.Count == 0)
+        {
+            actions.Add(new SuggestedAction
+            {
+                Label = "Más detalles",
+                Query = "dame más información"
+            });
+        }
+
+        return actions.Take(3).ToList();
     }
 
     private async Task<Dictionary<string, object>> GatherContextDataAsync(
