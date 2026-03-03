@@ -33,6 +33,7 @@ public class EmployeeSkillService : IEmployeeSkillService
             Category = es.SkillCategory,
             Level = es.Level,
             EvidenceUrl = es.EvidenceUrl,
+            ExperienceDescription = es.ExperienceDescription,
             LastValidatedAt = es.LastValidatedAt,
             ValidatedByUserId = es.ValidatedByUserId
         });
@@ -54,6 +55,7 @@ public class EmployeeSkillService : IEmployeeSkillService
             OrganizationId = organizationId,
             Level = request.Level,
             EvidenceUrl = request.EvidenceUrl,
+            ExperienceDescription = request.ExperienceDescription,
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = userId,
             UpdatedAt = DateTime.UtcNow,

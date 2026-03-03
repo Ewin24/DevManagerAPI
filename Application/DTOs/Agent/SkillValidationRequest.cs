@@ -9,5 +9,6 @@ public record SkillValidationRequest
     public required Guid SkillId { get; init; }
     public required int Level { get; init; } // 1-5
     public string? EvidenceUrl { get; init; }
+    public string? ExperienceDescription { get; init; }
     public List<Guid>? RelatedCertificationIds { get; init; }
 }

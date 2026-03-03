@@ -97,7 +97,8 @@ public class EmployeeSkillsController : ControllerBase
     ///     {
     ///         "skillId": "aaaaaaaa-0000-0000-0000-000000000008",
     ///         "level": 3,
-    ///         "evidenceUrl": "https://github.com/myuser/kubernetes-project"
+    ///         "evidenceUrl": "https://github.com/myuser/kubernetes-project",
+    ///         "experienceDescription": "He trabajado con Kubernetes en producción por 2 años, gestionando clusters de Azure AKS..."
     ///     }
     /// 
     /// **Ejemplo de Response (200 OK):**
@@ -112,10 +113,15 @@ public class EmployeeSkillsController : ControllerBase
     /// - skillId: Debe existir en el catálogo
     /// - level: Rango válido 1-5
     /// - evidenceUrl: URL válida (opcional)
+    /// - experienceDescription: Texto libre hasta 1000 caracteres (opcional)
+    /// 
+    /// **Campos opcionales:**
+    /// - evidenceUrl: URL con evidencia (GitHub, proyecto, etc.)
+    /// - experienceDescription: Descripción textual de la experiencia con esta habilidad
     /// 
     /// **Comportamiento (Upsert):**
     /// - Si la skill NO existe para el usuario → CREA (INSERT)
-    /// - Si la skill ya existe → ACTUALIZA nivel y evidenceUrl (UPDATE)
+    /// - Si la skill ya existe → ACTUALIZA nivel y evidencia (UPDATE)
     /// 
     /// **Nota importante:**
     /// - El usuario solo puede gestionar SUS PROPIAS skills
@@ -126,6 +132,7 @@ public class EmployeeSkillsController : ControllerBase
     /// - Auto-declaración de skills durante onboarding
     /// - Actualización tras completar capacitación
     /// - Agregar evidencia de proyectos personales
+    /// - Describir experiencia con la habilidad (texto libre)
     /// </remarks>
     /// <param name="request">Datos de la habilidad (skillId, nivel, evidencia)</param>
     /// <returns>Resultado de la operación</returns>

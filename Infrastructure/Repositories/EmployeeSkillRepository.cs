@@ -55,6 +55,7 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
             // Update existing
             existing.Level = employeeSkill.Level;
             existing.EvidenceUrl = employeeSkill.EvidenceUrl;
+            existing.ExperienceDescription = employeeSkill.ExperienceDescription;
             existing.UpdatedAt = DateTime.UtcNow;
             existing.UpdatedByUserId = employeeSkill.UpdatedByUserId;
             await _context.SaveChangesAsync();
@@ -71,6 +72,7 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
                 OrganizationId = employeeSkill.OrganizationId,
                 Level = employeeSkill.Level,
                 EvidenceUrl = employeeSkill.EvidenceUrl,
+                ExperienceDescription = employeeSkill.ExperienceDescription,
                 CreatedAt = DateTime.UtcNow,
                 CreatedByUserId = employeeSkill.CreatedByUserId,
                 UpdatedAt = DateTime.UtcNow,
@@ -150,6 +152,7 @@ public class EmployeeSkillRepository : Domain.Interfaces.Repositories.IEmployeeS
             SkillCategory = ef.Skill?.Category,
             Level = ef.Level,
             EvidenceUrl = ef.EvidenceUrl,
+            ExperienceDescription = ef.ExperienceDescription,
             LastValidatedAt = ef.LastValidatedAt,
             ValidatedByUserId = ef.ValidatedByUserId,
             CreatedAt = ef.CreatedAt,
