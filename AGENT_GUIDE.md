@@ -211,15 +211,46 @@ curl -X POST http://localhost:5073/agent/query \
 
 El agente ahora retorna respuestas estructuradas diseñadas para consumo directo por interfaces de usuario (UI/Frontend).
 
+### 🎯 Campo MARKDOWN (Importante)
+
+**El campo `markdown` es el contenido principal para mostrar en el chat.**
+
+El frontend debe usar este campo siempre como el mensaje principal. Los demás campos son datos adicionales opcionales.
+
 ### Esquema General
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | `response_type` | string | Tipo de respuesta: "text", "table", "list", "mixed", "error" |
 | `summary` | string | Mensaje amigable para el usuario (máx ~200 chars) |
-| `payload` | object | Contenido principal adaptado al response_type |
+| `markdown` | string | **Contenido principal** formateado en markdown listo para mostrar |
+| `payload` | object | Contenido estructurado (opcional, para casos avanzados) |
 | `metadata` | object | Información técnica (reasoning, tools, etc.) |
 | `suggested_actions` | array | Acciones sugeridas para quick replies (opcional) |
+
+### Ejemplo Completo
+
+```json
+{
+  "response_type": "text",
+  "summary": "Perfil de Carlos Rodriguez - 8 años de experiencia",
+  "markdown": "## 👤 Perfil de Carlos Rodriguez\n\n**Experiencia:** 8 años\n**Email:** admin@techcorp.com\n\n### Habilidades Declaradas\n- Python: Nivel 4 (No validado)\n- Comunicación: Nivel 4 (No validado)\n- AWS: Nivel 2 (No validado)\n\n### Certificaciones\n- el sabio opin...",
+  "payload": {
+    "text": "..."
+  },
+  "metadata": {
+    "reasoning": "Analicé los datos del perfil del usuario...",
+    "requires_human_approval": false,
+    "action_id": null
+  },
+  "suggested_actions": [
+    {
+      "label": "Más detalles",
+      "query": "dame más información"
+    }
+  ]
+}
+```
 
 ### Tipos de Respuesta
 
@@ -229,8 +260,9 @@ El agente ahora retorna respuestas estructuradas diseñadas para consumo directo
 {
   "response_type": "text",
   "summary": "El empleado Juan Pérez tiene 5 años de experiencia en .NET...",
+  "markdown": "## Juan Pérez\n\n**Experiencia:** 5 años\n**Seniority:** Senior Full Stack Developer\n\nEs un desarrollador senior con más de 5 años de experiencia en el ecosistema .NET y React.",
   "payload": {
-    "text": "Juan Pérez es un desarrollador senior con más de 5 años de experiencia en el ecosistema .NET..."
+    "text": "Juan Pérez es un desarrollador senior..."
   },
   "metadata": {
     "reasoning": "Analicé el perfil del empleado y su historial de proyectos...",

@@ -31,6 +31,9 @@ public class AgentController : ControllerBase
     /// <remarks>
     /// Permite hacer preguntas al agente sobre talento, proyectos, skills, etc. El agente responderá con análisis inteligente y recomendaciones usando Google Gemini.
     /// 
+    /// **IMPORTANTE - El campo 'markdown' es el contenido principal para mostrar en el chat.**
+    /// El frontend debe pintar este campo directamente. Los demás campos son datos adicionales.
+    /// 
     /// **Ejemplos de Queries - Consultas Organizacionales:**
     /// 
     ///     POST /agent/query
@@ -94,13 +97,25 @@ public class AgentController : ControllerBase
     ///         "success": true,
     ///         "message": "Consulta procesada exitosamente",
     ///         "data": {
-    ///             "answer": "Tenemos 2 desarrolladores con Java nivel 4+:\n\n1. Juan Martínez (Java: 4, Spring Boot: 3)\n2. Ana López (Java: 5, Spring Boot: 5, PostgreSQL: 4)\n\nAna López es el perfil más senior en Java dentro de la organización.",
-    ///             "reasoning": "Analicé la tabla talent.EmployeeSkills filtrando por OrganizationId y skillName='Java' con level >= 4. Encontré 2 matches.",
-    ///             "requiresApproval": false,
-    ///             "actionId": null,
-    ///             "confidence": 95
+    ///             "response_type": "text",
+    ///             "summary": "Perfil de Carlos Rodriguez - 8 años de experiencia",
+    ///             "markdown": "## 👤 Perfil de Carlos Rodriguez\n\n**Experiencia:** 8 años\n**Email:** admin@techcorp.com\n\n### Habilidades Declaradas\n- Python: Nivel 4 (No validado)\n- Comunicación: Nivel 4 (No validado)\n- AWS: Nivel 2 (No validado)",
+    ///             "payload": { "text": "..." },
+    ///             "metadata": {
+    ///                 "reasoning": "Analicé los datos del perfil del usuario...",
+    ///                 "requires_human_approval": false,
+    ///                 "action_id": null
+    ///             },
+    ///             "suggested_actions": [
+    ///                 {"label": "Más detalles", "query": "dame más información"}
+    ///             ]
     ///         }
     ///     }
+    /// 
+    /// **Cómo usar el campo markdown:**
+    /// Este campo siempre estará presente y contiene la respuesta formateada en markdown lista para mostrar.
+    /// El frontend debe usar este campo como contenido principal del mensaje.
+    /// Los campos 'payload' y 'metadata' contienen datos estructurados opcionales para casos de uso avanzados.
     /// 
     /// **Parámetro requireApproval:**
     /// - false (default): Consulta de solo lectura, respuesta inmediata
@@ -109,7 +124,7 @@ public class AgentController : ControllerBase
     /// **Notas importantes:**
     /// - El agente SOLO accede a datos de la OrganizationId del JWT (multi-tenancy)
     /// - Cada consulta se registra en reporting.AgentActions (auditoría)
-    /// - El campo reasoning muestra el proceso de razonamiento del agente (Chain of Thought)
+    /// - El campo reasoning en metadata muestra el proceso de razonamiento del agente (Chain of Thought)
     /// - El userId se extrae automáticamente del token JWT para consultas personales
     /// 
     /// **Casos de uso:**

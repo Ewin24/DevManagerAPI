@@ -1225,6 +1225,10 @@ El sistema detecta automáticamente cuando la consulta se refiere al usuario act
 - "para mí", "para mi"
 - "me recomi", "me适合" (soporte multilingüe)
 
+**🎯 IMPORTANTE - Campo markdown:**
+El campo `markdown` siempre está presente y es el contenido principal para mostrar en el chat.
+El frontend debe usar este campo directamente. Los demás campos son datos adicionales.
+
 **Response (200 OK):**
 ```json
 {
@@ -1233,8 +1237,9 @@ El sistema detecta automáticamente cuando la consulta se refiere al usuario act
   "data": {
     "response_type": "text",
     "summary": "Tenemos 2 desarrolladores con Java nivel 4+ en la organización",
+    "markdown": "## Desarrolladores con Java nivel 4+\n\nTenemos 2 desarrolladores:\n\n1. **Juan Martínez** - Java: 4, Spring Boot: 3\n2. **Ana López** - Java: 5, Spring Boot: 5, PostgreSQL: 4\n\nAna López es el perfil más senior en Java dentro de la organización.",
     "payload": {
-      "text": "Tenemos 2 desarrolladores con Java nivel 4+:\n\n1. Juan Martínez (Java: 4, Spring Boot: 3)\n2. Ana López (Java: 5, Spring Boot: 5, PostgreSQL: 4)\n\nAna López es el perfil más senior en Java dentro de la organización."
+      "text": "Tenemos 2 desarrolladores con Java nivel 4+..."
     },
     "metadata": {
       "reasoning": "Analicé la tabla talent.EmployeeSkills filtrando por OrganizationId y skillName='Java' con level >= 4. Encontré 2 matches.",
@@ -1259,27 +1264,19 @@ El sistema detecta automáticamente cuando la consulta se refiere al usuario act
   "data": {
     "response_type": "mixed",
     "summary": "3 recomendaciones de habilidades basadas en tu perfil actual",
+    "markdown": "## Recomendaciones para Ti\n\nBasado en tu perfil actual (C# nivel 4, React nivel 3, 5 años de experiencia):\n\n### Recomendaciones\n1. **Azure DevOps** - Complementa tus habilidades actuales y es muy demandada\n2. **Kubernetes** - De nivel 2 a 3+ para proyectos cloud-native\n3. **Certificación AWS** - Ampliaría tus oportunidades en la organización",
     "payload": {
-      "text": "Basado en tu perfil actual (C# nivel 4, React nivel 3, 5 años de experiencia), te recomiendo:",
+      "text": "Basado en tu perfil actual...",
       "list": {
         "items": [
-          {
-            "label": "Aprender Azure DevOps",
-            "value": "Complementa tus habilidades actuales y es muy demandada"
-          },
-          {
-            "label": "Mejorar Kubernetes",
-            "value": "De nivel 2 a 3+ para proyectos cloud-native"
-          },
-          {
-            "label": "Certificación AWS Solutions Architect",
-            "value": "Ampliaría tus oportunidades en la organización"
-          }
+          {"label": "Aprender Azure DevOps", "value": "Complementa tus habilidades"},
+          {"label": "Mejorar Kubernetes", "value": "De nivel 2 a 3+"},
+          {"label": "Certificación AWS Solutions Architect", "value": "Ampliaría oportunidades"}
         ]
       }
     },
     "metadata": {
-      "reasoning": "Analicé tu perfil: C# (4), React (3), SQL Server (4). Comparé con los requisitos de proyectos activos y skills más demandadas en la organización.",
+      "reasoning": "Analicé tu perfil: C# (4), React (3), SQL Server (4). Comparé con requisitos de proyectos activos.",
       "requires_human_approval": false,
       "action_id": null
     },

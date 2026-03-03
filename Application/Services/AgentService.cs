@@ -84,7 +84,12 @@ public class AgentService : IAgentService
 
             fullPrompt += @"
 
-**INSTRUCCIONES:**
+**INSTRUCCIONES DE FORMATO:**
+- USA FORMATO MARKDOWN para estructurar tu respuesta
+- NO devuelvas JSON puro como respuesta principal
+- Usa encabezados (##, ###), listas (-, *), tablas cuando sea necesario
+- El campo 'summary' debe ser un resumen corto (1-2 oraciones)
+- El contenido principal debe ser markdown legible directamente por el usuario
 - Analiza los DATOS REALES proporcionados arriba
 - Proporciona respuestas específicas basadas en esos datos
 - Incluye números, nombres y métricas concretas
@@ -94,6 +99,9 @@ public class AgentService : IAgentService
             // Obtener respuesta con razonamiento (Chain of Thought)
             var (response, reasoning) = await _geminiService.QueryWithReasoningAsync(
                 fullPrompt, cancellationToken);
+
+            // Limpiar y formatear la respuesta como markdown
+            var cleanedMarkdown = CleanGeminiResponse(response);
 
             // Registrar la acción del agente
             var actionId = await _agentRepository.CreateActionAsync(
@@ -106,8 +114,9 @@ public class AgentService : IAgentService
 
             return new AgentQueryResponse
             {
-                ResponseType = DetermineResponseType(response, contextData),
-                Summary = BuildSummary(response, request.Query),
+                ResponseType = DetermineResponseType(cleanedMarkdown, contextData),
+                Summary = BuildSummary(cleanedMarkdown, request.Query),
+                Markdown = cleanedMarkdown,
                 Payload = BuildPayload(response, contextData),
                 Metadata = new ResponseMetadata
                 {
@@ -116,7 +125,7 @@ public class AgentService : IAgentService
                     RequiresHumanApproval = request.RequireApproval,
                     ActionId = actionId
                 },
-                SuggestedActions = GenerateSuggestedActions(request.Query, response)
+                SuggestedActions = GenerateSuggestedActions(request.Query, cleanedMarkdown)
             };
         }
         catch (Exception ex)
@@ -124,6 +133,137 @@ public class AgentService : IAgentService
             _logger.LogError(ex, "Error procesando query del agente");
             throw;
         }
+    }
+
+    private static string CleanGeminiResponse(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+            return "No se pudo generar una respuesta.";
+
+        var cleaned = response.Trim();
+
+        // Si la respuesta es JSON embebido, intentar parsear y convertir a markdown
+        if (cleaned.Contains("{") && cleaned.Contains("}"))
+        {
+            // Remover markdown code blocks
+            cleaned = cleaned.Replace("```json", "").Replace("```", "").Replace("```json\n", "").Trim();
+
+            // Si empieza con {, intentamos parsear como JSON
+            if (cleaned.TrimStart().StartsWith("{"))
+            {
+                try
+                {
+                    var jsonDoc = JsonDocument.Parse(cleaned);
+                    return ConvertJsonToMarkdown(jsonDoc.RootElement);
+                }
+                catch
+                {
+                    // Si no se puede parsear, limpiar como texto
+                    return CleanJsonString(cleaned);
+                }
+            }
+        }
+
+        // Limpiar cualquier resto de JSON en el texto
+        return CleanJsonString(cleaned);
+    }
+
+    private static string ConvertJsonToMarkdown(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            var md = new System.Text.StringBuilder();
+            var properties = element.EnumerateObject().ToList();
+
+            for (int i = 0; i < properties.Count; i++)
+            {
+                var prop = properties[i];
+                var value = prop.Value;
+
+                if (value.ValueKind == JsonValueKind.Object)
+                {
+                    md.AppendLine($"### {FormatPropertyName(prop.Name)}");
+                    md.AppendLine(ConvertJsonToMarkdown(value));
+                }
+                else if (value.ValueKind == JsonValueKind.Array)
+                {
+                    md.AppendLine($"### {FormatPropertyName(prop.Name)}");
+                    var items = value.EnumerateArray().ToList();
+                    for (int j = 0; j < items.Count; j++)
+                    {
+                        var item = items[j];
+                        if (item.ValueKind == JsonValueKind.Object)
+                        {
+                            md.AppendLine($"- **{j + 1}.** ");
+                            md.AppendLine(ConvertJsonToMarkdown(item));
+                        }
+                        else
+                        {
+                            md.AppendLine($"- {FormatValue(item)}");
+                        }
+                    }
+                }
+                else
+                {
+                    var formattedValue = FormatValue(value);
+                    if (!string.IsNullOrEmpty(formattedValue))
+                    {
+                        md.AppendLine($"**{FormatPropertyName(prop.Name)}:** {formattedValue}");
+                    }
+                }
+            }
+            return md.ToString();
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            var md = new System.Text.StringBuilder();
+            foreach (var item in element.EnumerateArray())
+            {
+                md.AppendLine($"- {FormatValue(item)}");
+            }
+            return md.ToString();
+        }
+
+        return FormatValue(element);
+    }
+
+    private static string FormatPropertyName(string name)
+    {
+        // Convertir camelCase a Título con espacios
+        return System.Text.RegularExpressions.Regex.Replace(name, 
+            "([a-z])([A-Z])", "$1 $2").Trim();
+    }
+
+    private static string FormatValue(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? "",
+            JsonValueKind.Number => element.GetRawText(),
+            JsonValueKind.True => "Sí",
+            JsonValueKind.False => "No",
+            JsonValueKind.Null => "",
+            _ => element.GetRawText()
+        };
+    }
+
+    private static string CleanJsonString(string text)
+    {
+        // Remover claves JSON restantes que puedan estar en el texto
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(
+            text, 
+            @"""[\w]+"":\s*", 
+            "");
+        
+        cleaned = cleaned.Replace("{", "").Replace("}", "");
+        cleaned = cleaned.Replace("[\n", "").Replace("\n]", "");
+        cleaned = cleaned.Replace("\"", "");
+
+        // Limpiar commas restantes al final de líneas
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @",\s*$", "", System.Text.RegularExpressions.RegexOptions.Multiline);
+        
+        return cleaned.Trim();
     }
 
     private static string DetermineResponseType(string response, Dictionary<string, object> contextData)
