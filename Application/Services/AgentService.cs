@@ -17,6 +17,9 @@ public class AgentService : IAgentService
     private readonly IProjectService _projectService;
     private readonly IUserService _userService;
     private readonly IAgentRepository _agentRepository;
+    private readonly ICertificationService _certificationService;
+    private readonly IRolePermissionService _rolePermissionService;
+    private readonly IApplicationService _applicationService;
     private readonly ILogger<AgentService> _logger;
 
     public AgentService(
@@ -27,6 +30,9 @@ public class AgentService : IAgentService
         IProjectService projectService,
         IUserService userService,
         IAgentRepository agentRepository,
+        ICertificationService certificationService,
+        IRolePermissionService rolePermissionService,
+        IApplicationService applicationService,
         ILogger<AgentService> logger)
     {
         _geminiService = geminiService;
@@ -36,6 +42,9 @@ public class AgentService : IAgentService
         _projectService = projectService;
         _userService = userService;
         _agentRepository = agentRepository;
+        _certificationService = certificationService;
+        _rolePermissionService = rolePermissionService;
+        _applicationService = applicationService;
         _logger = logger;
     }
 
@@ -270,9 +279,14 @@ public class AgentService : IAgentService
     {
         var responseLower = response.ToLowerInvariant();
 
-        if (contextData.ContainsKey("SkillStatistics") || 
+        if (contextData.ContainsKey("SkillStatistics") ||
             contextData.ContainsKey("EmployeeProfiles") ||
-            contextData.ContainsKey("Projects"))
+            contextData.ContainsKey("Projects") ||
+            contextData.ContainsKey("OrgCertifications") ||
+            contextData.ContainsKey("ProjectApplications") ||
+            contextData.ContainsKey("UserRoleAssignments") ||
+            contextData.ContainsKey("TrainingGapAnalysis") ||
+            contextData.ContainsKey("OrgOverview"))
         {
             if (responseLower.Contains("tabla") || responseLower.Contains("tabla de") ||
                 responseLower.Contains("nivel") || responseLower.Contains("empleado"))
@@ -280,7 +294,8 @@ public class AgentService : IAgentService
                 return "table";
             }
             if (responseLower.Contains("lista") || responseLower.Contains("listado") ||
-                responseLower.Contains("recomendaciones"))
+                responseLower.Contains("recomendaciones") || responseLower.Contains("certificaciones") ||
+                responseLower.Contains("postulaciones") || responseLower.Contains("roles"))
             {
                 return "list";
             }
@@ -365,46 +380,59 @@ public class AgentService : IAgentService
     {
         var actions = new List<SuggestedAction>();
         var queryLower = query.ToLowerInvariant();
+        var responseLower = response.ToLowerInvariant();
 
         if (queryLower.Contains("habilidad") || queryLower.Contains("skill"))
         {
-            actions.Add(new SuggestedAction
-            {
-                Label = "Ver empleados con esta habilidad",
-                Query = "dame la lista de empleados por habilidad"
-            });
-            actions.Add(new SuggestedAction
-            {
-                Label = "Estadísticas de skills",
-                Query = "muéstrame las estadísticas de habilidades"
-            });
+            actions.Add(new SuggestedAction { Label = "Ver empleados por habilidad", Query = "dame la lista de empleados por habilidad" });
+            actions.Add(new SuggestedAction { Label = "Estadísticas de skills", Query = "muéstrame las estadísticas de habilidades" });
+            actions.Add(new SuggestedAction { Label = "Brechas de capacitación", Query = "identifica las brechas de capacitación del equipo" });
         }
 
         if (queryLower.Contains("proyecto") || queryLower.Contains("proyect"))
         {
-            actions.Add(new SuggestedAction
-            {
-                Label = "Buscar candidatos",
-                Query = "busca candidatos para este proyecto"
-            });
+            actions.Add(new SuggestedAction { Label = "Buscar candidatos", Query = "busca candidatos para este proyecto" });
+            actions.Add(new SuggestedAction { Label = "Ver postulaciones", Query = "muéstrame las postulaciones a los proyectos activos" });
         }
 
-        if (!queryLower.Contains("mi perfil") && !queryLower.Contains("mis habilidades"))
+        if (queryLower.Contains("certificac") || queryLower.Contains("cert"))
         {
-            actions.Add(new SuggestedAction
-            {
-                Label = "Mi perfil",
-                Query = "muéstrame mi perfil"
-            });
+            actions.Add(new SuggestedAction { Label = "Mis certificaciones", Query = "muéstrame mis certificaciones" });
+            actions.Add(new SuggestedAction { Label = "Certificaciones del equipo", Query = "qué certificaciones tiene el equipo" });
         }
 
-        if (actions.Count == 0)
+        if (queryLower.Contains("postulac") || queryLower.Contains("aplica"))
         {
-            actions.Add(new SuggestedAction
-            {
-                Label = "Más detalles",
-                Query = "dame más información"
-            });
+            actions.Add(new SuggestedAction { Label = "Ver proyectos activos", Query = "muéstrame los proyectos activos" });
+            actions.Add(new SuggestedAction { Label = "Postulaciones pendientes", Query = "cuáles son las postulaciones pendientes de revisión" });
+        }
+
+        if (queryLower.Contains("rol") || queryLower.Contains("permiso") || queryLower.Contains("acceso"))
+        {
+            actions.Add(new SuggestedAction { Label = "Ver todos los roles", Query = "muéstrame todos los roles de la organización" });
+            actions.Add(new SuggestedAction { Label = "Quién es administrador", Query = "quiénes tienen rol de administrador" });
+        }
+
+        if (queryLower.Contains("brecha") || queryLower.Contains("capacitac") || queryLower.Contains("formac"))
+        {
+            actions.Add(new SuggestedAction { Label = "Skills del equipo", Query = "qué habilidades tiene el equipo" });
+            actions.Add(new SuggestedAction { Label = "Empleados sin skills", Query = "cuántos empleados no tienen habilidades registradas" });
+        }
+
+        if (responseLower.Contains("no cuento con la información") || responseLower.Contains("no tengo información"))
+        {
+            actions.Clear();
+            actions.Add(new SuggestedAction { Label = "Resumen general", Query = "dame un resumen general de la organización" });
+            actions.Add(new SuggestedAction { Label = "Estado de proyectos", Query = "muéstrame el estado de todos los proyectos" });
+            actions.Add(new SuggestedAction { Label = "Estadísticas de skills", Query = "muéstrame las estadísticas de habilidades del equipo" });
+        }
+
+        if (!actions.Any())
+        {
+            if (!queryLower.Contains("mi perfil") && !queryLower.Contains("mis habilidades"))
+                actions.Add(new SuggestedAction { Label = "Mi perfil", Query = "muéstrame mi perfil" });
+            actions.Add(new SuggestedAction { Label = "Resumen general", Query = "dame un resumen general de la organización" });
+            actions.Add(new SuggestedAction { Label = "Proyectos activos", Query = "cuáles son los proyectos activos" });
         }
 
         return actions.Take(3).ToList();
@@ -537,6 +565,179 @@ public class AgentService : IAgentService
                 }
             }
 
+            // Detectar si la query es sobre certificaciones
+            if (queryLower.Contains("certificac") || queryLower.Contains("certificado") ||
+                queryLower.Contains("cert") || queryLower.Contains("título") ||
+                queryLower.Contains("titulo") || queryLower.Contains("acreditac"))
+            {
+                try
+                {
+                    if (isCurrentUserQuery)
+                    {
+                        var myCerts = await _certificationService.GetCertificationsByUserIdAsync(userId, organizationId);
+                        contextData["MyCertifications"] = myCerts;
+                    }
+                    else
+                    {
+                        // Org-wide: obtener certs de todos los usuarios activos
+                        var users = await _userService.GetAllAsync(organizationId);
+                        var allCerts = new List<object>();
+                        foreach (var user in users.Where(u => u.IsActive).Take(20))
+                        {
+                            var userCerts = await _certificationService.GetCertificationsByUserIdAsync(user.Id, organizationId);
+                            allCerts.AddRange(userCerts.Select(c => new
+                            {
+                                userId = user.Id,
+                                userName = $"{user.FirstName} {user.LastName}",
+                                certName = c.Name,
+                                issuer = c.Issuer,
+                                issueDate = c.IssueDate,
+                                expirationDate = c.ExpirationDate
+                            }));
+                        }
+                        contextData["OrgCertifications"] = allCerts;
+                    }
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error obteniendo certificaciones"); }
+            }
+
+            // Detectar si la query es sobre postulaciones / aplicaciones a proyectos
+            if (queryLower.Contains("postulac") || queryLower.Contains("aplica") ||
+                queryLower.Contains("candid") || queryLower.Contains("solicitud") ||
+                queryLower.Contains("vacante") || queryLower.Contains("interesad") ||
+                queryLower.Contains("revision") || queryLower.Contains("revisión") ||
+                queryLower.Contains("pendiente"))
+            {
+                try
+                {
+                    var projects = contextData.ContainsKey("Projects")
+                        ? (contextData["Projects"] as IEnumerable<Application.DTOs.Projects.ProjectResponse>)?.ToList()
+                        ?? (await _projectService.GetAllProjectsAsync(organizationId)).ToList()
+                        : (await _projectService.GetAllProjectsAsync(organizationId)).ToList();
+
+                    var allApplications = new List<object>();
+                    foreach (var project in projects.Take(15))
+                    {
+                        var apps = await _applicationService.GetProjectApplicationsAsync(project.Id, organizationId);
+                        allApplications.AddRange(apps.Select(a => new
+                        {
+                            projectId = project.Id,
+                            projectName = project.Name,
+                            applicationId = a.Id,
+                            applicantName = a.UserName,
+                            status = a.Status.ToString(),
+                            message = a.Message,
+                            appliedAt = a.CreatedAt,
+                            reviewedAt = a.ReviewedAt
+                        }));
+                    }
+                    contextData["ProjectApplications"] = allApplications;
+                    if (!contextData.ContainsKey("Projects"))
+                        contextData["Projects"] = projects;
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error obteniendo postulaciones"); }
+            }
+
+            // Detectar si la query es sobre roles, permisos o control de acceso (RBAC)
+            if (queryLower.Contains(" rol") || queryLower.Contains("role") ||
+                queryLower.Contains("permiso") || queryLower.Contains("acceso") ||
+                queryLower.Contains("rbac") || queryLower.Contains("administrador") ||
+                queryLower.Contains("quién tiene") || queryLower.Contains("autorización") ||
+                queryLower.Contains("autorizac"))
+            {
+                try
+                {
+                    var roles = await _rolePermissionService.GetAllRolesAsync(organizationId);
+                    var userRoleAssignments = await _rolePermissionService.GetUserRoleAssignmentsAsync(organizationId);
+                    contextData["Roles"] = roles;
+                    contextData["UserRoleAssignments"] = userRoleAssignments;
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error obteniendo roles/permisos"); }
+            }
+
+            // Detectar si la query es sobre brechas de capacitación / formación
+            if (queryLower.Contains("brecha") || queryLower.Contains("capacitac") ||
+                queryLower.Contains("formac") || queryLower.Contains("entrenamiento") ||
+                queryLower.Contains("gap") || queryLower.Contains("aprender") ||
+                queryLower.Contains("mejorar") || queryLower.Contains("desarrollarse") ||
+                queryLower.Contains("necesita") || queryLower.Contains("falta"))
+            {
+                try
+                {
+                    var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
+                    var projects = await _projectService.GetAllProjectsAsync(organizationId);
+                    var skills = await _skillService.GetAllSkillsAsync(organizationId);
+                    var allUsers = await _userService.GetAllAsync(organizationId);
+                    var userNameDict = allUsers.ToDictionary(u => u.Id, u => $"{u.FirstName} {u.LastName}");
+
+                    var trainingGapData = new
+                    {
+                        totalEmployees = profiles.Count(),
+                        employeesWithNoSkills = profiles.Count(p => !p.Skills.Any()),
+                        skillCoverage = profiles
+                            .SelectMany(p => p.Skills.Select(s => s.SkillName))
+                            .GroupBy(s => s)
+                            .Select(g => new { skill = g.Key, employeeCount = g.Count() })
+                            .OrderByDescending(x => x.employeeCount)
+                            .Take(15)
+                            .ToList(),
+                        employeesWithLowLevelSkills = profiles
+                            .SelectMany(p => p.Skills
+                                .Where(s => s.CurrentLevel < 3)
+                                .Select(s => new
+                                {
+                                    employeeName = userNameDict.TryGetValue(p.UserId, out var n) ? n : p.UserId.ToString(),
+                                    skill = s.SkillName,
+                                    currentLevel = s.CurrentLevel
+                                }))
+                            .Take(20)
+                            .ToList(),
+                        projectsNeedingStaff = projects
+                            .Where(p => p.Status == Domain.Enums.ProjectStatus.Draft ||
+                                        p.Status == Domain.Enums.ProjectStatus.Open ||
+                                        p.Status == Domain.Enums.ProjectStatus.InProgress)
+                            .Select(p => new { name = p.Name, status = p.Status.ToString() })
+                            .ToList()
+                    };
+                    contextData["TrainingGapAnalysis"] = trainingGapData;
+                    if (!contextData.ContainsKey("Skills")) contextData["Skills"] = skills;
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error calculando brechas de capacitación"); }
+            }
+
+            // Catch-all: si ningún bloque específico cargó datos, cargar resumen general de la organización
+            if (!contextData.Any())
+            {
+                try
+                {
+                    var users = await _userService.GetAllAsync(organizationId);
+                    var projects = await _projectService.GetAllProjectsAsync(organizationId);
+                    var skills = await _skillService.GetAllSkillsAsync(organizationId);
+                    var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
+
+                    contextData["OrgOverview"] = new
+                    {
+                        totalUsers = users.Count(),
+                        activeUsers = users.Count(u => u.IsActive),
+                        totalProjects = projects.Count(),
+                        projectsByStatus = projects
+                            .GroupBy(p => p.Status)
+                            .Select(g => new { status = g.Key.ToString(), count = g.Count() })
+                            .ToList(),
+                        totalSkills = skills.Count(),
+                        employeesWithProfile = profiles.Count(),
+                        topSkills = profiles
+                            .SelectMany(p => p.Skills.Select(s => s.SkillName))
+                            .GroupBy(s => s)
+                            .OrderByDescending(g => g.Count())
+                            .Take(8)
+                            .Select(g => g.Key)
+                            .ToList()
+                    };
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error obteniendo overview de la organización"); }
+            }
+
             _logger.LogInformation("Se obtuvieron {Count} conjuntos de datos para el contexto", contextData.Count);
         }
         catch (Exception ex)
@@ -593,6 +794,62 @@ public class AgentService : IAgentService
             var currentUser = contextData["CurrentUserProfile"];
             context.AppendLine("### PERFIL DEL USUARIO ACTUAL:");
             context.AppendLine(JsonSerializer.Serialize(currentUser, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("MyCertifications"))
+        {
+            var certs = contextData["MyCertifications"];
+            context.AppendLine("### MIS CERTIFICACIONES:");
+            context.AppendLine(JsonSerializer.Serialize(certs, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("OrgCertifications"))
+        {
+            var certs = contextData["OrgCertifications"];
+            context.AppendLine("### CERTIFICACIONES DE LA ORGANIZACIÓN:");
+            context.AppendLine(JsonSerializer.Serialize(certs, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("ProjectApplications"))
+        {
+            var apps = contextData["ProjectApplications"];
+            context.AppendLine("### POSTULACIONES A PROYECTOS:");
+            context.AppendLine(JsonSerializer.Serialize(apps, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("Roles"))
+        {
+            var roles = contextData["Roles"];
+            context.AppendLine("### ROLES DE LA ORGANIZACIÓN:");
+            context.AppendLine(JsonSerializer.Serialize(roles, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("UserRoleAssignments"))
+        {
+            var assignments = contextData["UserRoleAssignments"];
+            context.AppendLine("### ASIGNACIONES DE ROL POR USUARIO:");
+            context.AppendLine(JsonSerializer.Serialize(assignments, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("TrainingGapAnalysis"))
+        {
+            var gaps = contextData["TrainingGapAnalysis"];
+            context.AppendLine("### ANÁLISIS DE BRECHAS DE CAPACITACIÓN:");
+            context.AppendLine(JsonSerializer.Serialize(gaps, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("OrgOverview"))
+        {
+            var overview = contextData["OrgOverview"];
+            context.AppendLine("### RESUMEN GENERAL DE LA ORGANIZACIÓN:");
+            context.AppendLine(JsonSerializer.Serialize(overview, new JsonSerializerOptions { WriteIndented = true }));
             context.AppendLine();
         }
 
@@ -1044,6 +1301,9 @@ Tu misión es ayudar a optimizar la gestión de talento y asignación de proyect
 - Recomendar candidatos óptimos para proyectos
 - Identificar brechas de capacitación
 - Analizar tendencias de contribución
+- Consultar postulaciones a proyectos y su estado
+- Revisar roles y permisos RBAC de la organización
+- Mostrar resúmenes generales de la organización
 
 **Restricciones de seguridad:**
 - Solo accedes a datos de la organización actual (multi-tenancy estricto)
@@ -1056,6 +1316,14 @@ Tu misión es ayudar a optimizar la gestión de talento y asignación de proyect
 - Explica tu razonamiento (Chain of Thought)
 - Proporciona métricas cuantificables cuando sea posible
 - Señala limitaciones y suposiciones
+
+**REGLAS DE RESPUESTA CRÍTICAS:**
+- Si los datos provistos SON suficientes: responde con información específica, nombres reales y métricas concretas.
+- Si los datos NO son suficientes para responder la consulta exacta, responde EXACTAMENTE así:
+  'No cuento con la información necesaria para responder esta consulta con los datos disponibles.'
+  Luego sugiere qué sí puedes responder: 'Puedo ayudarte con: habilidades del equipo, proyectos activos, perfiles de empleados, certificaciones, postulaciones a proyectos, roles y permisos, o un resumen general de la organización.'
+- NUNCA inventes datos, nombres o métricas que no estén en los datos proporcionados.
+- NUNCA uses placeholders como [nombre], [cantidad], [skill].
 
 Responde siempre de manera estructurada y accionable.";
     }
