@@ -59,6 +59,24 @@ public class AgentService : IAgentService
 
         var toolsExecuted = new List<ToolExecutionResult>();
 
+        // Guardia de intención: rechazar consultas fuera del dominio antes de llamar a Gemini
+        if (IsOffTopicQuery(request.Query))
+        {
+            _logger.LogInformation("Consulta off-topic rechazada para org {OrgId}: {Query}", organizationId, request.Query);
+            return new AgentQueryResponse
+            {
+                ResponseType = "text",
+                Summary = "Consulta fuera del ámbito del sistema DevManager.",
+                Markdown = "## Fuera de mi ámbito\n\nSolo puedo responder consultas relacionadas con la gestión de talento y proyectos de tu organización.\n\n**Puedo ayudarte con:**\n- Habilidades y competencias del equipo\n- Proyectos activos y sus requisitos\n- Perfiles y certificaciones de empleados\n- Postulaciones a proyectos\n- Brechas de capacitación\n- Roles y permisos de la organización\n- Resumen general de la organización",
+                SuggestedActions = new List<SuggestedAction>
+                {
+                    new() { Label = "Ver habilidades del equipo", Query = "¿Qué habilidades tiene el equipo?", Icon = "skill" },
+                    new() { Label = "Proyectos activos", Query = "¿Cuáles son los proyectos activos?", Icon = "project" },
+                    new() { Label = "Resumen de la organización", Query = "Dame un resumen general de la organización", Icon = "org" }
+                }
+            };
+        }
+
         try
         {
             // Determinar qué datos necesita la consulta y obtenerlos
@@ -1285,6 +1303,44 @@ Ordena por matchScore descendente.";
             actionId, "REJECTED", rejectedByUserId);
 
         _logger.LogInformation("Acción {ActionId} rechazada", actionId);
+    }
+
+    /// <summary>
+    /// Detecta si la consulta no tiene relación con el dominio de gestión de talento/proyectos.
+    /// Devuelve true cuando NINGUNA keyword de dominio aparece en la query.
+    /// </summary>
+    private static bool IsOffTopicQuery(string query)
+    {
+        var q = query.ToLowerInvariant();
+
+        // Keywords que SÍ pertenecen al dominio — si alguna aparece, la query es válida
+        var domainKeywords = new[]
+        {
+            // Talento / personas
+            "empleado", "usuario", "candidato", "desarrollador", "equipo", "team", "persona", "perfil",
+            "nombre", "contrat", "staff", "recurso", "talento",
+            // Habilidades
+            "habilidad", "skill", "competencia", "capacidad", "nivel", "tecnolog",
+            // Proyectos
+            "proyecto", "project", "asignacion", "asignación", "tarea", "sprint", "entregable",
+            // Certificaciones
+            "certificacion", "certificación", "certificado", "cert",
+            // Postulaciones
+            "postulacion", "postulación", "aplicacion", "aplicación", "postul", "aplicó",
+            // Roles / permisos
+            "rol", "role", "permiso", "acceso", "rbac", "admin", "manager",
+            // Organización
+            "organizacion", "organización", "empresa", "compañia", "compañía", "org",
+            // Brechas / capacitación
+            "brecha", "capacitacion", "capacitación", "entrenamiento", "training", "formacion", "formación",
+            // Consultas reflexivas sobre el propio usuario
+            "mis ", "mi ", " yo ", "para mí", "para mi", "que me ", "me recomi", "tengo",
+            // Verbos típicos de consultas de negocio
+            "cuantos", "cuántos", "cuales", "cuáles", "listar", "lista", "mostrar", "muestra",
+            "analiza", "analizar", "recomienda", "recomendar", "busca", "buscar", "dame"
+        };
+
+        return !domainKeywords.Any(k => q.Contains(k));
     }
 
     private static string BuildSystemPrompt(Guid organizationId)
