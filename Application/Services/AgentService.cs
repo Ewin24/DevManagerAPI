@@ -1,4 +1,6 @@
+using Application.Common.Exceptions;
 using Application.DTOs.Agent;
+using Application.DTOs.Projects;
 using Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -972,21 +974,15 @@ Responde en formato JSON:
 
         try
         {
-            // ── 1. Obtener datos en paralelo para reducir latencia ──────────────
-            var projectTask      = _projectService.GetProjectByIdAsync(request.ProjectId, organizationId);
-            var requirementsTask = _projectService.GetSkillRequirementsAsync(request.ProjectId, organizationId);
-            var profilesTask     = _profileService.GetAllProfilesWithSkillsAsync(organizationId);
-            var usersTask        = _userService.GetAllAsync(organizationId);
-
-            await Task.WhenAll(projectTask, requirementsTask, profilesTask, usersTask);
-
-            var project      = await projectTask;
-            var requirements = (await requirementsTask).ToList();
-            var profiles     = (await profilesTask).ToList();
-            var allUsers     = await usersTask;
+            // ── 1. Obtener datos secuencialmente (DbContext es scoped, no thread-safe) ──
+            var project = await _projectService.GetProjectByIdAsync(request.ProjectId, organizationId);
 
             if (project == null)
-                throw new InvalidOperationException($"Proyecto {request.ProjectId} no encontrado");
+                throw new NotFoundException("Proyecto", request.ProjectId);
+
+            var requirements = (await _projectService.GetSkillRequirementsAsync(request.ProjectId, organizationId)).ToList();
+            var profiles     = (await _profileService.GetAllProfilesWithSkillsAsync(organizationId)).ToList();
+            var allUsers     = await _userService.GetAllAsync(organizationId);
 
             if (!profiles.Any())
             {
@@ -1015,8 +1011,10 @@ Responde en formato JSON:
             var scoredCandidates = profiles
                 .Select(profile =>
                 {
+                    // GroupBy para tolerar skills duplicadas en datos inconsistentes
                     var skillMap = profile.Skills
-                        .ToDictionary(s => s.SkillName.ToLowerInvariant(), s => s.CurrentLevel);
+                        .GroupBy(s => s.SkillName.ToLowerInvariant())
+                        .ToDictionary(g => g.Key, g => g.Max(s => (int)s.CurrentLevel));
 
                     // Mandatory (60 %)
                     double mandatoryScore = 0;
