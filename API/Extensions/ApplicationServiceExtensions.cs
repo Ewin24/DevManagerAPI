@@ -61,6 +61,9 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IAssignmentService, AssignmentService>();
 
+        // Servicios de Reportes
+        services.AddScoped<IReportsService, ReportsService>();
+
         // Servicios de configuración/catálogos
         services.AddScoped<IConfigService, Infrastructure.Services.ConfigService>();
 

@@ -1,4 +1,6 @@
+using Application.Common.Exceptions;
 using Application.DTOs.Agent;
+using Application.DTOs.Projects;
 using Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -17,6 +19,9 @@ public class AgentService : IAgentService
     private readonly IProjectService _projectService;
     private readonly IUserService _userService;
     private readonly IAgentRepository _agentRepository;
+    private readonly ICertificationService _certificationService;
+    private readonly IRolePermissionService _rolePermissionService;
+    private readonly IApplicationService _applicationService;
     private readonly ILogger<AgentService> _logger;
 
     public AgentService(
@@ -27,6 +32,9 @@ public class AgentService : IAgentService
         IProjectService projectService,
         IUserService userService,
         IAgentRepository agentRepository,
+        ICertificationService certificationService,
+        IRolePermissionService rolePermissionService,
+        IApplicationService applicationService,
         ILogger<AgentService> logger)
     {
         _geminiService = geminiService;
@@ -36,6 +44,9 @@ public class AgentService : IAgentService
         _projectService = projectService;
         _userService = userService;
         _agentRepository = agentRepository;
+        _certificationService = certificationService;
+        _rolePermissionService = rolePermissionService;
+        _applicationService = applicationService;
         _logger = logger;
     }
 
@@ -49,6 +60,24 @@ public class AgentService : IAgentService
             organizationId, userId, request.Query);
 
         var toolsExecuted = new List<ToolExecutionResult>();
+
+        // Guardia de intención: rechazar consultas fuera del dominio antes de llamar a Gemini
+        if (IsOffTopicQuery(request.Query))
+        {
+            _logger.LogInformation("Consulta off-topic rechazada para org {OrgId}: {Query}", organizationId, request.Query);
+            return new AgentQueryResponse
+            {
+                ResponseType = "text",
+                Summary = "Consulta fuera del ámbito del sistema DevManager.",
+                Markdown = "## Fuera de mi ámbito\n\nSolo puedo responder consultas relacionadas con la gestión de talento y proyectos de tu organización.\n\n**Puedo ayudarte con:**\n- Habilidades y competencias del equipo\n- Proyectos activos y sus requisitos\n- Perfiles y certificaciones de empleados\n- Postulaciones a proyectos\n- Brechas de capacitación\n- Roles y permisos de la organización\n- Resumen general de la organización",
+                SuggestedActions = new List<SuggestedAction>
+                {
+                    new() { Label = "Ver habilidades del equipo", Query = "¿Qué habilidades tiene el equipo?", Icon = "skill" },
+                    new() { Label = "Proyectos activos", Query = "¿Cuáles son los proyectos activos?", Icon = "project" },
+                    new() { Label = "Resumen de la organización", Query = "Dame un resumen general de la organización", Icon = "org" }
+                }
+            };
+        }
 
         try
         {
@@ -270,9 +299,14 @@ public class AgentService : IAgentService
     {
         var responseLower = response.ToLowerInvariant();
 
-        if (contextData.ContainsKey("SkillStatistics") || 
+        if (contextData.ContainsKey("SkillStatistics") ||
             contextData.ContainsKey("EmployeeProfiles") ||
-            contextData.ContainsKey("Projects"))
+            contextData.ContainsKey("Projects") ||
+            contextData.ContainsKey("OrgCertifications") ||
+            contextData.ContainsKey("ProjectApplications") ||
+            contextData.ContainsKey("UserRoleAssignments") ||
+            contextData.ContainsKey("TrainingGapAnalysis") ||
+            contextData.ContainsKey("OrgOverview"))
         {
             if (responseLower.Contains("tabla") || responseLower.Contains("tabla de") ||
                 responseLower.Contains("nivel") || responseLower.Contains("empleado"))
@@ -280,7 +314,8 @@ public class AgentService : IAgentService
                 return "table";
             }
             if (responseLower.Contains("lista") || responseLower.Contains("listado") ||
-                responseLower.Contains("recomendaciones"))
+                responseLower.Contains("recomendaciones") || responseLower.Contains("certificaciones") ||
+                responseLower.Contains("postulaciones") || responseLower.Contains("roles"))
             {
                 return "list";
             }
@@ -365,46 +400,59 @@ public class AgentService : IAgentService
     {
         var actions = new List<SuggestedAction>();
         var queryLower = query.ToLowerInvariant();
+        var responseLower = response.ToLowerInvariant();
 
         if (queryLower.Contains("habilidad") || queryLower.Contains("skill"))
         {
-            actions.Add(new SuggestedAction
-            {
-                Label = "Ver empleados con esta habilidad",
-                Query = "dame la lista de empleados por habilidad"
-            });
-            actions.Add(new SuggestedAction
-            {
-                Label = "Estadísticas de skills",
-                Query = "muéstrame las estadísticas de habilidades"
-            });
+            actions.Add(new SuggestedAction { Label = "Ver empleados por habilidad", Query = "dame la lista de empleados por habilidad" });
+            actions.Add(new SuggestedAction { Label = "Estadísticas de skills", Query = "muéstrame las estadísticas de habilidades" });
+            actions.Add(new SuggestedAction { Label = "Brechas de capacitación", Query = "identifica las brechas de capacitación del equipo" });
         }
 
         if (queryLower.Contains("proyecto") || queryLower.Contains("proyect"))
         {
-            actions.Add(new SuggestedAction
-            {
-                Label = "Buscar candidatos",
-                Query = "busca candidatos para este proyecto"
-            });
+            actions.Add(new SuggestedAction { Label = "Buscar candidatos", Query = "busca candidatos para este proyecto" });
+            actions.Add(new SuggestedAction { Label = "Ver postulaciones", Query = "muéstrame las postulaciones a los proyectos activos" });
         }
 
-        if (!queryLower.Contains("mi perfil") && !queryLower.Contains("mis habilidades"))
+        if (queryLower.Contains("certificac") || queryLower.Contains("cert"))
         {
-            actions.Add(new SuggestedAction
-            {
-                Label = "Mi perfil",
-                Query = "muéstrame mi perfil"
-            });
+            actions.Add(new SuggestedAction { Label = "Mis certificaciones", Query = "muéstrame mis certificaciones" });
+            actions.Add(new SuggestedAction { Label = "Certificaciones del equipo", Query = "qué certificaciones tiene el equipo" });
         }
 
-        if (actions.Count == 0)
+        if (queryLower.Contains("postulac") || queryLower.Contains("aplica"))
         {
-            actions.Add(new SuggestedAction
-            {
-                Label = "Más detalles",
-                Query = "dame más información"
-            });
+            actions.Add(new SuggestedAction { Label = "Ver proyectos activos", Query = "muéstrame los proyectos activos" });
+            actions.Add(new SuggestedAction { Label = "Postulaciones pendientes", Query = "cuáles son las postulaciones pendientes de revisión" });
+        }
+
+        if (queryLower.Contains("rol") || queryLower.Contains("permiso") || queryLower.Contains("acceso"))
+        {
+            actions.Add(new SuggestedAction { Label = "Ver todos los roles", Query = "muéstrame todos los roles de la organización" });
+            actions.Add(new SuggestedAction { Label = "Quién es administrador", Query = "quiénes tienen rol de administrador" });
+        }
+
+        if (queryLower.Contains("brecha") || queryLower.Contains("capacitac") || queryLower.Contains("formac"))
+        {
+            actions.Add(new SuggestedAction { Label = "Skills del equipo", Query = "qué habilidades tiene el equipo" });
+            actions.Add(new SuggestedAction { Label = "Empleados sin skills", Query = "cuántos empleados no tienen habilidades registradas" });
+        }
+
+        if (responseLower.Contains("no cuento con la información") || responseLower.Contains("no tengo información"))
+        {
+            actions.Clear();
+            actions.Add(new SuggestedAction { Label = "Resumen general", Query = "dame un resumen general de la organización" });
+            actions.Add(new SuggestedAction { Label = "Estado de proyectos", Query = "muéstrame el estado de todos los proyectos" });
+            actions.Add(new SuggestedAction { Label = "Estadísticas de skills", Query = "muéstrame las estadísticas de habilidades del equipo" });
+        }
+
+        if (!actions.Any())
+        {
+            if (!queryLower.Contains("mi perfil") && !queryLower.Contains("mis habilidades"))
+                actions.Add(new SuggestedAction { Label = "Mi perfil", Query = "muéstrame mi perfil" });
+            actions.Add(new SuggestedAction { Label = "Resumen general", Query = "dame un resumen general de la organización" });
+            actions.Add(new SuggestedAction { Label = "Proyectos activos", Query = "cuáles son los proyectos activos" });
         }
 
         return actions.Take(3).ToList();
@@ -537,6 +585,179 @@ public class AgentService : IAgentService
                 }
             }
 
+            // Detectar si la query es sobre certificaciones
+            if (queryLower.Contains("certificac") || queryLower.Contains("certificado") ||
+                queryLower.Contains("cert") || queryLower.Contains("título") ||
+                queryLower.Contains("titulo") || queryLower.Contains("acreditac"))
+            {
+                try
+                {
+                    if (isCurrentUserQuery)
+                    {
+                        var myCerts = await _certificationService.GetCertificationsByUserIdAsync(userId, organizationId);
+                        contextData["MyCertifications"] = myCerts;
+                    }
+                    else
+                    {
+                        // Org-wide: obtener certs de todos los usuarios activos
+                        var users = await _userService.GetAllAsync(organizationId);
+                        var allCerts = new List<object>();
+                        foreach (var user in users.Where(u => u.IsActive).Take(20))
+                        {
+                            var userCerts = await _certificationService.GetCertificationsByUserIdAsync(user.Id, organizationId);
+                            allCerts.AddRange(userCerts.Select(c => new
+                            {
+                                userId = user.Id,
+                                userName = $"{user.FirstName} {user.LastName}",
+                                certName = c.Name,
+                                issuer = c.Issuer,
+                                issueDate = c.IssueDate,
+                                expirationDate = c.ExpirationDate
+                            }));
+                        }
+                        contextData["OrgCertifications"] = allCerts;
+                    }
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error obteniendo certificaciones"); }
+            }
+
+            // Detectar si la query es sobre postulaciones / aplicaciones a proyectos
+            if (queryLower.Contains("postulac") || queryLower.Contains("aplica") ||
+                queryLower.Contains("candid") || queryLower.Contains("solicitud") ||
+                queryLower.Contains("vacante") || queryLower.Contains("interesad") ||
+                queryLower.Contains("revision") || queryLower.Contains("revisión") ||
+                queryLower.Contains("pendiente"))
+            {
+                try
+                {
+                    var projects = contextData.ContainsKey("Projects")
+                        ? (contextData["Projects"] as IEnumerable<Application.DTOs.Projects.ProjectResponse>)?.ToList()
+                        ?? (await _projectService.GetAllProjectsAsync(organizationId)).ToList()
+                        : (await _projectService.GetAllProjectsAsync(organizationId)).ToList();
+
+                    var allApplications = new List<object>();
+                    foreach (var project in projects.Take(15))
+                    {
+                        var apps = await _applicationService.GetProjectApplicationsAsync(project.Id, organizationId);
+                        allApplications.AddRange(apps.Select(a => new
+                        {
+                            projectId = project.Id,
+                            projectName = project.Name,
+                            applicationId = a.Id,
+                            applicantName = a.UserName,
+                            status = a.Status.ToString(),
+                            message = a.Message,
+                            appliedAt = a.CreatedAt,
+                            reviewedAt = a.ReviewedAt
+                        }));
+                    }
+                    contextData["ProjectApplications"] = allApplications;
+                    if (!contextData.ContainsKey("Projects"))
+                        contextData["Projects"] = projects;
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error obteniendo postulaciones"); }
+            }
+
+            // Detectar si la query es sobre roles, permisos o control de acceso (RBAC)
+            if (queryLower.Contains(" rol") || queryLower.Contains("role") ||
+                queryLower.Contains("permiso") || queryLower.Contains("acceso") ||
+                queryLower.Contains("rbac") || queryLower.Contains("administrador") ||
+                queryLower.Contains("quién tiene") || queryLower.Contains("autorización") ||
+                queryLower.Contains("autorizac"))
+            {
+                try
+                {
+                    var roles = await _rolePermissionService.GetAllRolesAsync(organizationId);
+                    var userRoleAssignments = await _rolePermissionService.GetUserRoleAssignmentsAsync(organizationId);
+                    contextData["Roles"] = roles;
+                    contextData["UserRoleAssignments"] = userRoleAssignments;
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error obteniendo roles/permisos"); }
+            }
+
+            // Detectar si la query es sobre brechas de capacitación / formación
+            if (queryLower.Contains("brecha") || queryLower.Contains("capacitac") ||
+                queryLower.Contains("formac") || queryLower.Contains("entrenamiento") ||
+                queryLower.Contains("gap") || queryLower.Contains("aprender") ||
+                queryLower.Contains("mejorar") || queryLower.Contains("desarrollarse") ||
+                queryLower.Contains("necesita") || queryLower.Contains("falta"))
+            {
+                try
+                {
+                    var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
+                    var projects = await _projectService.GetAllProjectsAsync(organizationId);
+                    var skills = await _skillService.GetAllSkillsAsync(organizationId);
+                    var allUsers = await _userService.GetAllAsync(organizationId);
+                    var userNameDict = allUsers.ToDictionary(u => u.Id, u => $"{u.FirstName} {u.LastName}");
+
+                    var trainingGapData = new
+                    {
+                        totalEmployees = profiles.Count(),
+                        employeesWithNoSkills = profiles.Count(p => !p.Skills.Any()),
+                        skillCoverage = profiles
+                            .SelectMany(p => p.Skills.Select(s => s.SkillName))
+                            .GroupBy(s => s)
+                            .Select(g => new { skill = g.Key, employeeCount = g.Count() })
+                            .OrderByDescending(x => x.employeeCount)
+                            .Take(15)
+                            .ToList(),
+                        employeesWithLowLevelSkills = profiles
+                            .SelectMany(p => p.Skills
+                                .Where(s => s.CurrentLevel < 3)
+                                .Select(s => new
+                                {
+                                    employeeName = userNameDict.TryGetValue(p.UserId, out var n) ? n : p.UserId.ToString(),
+                                    skill = s.SkillName,
+                                    currentLevel = s.CurrentLevel
+                                }))
+                            .Take(20)
+                            .ToList(),
+                        projectsNeedingStaff = projects
+                            .Where(p => p.Status == Domain.Enums.ProjectStatus.Draft ||
+                                        p.Status == Domain.Enums.ProjectStatus.Open ||
+                                        p.Status == Domain.Enums.ProjectStatus.InProgress)
+                            .Select(p => new { name = p.Name, status = p.Status.ToString() })
+                            .ToList()
+                    };
+                    contextData["TrainingGapAnalysis"] = trainingGapData;
+                    if (!contextData.ContainsKey("Skills")) contextData["Skills"] = skills;
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error calculando brechas de capacitación"); }
+            }
+
+            // Catch-all: si ningún bloque específico cargó datos, cargar resumen general de la organización
+            if (!contextData.Any())
+            {
+                try
+                {
+                    var users = await _userService.GetAllAsync(organizationId);
+                    var projects = await _projectService.GetAllProjectsAsync(organizationId);
+                    var skills = await _skillService.GetAllSkillsAsync(organizationId);
+                    var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
+
+                    contextData["OrgOverview"] = new
+                    {
+                        totalUsers = users.Count(),
+                        activeUsers = users.Count(u => u.IsActive),
+                        totalProjects = projects.Count(),
+                        projectsByStatus = projects
+                            .GroupBy(p => p.Status)
+                            .Select(g => new { status = g.Key.ToString(), count = g.Count() })
+                            .ToList(),
+                        totalSkills = skills.Count(),
+                        employeesWithProfile = profiles.Count(),
+                        topSkills = profiles
+                            .SelectMany(p => p.Skills.Select(s => s.SkillName))
+                            .GroupBy(s => s)
+                            .OrderByDescending(g => g.Count())
+                            .Take(8)
+                            .Select(g => g.Key)
+                            .ToList()
+                    };
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Error obteniendo overview de la organización"); }
+            }
+
             _logger.LogInformation("Se obtuvieron {Count} conjuntos de datos para el contexto", contextData.Count);
         }
         catch (Exception ex)
@@ -593,6 +814,62 @@ public class AgentService : IAgentService
             var currentUser = contextData["CurrentUserProfile"];
             context.AppendLine("### PERFIL DEL USUARIO ACTUAL:");
             context.AppendLine(JsonSerializer.Serialize(currentUser, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("MyCertifications"))
+        {
+            var certs = contextData["MyCertifications"];
+            context.AppendLine("### MIS CERTIFICACIONES:");
+            context.AppendLine(JsonSerializer.Serialize(certs, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("OrgCertifications"))
+        {
+            var certs = contextData["OrgCertifications"];
+            context.AppendLine("### CERTIFICACIONES DE LA ORGANIZACIÓN:");
+            context.AppendLine(JsonSerializer.Serialize(certs, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("ProjectApplications"))
+        {
+            var apps = contextData["ProjectApplications"];
+            context.AppendLine("### POSTULACIONES A PROYECTOS:");
+            context.AppendLine(JsonSerializer.Serialize(apps, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("Roles"))
+        {
+            var roles = contextData["Roles"];
+            context.AppendLine("### ROLES DE LA ORGANIZACIÓN:");
+            context.AppendLine(JsonSerializer.Serialize(roles, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("UserRoleAssignments"))
+        {
+            var assignments = contextData["UserRoleAssignments"];
+            context.AppendLine("### ASIGNACIONES DE ROL POR USUARIO:");
+            context.AppendLine(JsonSerializer.Serialize(assignments, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("TrainingGapAnalysis"))
+        {
+            var gaps = contextData["TrainingGapAnalysis"];
+            context.AppendLine("### ANÁLISIS DE BRECHAS DE CAPACITACIÓN:");
+            context.AppendLine(JsonSerializer.Serialize(gaps, new JsonSerializerOptions { WriteIndented = true }));
+            context.AppendLine();
+        }
+
+        if (contextData.ContainsKey("OrgOverview"))
+        {
+            var overview = contextData["OrgOverview"];
+            context.AppendLine("### RESUMEN GENERAL DE LA ORGANIZACIÓN:");
+            context.AppendLine(JsonSerializer.Serialize(overview, new JsonSerializerOptions { WriteIndented = true }));
             context.AppendLine();
         }
 
@@ -687,6 +964,7 @@ Responde en formato JSON:
         }
     }
 
+    // MATCH CANDIDATES — algoritmo local primero, Gemini solo para narrativa
     public async Task<SkillMatchResponse> MatchCandidatesForProjectAsync(
         Guid organizationId,
         SkillMatchRequest request,
@@ -696,289 +974,226 @@ Responde en formato JSON:
 
         try
         {
-            // 1. Obtener proyecto y requisitos
-            var project = await _projectService.GetProjectByIdAsync(
-                request.ProjectId, organizationId);
+            // ── 1. Obtener datos secuencialmente (DbContext es scoped, no thread-safe) ──
+            var project = await _projectService.GetProjectByIdAsync(request.ProjectId, organizationId);
 
             if (project == null)
+                throw new NotFoundException("Proyecto", request.ProjectId);
+
+            var requirements = (await _projectService.GetSkillRequirementsAsync(request.ProjectId, organizationId)).ToList();
+            var profiles     = (await _profileService.GetAllProfilesWithSkillsAsync(organizationId)).ToList();
+            var allUsers     = await _userService.GetAllAsync(organizationId);
+
+            if (!profiles.Any())
             {
-                throw new InvalidOperationException($"Proyecto {request.ProjectId} no encontrado");
-            }
-
-            var requirements = await _projectService.GetSkillRequirementsAsync(
-                request.ProjectId, organizationId);
-
-            // 2. Obtener todos los perfiles con skills
-            var profiles = await _profileService.GetAllProfilesWithSkillsAsync(organizationId);
-
-            // 3. Obtener información de usuarios para completar los datos
-            var userIds = profiles.Select(p => p.UserId).ToList();
-            var users = new Dictionary<Guid, (string FullName, string Email)>();
-
-            // Obtener información de todos los usuarios en batch
-            try
-            {
-                var allUsers = await _userService.GetAllAsync(organizationId);
-                foreach (var user in allUsers)
-                {
-                    users[user.Id] = ($"{user.FirstName} {user.LastName}", user.Email);
-                }
-                _logger.LogInformation("Se obtuvieron {Count} usuarios para matching", users.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "No se pudo obtener la lista de usuarios, intentando uno por uno");
-
-                // Fallback: obtener uno por uno
-                foreach (var userId in userIds)
-                {
-                    try
-                    {
-                        var user = await _userService.GetByIdAsync(userId, organizationId);
-                        if (user != null)
-                        {
-                            users[userId] = ($"{user.FirstName} {user.LastName}", user.Email);
-                        }
-                    }
-                    catch
-                    {
-                        // Silenciar errores individuales para continuar con otros usuarios
-                        _logger.LogDebug("Usuario {UserId} no encontrado", userId);
-                    }
-                }
-            }
-
-            // Construir estructura de candidatos para el análisis
-            var candidates = profiles.Select(p => new
-            {
-                userId = p.UserId,
-                fullName = users.ContainsKey(p.UserId) ? users[p.UserId].FullName : "Usuario desconocido",
-                email = users.ContainsKey(p.UserId) ? users[p.UserId].Email : "",
-                bio = p.Bio ?? "Sin bio",
-                yearsExperience = p.YearsExperience ?? 0,
-                skills = p.Skills.Select(s => new
-                {
-                    skillName = s.SkillName,
-                    level = s.CurrentLevel,
-                    validated = s.LastValidatedAt.HasValue
-                }).ToList()
-            }).ToList();
-
-            // Si no hay candidatos, retornar lista vacía
-            if (!candidates.Any())
-            {
-                _logger.LogWarning("No se encontraron candidatos con skills en la organización");
                 return new SkillMatchResponse
                 {
-                    ProjectId = request.ProjectId,
-                    ProjectName = project.Name,
-                    Candidates = new List<CandidateMatch>(),
+                    ProjectId       = request.ProjectId,
+                    ProjectName     = project.Name,
+                    Candidates      = new List<CandidateMatch>(),
                     AnalysisNarrative = "No se encontraron candidatos con habilidades registradas en esta organización."
                 };
             }
 
-            // 3. Construir prompt para matching inteligente
-            var matchingPrompt = $@"
-Actúa como un experto en matching de talento para proyectos tecnológicos.
+            // ── 2. Índice de usuarios para O(1) lookup ─────────────────────────
+            var userIndex = allUsers.ToDictionary(
+                u => u.Id,
+                u => (FullName: $"{u.FirstName} {u.LastName}", Email: u.Email));
 
-**Proyecto:** {project.Name}
-**Descripción:** {project.Description}
-**Complejidad:** {project.ComplexityLevel}/3
+            // ── 3. Scoring local determinístico (sin Gemini) ───────────────────
+            //   Mandatory skills  = 60 %
+            //   Optional skills   = 20 %
+            //   Experience        = 10 %
+            //   Level surplus     = 10 %
+            var mandatoryReqs = requirements.Where(r => r.IsMandatory).ToList();
+            var optionalReqs  = requirements.Where(r => !r.IsMandatory).ToList();
 
-**Requisitos de habilidades:**
-{string.Join("\n", requirements.Select(r =>
-    $"- {r.SkillName}: Nivel {r.RequiredLevel}/5 {(r.IsMandatory ? "(OBLIGATORIO)" : "(opcional)")}"))}
-
-**Candidatos disponibles:**
-{JsonSerializer.Serialize(candidates, new JsonSerializerOptions { WriteIndented = true })}
-
-Analiza y calcula un match score (0-100) para cada candidato considerando:
-1. Cumplimiento de skills obligatorias
-2. Nivel de proficiencia en cada skill
-3. Años de experiencia
-4. Certificaciones relevantes
-5. Historial de contribución en proyectos similares
-
-Retorna los TOP {request.MaxCandidates ?? 10} candidatos en formato JSON:
-{{
-    ""candidates"": [
-        {{
-            ""userId"": ""guid"",
-            ""fullName"": ""nombre"",
-            ""email"": ""email"",
-            ""matchScore"": 0-100,
-            ""skillAlignments"": [
-                {{
-                    ""skillName"": ""nombre"",
-                    ""requiredLevel"": 1-5,
-                    ""currentLevel"": 1-5,
-                    ""isMandatory"": true/false,
-                    ""meets"": true/false
-                }}
-            ],
-            ""recommendationReason"": ""explicación del por qué es buen candidato""
-        }}
-    ],
-    ""analysisNarrative"": ""Narrativa general del análisis""
-}}
-
-Ordena por matchScore descendente.";
-
-            // Llamar a Gemini con el prompt de matching
-            var geminiResponse = await _geminiService.QueryAsync(matchingPrompt, cancellationToken);
-
-            // Limpiar respuesta de markdown code blocks
-            var cleanJson = geminiResponse.Trim()
-                .Replace("```json", "")
-                .Replace("```", "")
-                .Trim();
-
-            // Intentar extraer JSON si está embebido en texto
-            if (!cleanJson.StartsWith("{"))
-            {
-                var jsonStart = cleanJson.IndexOf("{");
-                var jsonEnd = cleanJson.LastIndexOf("}");
-                if (jsonStart >= 0 && jsonEnd > jsonStart)
+            var scoredCandidates = profiles
+                .Select(profile =>
                 {
-                    cleanJson = cleanJson.Substring(jsonStart, jsonEnd - jsonStart + 1);
-                }
+                    // GroupBy para tolerar skills duplicadas en datos inconsistentes
+                    var skillMap = profile.Skills
+                        .GroupBy(s => s.SkillName.ToLowerInvariant())
+                        .ToDictionary(g => g.Key, g => g.Max(s => (int)s.CurrentLevel));
+
+                    // Mandatory (60 %)
+                    double mandatoryScore = 0;
+                    if (mandatoryReqs.Any())
+                    {
+                        var met = mandatoryReqs.Count(r =>
+                            skillMap.TryGetValue(r.SkillName.ToLowerInvariant(), out var lvl) &&
+                            lvl >= r.RequiredLevel);
+                        mandatoryScore = (double)met / mandatoryReqs.Count * 60.0;
+                    }
+                    else
+                    {
+                        mandatoryScore = 60.0; // sin obligatorios → score lleno en esa banda
+                    }
+
+                    // Optional (20 %)
+                    double optionalScore = 0;
+                    if (optionalReqs.Any())
+                    {
+                        var met = optionalReqs.Count(r =>
+                            skillMap.TryGetValue(r.SkillName.ToLowerInvariant(), out var lvl) &&
+                            lvl >= r.RequiredLevel);
+                        optionalScore = (double)met / optionalReqs.Count * 20.0;
+                    }
+
+                    // Experience (10 %)
+                    var years = profile.YearsExperience ?? 0;
+                    double expScore = Math.Min(years / 10.0, 1.0) * 10.0;
+
+                    // Skill surplus (10 %) — nivel real - nivel requerido en skills que sí cumple
+                    var metReqs = requirements.Where(r =>
+                        skillMap.TryGetValue(r.SkillName.ToLowerInvariant(), out var lvl) &&
+                        lvl >= r.RequiredLevel).ToList();
+
+                    double surplusScore = 0;
+                    if (metReqs.Any())
+                    {
+                        var avgSurplus = metReqs
+                            .Average(r => skillMap[r.SkillName.ToLowerInvariant()] - r.RequiredLevel);
+                        surplusScore = Math.Min(avgSurplus / 2.0, 1.0) * 10.0;
+                    }
+
+                    var total = Math.Round(mandatoryScore + optionalScore + expScore + surplusScore, 1);
+
+                    // Construir alignments
+                    var alignments = requirements.Select(r =>
+                    {
+                        skillMap.TryGetValue(r.SkillName.ToLowerInvariant(), out var currentLevel);
+                        return new SkillAlignment
+                        {
+                            SkillName     = r.SkillName,
+                            RequiredLevel = r.RequiredLevel,
+                            CurrentLevel  = currentLevel,
+                            IsMandatory   = r.IsMandatory,
+                            Meets         = currentLevel >= r.RequiredLevel
+                        };
+                    }).ToList();
+
+                    userIndex.TryGetValue(profile.UserId, out var userInfo);
+
+                    return new
+                    {
+                        Profile    = profile,
+                        FullName   = userInfo.FullName ?? "Usuario desconocido",
+                        Email      = userInfo.Email ?? "",
+                        Score      = total,
+                        Alignments = alignments,
+                        MandatoryMet = mandatoryReqs.All(r =>
+                            skillMap.TryGetValue(r.SkillName.ToLowerInvariant(), out var lvl) &&
+                            lvl >= r.RequiredLevel)
+                    };
+                })
+                .Where(c => c.Score >= request.MinScore)
+                .OrderByDescending(c => c.Score)
+                .Take(request.MaxCandidates ?? 10)
+                .ToList();
+
+            _logger.LogInformation(
+                "Pre-scoring local: {Total} candidatos después de filtro (minScore={Min})",
+                scoredCandidates.Count, request.MinScore);
+
+            // ── 4. Si no pasó el filtro, responds sin llamar a Gemini ──────────
+            if (!scoredCandidates.Any())
+            {
+                return new SkillMatchResponse
+                {
+                    ProjectId         = request.ProjectId,
+                    ProjectName       = project.Name,
+                    Candidates        = new List<CandidateMatch>(),
+                    AnalysisNarrative = $"Ningún candidato supera el score mínimo de {request.MinScore}. " +
+                                        "Considera reducir el filtro o revisar los requisitos del proyecto."
+                };
             }
 
-            _logger.LogInformation("JSON limpio de Gemini ({Length} caracteres): {Json}", cleanJson.Length, cleanJson.Substring(0, Math.Min(500, cleanJson.Length)));
+            // ── 5. Gemini solo genera narrativa para los top-N ya filtrados ────
+            //    Prompt mínimo: sin JSON masivo, solo datos compactos
+            var topSummary = string.Join("\n", scoredCandidates.Select((c, i) =>
+            {
+                var gaps = c.Alignments.Where(a => !a.Meets).Select(a =>
+                    $"{a.SkillName}(tiene {a.CurrentLevel}, necesita {a.RequiredLevel})");
+                var matched = c.Alignments.Where(a => a.Meets).Select(a => a.SkillName);
+                return $"{i+1}. {c.FullName} — score {c.Score}/100 | exp:{c.Profile.YearsExperience ?? 0}a" +
+                       $" | cumple:[{string.Join(",", matched)}]" +
+                       (gaps.Any() ? $" | gaps:[{string.Join(",", gaps)}]" : "");
+            }));
 
-            // Deserializar la respuesta completa
-            Dictionary<string, JsonElement>? matchResult;
+            var narrativePrompt = $@"Analiza este matching de candidatos para el proyecto ""{project.Name}"":
+
+Requisitos obligatorios: {string.Join(", ", mandatoryReqs.Select(r => $"{r.SkillName} niv.{r.RequiredLevel}"))}
+Requisitos opcionales: {string.Join(", ", optionalReqs.Select(r => $"{r.SkillName} niv.{r.RequiredLevel}"))}
+
+Top candidatos (ya puntuados):
+{topSummary}
+
+Escribe en 3-5 líneas: ¿quién es el mejor candidato y por qué? ¿hay brechas críticas en el equipo?
+Sé concreto, menciona nombres reales. No inventes datos.";
+
+            string narrative;
             try
             {
-                matchResult = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-                    cleanJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                narrative = await _geminiService.QueryAsync(narrativePrompt, cancellationToken);
+                // Limpiar markdown si viene con bloques de código
+                narrative = narrative.Trim().Replace("```", "").Trim();
             }
-            catch (JsonException ex)
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deserializando JSON de Gemini. JSON: {Json}", cleanJson);
-                throw new InvalidOperationException($"No se pudo deserializar la respuesta de Gemini: {ex.Message}");
-            }
-
-            if (matchResult == null)
-            {
-                throw new InvalidOperationException("Gemini devolvió null");
+                _logger.LogWarning(ex, "Gemini no pudo generar narrativa, usando resumen local");
+                narrative = scoredCandidates.Count > 0
+                    ? $"Mejor candidato: {scoredCandidates[0].FullName} con {scoredCandidates[0].Score}/100. " +
+                      $"Total evaluados: {scoredCandidates.Count}."
+                    : "No se encontraron candidatos adecuados.";
             }
 
-            // Parsear candidatos con manejo de errores robusto
-            List<CandidateMatch> candidatesList = new();
-            if (matchResult.TryGetValue("candidates", out var candidatesElement))
+            // ── 6. Construir respuesta final ───────────────────────────────────
+            var candidateMatches = scoredCandidates.Select(c =>
             {
-                _logger.LogDebug("Candidates JSON: {CandidatesJson}", candidatesElement.GetRawText());
+                var mandatoryMet = c.Alignments.Where(a => a.IsMandatory).Count(a => a.Meets);
+                var totalMandatory = c.Alignments.Count(a => a.IsMandatory);
+                var gaps = c.Alignments.Where(a => !a.Meets).Select(a =>
+                    $"{a.SkillName}: tiene nivel {a.CurrentLevel}, requiere {a.RequiredLevel}").ToList();
 
-                try
+                var reason = c.MandatoryMet
+                    ? $"Cumple todos los requisitos obligatorios ({mandatoryMet}/{totalMandatory}). " +
+                      $"Experiencia: {c.Profile.YearsExperience ?? 0} años."
+                    : $"Cumple {mandatoryMet}/{totalMandatory} requisitos obligatorios. " +
+                      (gaps.Any() ? $"Gaps: {string.Join("; ", gaps.Take(3))}." : "");
+
+                return new CandidateMatch
                 {
-                    // Intentar deserialización directa
-                    candidatesList = JsonSerializer.Deserialize<List<CandidateMatch>>(
-                        candidatesElement.GetRawText(),
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<CandidateMatch>();
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogWarning(ex, "No se pudo deserializar candidatos con el formato esperado. Intentando parseo manual...");
-
-                    // Parseo manual como fallback
-                    if (candidatesElement.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (var candElement in candidatesElement.EnumerateArray())
-                        {
-                            try
-                            {
-                                var userId = candElement.TryGetProperty("userId", out var userIdProp)
-                                    ? Guid.Parse(userIdProp.GetString() ?? Guid.Empty.ToString())
-                                    : Guid.Empty;
-
-                                var fullName = candElement.TryGetProperty("fullName", out var nameProp)
-                                    ? nameProp.GetString() ?? "Unknown"
-                                    : "Unknown";
-
-                                var email = candElement.TryGetProperty("email", out var emailProp)
-                                    ? emailProp.GetString() ?? ""
-                                    : "";
-
-                                var matchScore = candElement.TryGetProperty("matchScore", out var scoreProp)
-                                    ? (scoreProp.ValueKind == JsonValueKind.Number ? scoreProp.GetDouble() : 0)
-                                    : 0;
-
-                                var reason = candElement.TryGetProperty("recommendationReason", out var reasonProp)
-                                    ? reasonProp.GetString() ?? "Sin razón especificada"
-                                    : "Sin razón especificada";
-
-                                // Parsear alignments
-                                var alignments = new List<SkillAlignment>();
-                                if (candElement.TryGetProperty("skillAlignments", out var alignmentsElement)
-                                    && alignmentsElement.ValueKind == JsonValueKind.Array)
-                                {
-                                    foreach (var alignElement in alignmentsElement.EnumerateArray())
-                                    {
-                                        alignments.Add(new SkillAlignment
-                                        {
-                                            SkillName = alignElement.TryGetProperty("skillName", out var sn) ? sn.GetString() ?? "" : "",
-                                            RequiredLevel = alignElement.TryGetProperty("requiredLevel", out var rl) ? rl.GetInt32() : 0,
-                                            CurrentLevel = alignElement.TryGetProperty("currentLevel", out var cl) ? cl.GetInt32() : 0,
-                                            IsMandatory = alignElement.TryGetProperty("isMandatory", out var im) && im.GetBoolean(),
-                                            Meets = alignElement.TryGetProperty("meets", out var m) && m.GetBoolean()
-                                        });
-                                    }
-                                }
-
-                                candidatesList.Add(new CandidateMatch
-                                {
-                                    UserId = userId,
-                                    FullName = fullName,
-                                    Email = email,
-                                    MatchScore = matchScore,
-                                    RecommendationReason = reason,
-                                    SkillAlignments = alignments
-                                });
-                            }
-                            catch (Exception parseEx)
-                            {
-                                _logger.LogWarning(parseEx, "Error parseando candidato individual");
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                _logger.LogWarning("No se encontró la propiedad 'candidates' en la respuesta de Gemini");
-            }
-
-            // Parsear narrative
-            var narrative = "Análisis de matching completado";
-            if (matchResult.TryGetValue("analysisNarrative", out var narrativeElement))
-            {
-                narrative = narrativeElement.GetString() ?? narrative;
-            }
+                    UserId               = c.Profile.UserId,
+                    FullName             = c.FullName,
+                    Email                = c.Email,
+                    MatchScore           = c.Score,
+                    SkillAlignments      = c.Alignments,
+                    RecommendationReason = reason
+                };
+            }).ToList();
 
             var response = new SkillMatchResponse
             {
-                ProjectId = request.ProjectId,
-                ProjectName = project.Name,
-                Candidates = candidatesList ?? new List<CandidateMatch>(),
+                ProjectId         = request.ProjectId,
+                ProjectName       = project.Name,
+                Candidates        = candidateMatches,
                 AnalysisNarrative = narrative
             };
 
-            // Registrar matching
             await _agentRepository.CreateActionAsync(
                 organizationId,
                 "PROJECT_MATCHING",
                 $"Matching para proyecto {project.Name}",
                 JsonSerializer.Serialize(request),
-                JsonSerializer.Serialize(response),
+                JsonSerializer.Serialize(new { candidateCount = candidateMatches.Count, topScore = candidateMatches.FirstOrDefault()?.MatchScore }),
                 "SUCCESS");
 
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error en matching de candidatos");
+            _logger.LogError(ex, "Error en matching de candidatos para proyecto {ProjectId}", request.ProjectId);
             throw;
         }
     }
@@ -1030,6 +1245,44 @@ Ordena por matchScore descendente.";
         _logger.LogInformation("Acción {ActionId} rechazada", actionId);
     }
 
+    /// <summary>
+    /// Detecta si la consulta no tiene relación con el dominio de gestión de talento/proyectos.
+    /// Devuelve true cuando NINGUNA keyword de dominio aparece en la query.
+    /// </summary>
+    private static bool IsOffTopicQuery(string query)
+    {
+        var q = query.ToLowerInvariant();
+
+        // Keywords que SÍ pertenecen al dominio — si alguna aparece, la query es válida
+        var domainKeywords = new[]
+        {
+            // Talento / personas
+            "empleado", "usuario", "candidato", "desarrollador", "equipo", "team", "persona", "perfil",
+            "nombre", "contrat", "staff", "recurso", "talento",
+            // Habilidades
+            "habilidad", "skill", "competencia", "capacidad", "nivel", "tecnolog",
+            // Proyectos
+            "proyecto", "project", "asignacion", "asignación", "tarea", "sprint", "entregable",
+            // Certificaciones
+            "certificacion", "certificación", "certificado", "cert",
+            // Postulaciones
+            "postulacion", "postulación", "aplicacion", "aplicación", "postul", "aplicó",
+            // Roles / permisos
+            "rol", "role", "permiso", "acceso", "rbac", "admin", "manager",
+            // Organización
+            "organizacion", "organización", "empresa", "compañia", "compañía", "org",
+            // Brechas / capacitación
+            "brecha", "capacitacion", "capacitación", "entrenamiento", "training", "formacion", "formación",
+            // Consultas reflexivas sobre el propio usuario
+            "mis ", "mi ", " yo ", "para mí", "para mi", "que me ", "me recomi", "tengo",
+            // Verbos típicos de consultas de negocio
+            "cuantos", "cuántos", "cuales", "cuáles", "listar", "lista", "mostrar", "muestra",
+            "analiza", "analizar", "recomienda", "recomendar", "busca", "buscar", "dame"
+        };
+
+        return !domainKeywords.Any(k => q.Contains(k));
+    }
+
     private static string BuildSystemPrompt(Guid organizationId)
     {
         return $@"
@@ -1044,6 +1297,9 @@ Tu misión es ayudar a optimizar la gestión de talento y asignación de proyect
 - Recomendar candidatos óptimos para proyectos
 - Identificar brechas de capacitación
 - Analizar tendencias de contribución
+- Consultar postulaciones a proyectos y su estado
+- Revisar roles y permisos RBAC de la organización
+- Mostrar resúmenes generales de la organización
 
 **Restricciones de seguridad:**
 - Solo accedes a datos de la organización actual (multi-tenancy estricto)
@@ -1056,6 +1312,14 @@ Tu misión es ayudar a optimizar la gestión de talento y asignación de proyect
 - Explica tu razonamiento (Chain of Thought)
 - Proporciona métricas cuantificables cuando sea posible
 - Señala limitaciones y suposiciones
+
+**REGLAS DE RESPUESTA CRÍTICAS:**
+- Si los datos provistos SON suficientes: responde con información específica, nombres reales y métricas concretas.
+- Si los datos NO son suficientes para responder la consulta exacta, responde EXACTAMENTE así:
+  'No cuento con la información necesaria para responder esta consulta con los datos disponibles.'
+  Luego sugiere qué sí puedes responder: 'Puedo ayudarte con: habilidades del equipo, proyectos activos, perfiles de empleados, certificaciones, postulaciones a proyectos, roles y permisos, o un resumen general de la organización.'
+- NUNCA inventes datos, nombres o métricas que no estén en los datos proporcionados.
+- NUNCA uses placeholders como [nombre], [cantidad], [skill].
 
 Responde siempre de manera estructurada y accionable.";
     }

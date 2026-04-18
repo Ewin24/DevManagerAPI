@@ -35,6 +35,7 @@ public interface IRolePermissionRepository
     Task<bool> AssignRoleToUserAsync(Guid userId, Guid roleId, Guid organizationId);
     Task<bool> RevokeRoleFromUserAsync(Guid userId, Guid roleId);
     Task<IEnumerable<UserRole>> GetUserRoleAssignmentsAsync(Guid organizationId);
+    Task<int> GetUserCountByRoleAsync(Guid roleId, Guid organizationId);
 
     // === UserPermissions (overrides directos) ===
     Task<IEnumerable<UserPermission>> GetDirectPermissionsByUserAsync(Guid userId, Guid organizationId);
