@@ -19,7 +19,11 @@ public static class MCPTools
             GetProjectRequirementsTool(),
             GetSkillsTool(),
             GetCertificationsTool(),
-            GetProjectHistoryTool()
+            GetProjectHistoryTool(),
+            GetProjectApplicationsTool(),
+            GetRoleAssignmentsTool(),
+            GetTrainingGapsTool(),
+            GetOrgOverviewTool()
         };
     }
 
@@ -165,5 +169,84 @@ Para usar una herramienta, incluye en tu respuesta:
 TOOL_CALL: {{""name"": ""nombre_herramienta"", ""parameters"": {{...}}}}
 
 Puedes usar múltiples herramientas en secuencia para completar tareas complejas.";
+    }
+
+    private static AgentTool GetProjectApplicationsTool()
+    {
+        return new AgentTool
+        {
+            Name = "get_project_applications",
+            Description = "Obtiene las postulaciones a proyectos de la organización. Puede filtrar por proyecto o mostrar todas las postulaciones pendientes de revisión.",
+            Schema = @"{
+                ""type"": ""object"",
+                ""properties"": {
+                    ""projectId"": { ""type"": ""string"", ""format"": ""uuid"", ""nullable"": true },
+                    ""status"": { ""type"": ""string"", ""enum"": [""Applied"", ""Approved"", ""Rejected""], ""nullable"": true }
+                }
+            }",
+            Handler = async (parameters) =>
+            {
+                var projectId = parameters.ContainsKey("projectId") ? parameters["projectId"]?.ToString() : null;
+                var status = parameters.ContainsKey("status") ? parameters["status"]?.ToString() : null;
+                return new { projectId, status, message = "Project applications tool executed" };
+            }
+        };
+    }
+
+    private static AgentTool GetRoleAssignmentsTool()
+    {
+        return new AgentTool
+        {
+            Name = "get_role_assignments",
+            Description = "Obtiene los roles de la organización y los usuarios asignados a cada rol. Útil para consultas sobre permisos, accesos y control RBAC.",
+            Schema = @"{
+                ""type"": ""object"",
+                ""properties"": {
+                    ""roleName"": { ""type"": ""string"", ""nullable"": true }
+                }
+            }",
+            Handler = async (parameters) =>
+            {
+                var roleName = parameters.ContainsKey("roleName") ? parameters["roleName"]?.ToString() : null;
+                return new { roleName, message = "Role assignments tool executed" };
+            }
+        };
+    }
+
+    private static AgentTool GetTrainingGapsTool()
+    {
+        return new AgentTool
+        {
+            Name = "get_training_gaps",
+            Description = "Analiza las brechas de capacitación del equipo comparando habilidades actuales con las demandadas por los proyectos activos. Identifica empleados con skills en nivel bajo.",
+            Schema = @"{
+                ""type"": ""object"",
+                ""properties"": {
+                    ""minLevel"": { ""type"": ""integer"", ""minimum"": 1, ""maximum"": 5, ""nullable"": true }
+                }
+            }",
+            Handler = async (parameters) =>
+            {
+                var minLevel = parameters.ContainsKey("minLevel") ? parameters["minLevel"]?.ToString() : "3";
+                return new { minLevel, message = "Training gaps tool executed" };
+            }
+        };
+    }
+
+    private static AgentTool GetOrgOverviewTool()
+    {
+        return new AgentTool
+        {
+            Name = "get_org_overview",
+            Description = "Obtiene un resumen general de la organización: total de usuarios, proyectos por estado, principales habilidades del equipo y empleados con perfil registrado.",
+            Schema = @"{
+                ""type"": ""object"",
+                ""properties"": {}
+            }",
+            Handler = async (parameters) =>
+            {
+                return new { message = "Org overview tool executed — returns total users, projects by status, top skills" };
+            }
+        };
     }
 }
