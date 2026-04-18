@@ -55,13 +55,25 @@ public class ReportsService : IReportsService
             var allSkills = await _skillRepository.GetAllAsync(organizationId);
             var skillDistributions = new List<SkillDistributionResponse>();
 
+            // Obtener usuarios para consultar sus skills
+            var users = await _userRepository.GetAllAsync(organizationId);
+
+            var allEmployeeSkills = new List<Domain.Entities.Talent.EmployeeSkill>();
+            foreach(var user in users) 
+            {
+                try 
+                {
+                    var userSkills = await _employeeSkillRepository.GetByUserIdAsync(user.Id, organizationId);
+                    allEmployeeSkills.AddRange(userSkills);
+                }
+                catch 
+                {
+                    // Ignorar si hay error al obtener skills de un usuario
+                }
+            }
+
             foreach (var skill in allSkills)
             {
-                // Obtener todas las asignaciones de EmployeeSkill para esta habilidad
-                // Nota: Este es un enfoque simplificado que podría optimarse con una consulta SQL directa
-                // En una implementación real, agregaríamos un método específico al repositorio
-                
-                // Por ahora, usaremos una aproximación que obtiene los datos disponibles
                 var skillName = skill.Name;
                 var levelDistribution = new Dictionary<string, int>
                 {
@@ -72,12 +84,21 @@ public class ReportsService : IReportsService
                     { "5", 0 }
                 };
 
-                decimal totalLevel = 0;
-                int totalEmployees = 0;
+                // Filtrar los skills obtenidos que coincidan con la habilidad actual
+                var matchingSkills = allEmployeeSkills.Where(es => es.SkillId == skill.Id).ToList();
 
-                // Nota: Para una implementación real, necesitaríamos acceso a una vista o procedimiento
-                // que calcule esto directamente en la BD para mejor performance
-                // Por ahora, retornamos la estructura correcta con ceros si no hay datos
+                decimal totalLevel = 0;
+                int totalEmployees = matchingSkills.Count;
+
+                foreach (var es in matchingSkills)
+                {
+                    var level = es.Level.ToString();
+                    if (levelDistribution.ContainsKey(level))
+                    {
+                        levelDistribution[level]++;
+                    }
+                    totalLevel += es.Level;
+                }
 
                 if (totalEmployees > 0)
                 {
@@ -177,7 +198,7 @@ public class ReportsService : IReportsService
     /// Genera un resumen ejecutivo mediante IA
     /// Construye un prompt con el análisis de habilidades y proyectos
     /// </summary>
-    public async Task<AiSummaryResponse> GetAiSummaryAsync(Guid organizationId)
+    public async Task<AiSummaryResponse> GetAiSummaryAsync(Guid organizationId, Guid userId)
     {
         _logger.LogInformation("Generando resumen ejecutivo por IA para org {OrgId}", organizationId);
 
@@ -196,11 +217,7 @@ Usa un tono profesional y sé conciso. Formato: Markdown con encabezados (##) y 
                 Context = "Análisis de talento y capacidades organizacionales"
             };
 
-            // Nota: Se necesita un userId válido para QueryAsync
-            // En un contexto real, esto vendría del contexto de la solicitud (ej: usuario administrador del sistema)
-            var systemAdminId = Guid.Empty; // Placeholder - en producción, usar un ID válido
-
-            var agentResponse = await _agentService.QueryAsync(organizationId, systemAdminId, request);
+            var agentResponse = await _agentService.QueryAsync(organizationId, userId, request);
 
             return new AiSummaryResponse
             {
