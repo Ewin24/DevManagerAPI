@@ -204,17 +204,30 @@ public class ReportsService : IReportsService
 
         try
         {
+            // Obtener datos para dar contexto al agente
+            var skillsDistribution = await GetSkillsDistributionAsync(organizationId);
+            var projectMetrics = await GetProjectMetricsAsync(organizationId);
+            var deptMetrics = await GetDepartmentMetricsAsync(organizationId);
+            
+            var contextData = new {
+                Skills = skillsDistribution,
+                Projects = projectMetrics,
+                Department = deptMetrics
+            };
+            
+            var contextJson = System.Text.Json.JsonSerializer.Serialize(contextData);
+
             // Construir un prompt para el agente IA basado en análisis de la organización
             var query = @"Genera un resumen ejecutivo en Markdown (máximo 5 párrafos) sobre:
 1. Las habilidades más fuertes en la organización (basadas en los empleados y sus niveles)
 2. Las brechas críticas de talento (habilidades demandadas pero no disponibles)
 3. Recomendaciones específicas para mejorar la capacidad de la organización
-Usa un tono profesional y sé conciso. Formato: Markdown con encabezados (##) y listas.";
+Usa un tono profesional y sé conciso. Formato: Markdown con encabezados (##) y listas. Basa tu análisis estrictamente en los datos provistos en el contexto.";
 
             var request = new AgentQueryRequest
             {
                 Query = query,
-                Context = "Análisis de talento y capacidades organizacionales"
+                Context = $"Análisis de talento y capacidades organizacionales. Datos actuales: {contextJson}"
             };
 
             var agentResponse = await _agentService.QueryAsync(organizationId, userId, request);
