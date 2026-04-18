@@ -15,20 +15,31 @@ using System.Text;
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IRolePermissionRepository _rolePermissionRepository;
     private readonly ILogger<UserService> _logger;
 
     public UserService(
         IUserRepository userRepository,
+        IRolePermissionRepository rolePermissionRepository,
         ILogger<UserService> logger)
     {
         _userRepository = userRepository;
+        _rolePermissionRepository = rolePermissionRepository;
         _logger = logger;
     }
 
     public async Task<IEnumerable<UserResponse>> GetAllAsync(Guid organizationId)
     {
         var users = await _userRepository.GetAllAsync(organizationId);
-        return users.Select(MapToResponse);
+        var userResponses = new List<UserResponse>();
+        
+        foreach (var user in users)
+        {
+            var response = await MapToResponseAsync(user, organizationId);
+            userResponses.Add(response);
+        }
+        
+        return userResponses;
     }
 
     public async Task<UserResponse> GetByIdAsync(Guid id, Guid organizationId)
@@ -38,7 +49,7 @@ public class UserService : IUserService
         {
             throw new NotFoundException("Usuario", id);
         }
-        return MapToResponse(user);
+        return await MapToResponseAsync(user, organizationId);
     }
 
     public async Task<UserResponse> CreateAsync(
@@ -73,7 +84,7 @@ public class UserService : IUserService
 
         _logger.LogInformation("Usuario creado: {UserId} - {Email}", user.Id, user.Email);
 
-        return MapToResponse(user);
+        return await MapToResponseAsync(user, organizationId);
     }
 
     public async Task<UserResponse> UpdateAsync(
@@ -102,7 +113,7 @@ public class UserService : IUserService
 
         _logger.LogInformation("Usuario actualizado: {UserId}", id);
 
-        return MapToResponse(user);
+        return await MapToResponseAsync(user, organizationId);
     }
 
     public async Task DeleteAsync(Guid id, Guid organizationId, Guid deletedByUserId)
@@ -120,8 +131,12 @@ public class UserService : IUserService
 
     #region Helpers
 
-    private static UserResponse MapToResponse(User user)
+    private async Task<UserResponse> MapToResponseAsync(User user, Guid organizationId)
     {
+        // Obtener el rol del usuario si existe
+        var userRoles = await _rolePermissionRepository.GetRolesByUserAsync(user.Id, organizationId);
+        var firstRole = userRoles.FirstOrDefault();
+
         return new UserResponse
         {
             Id = user.Id,
@@ -131,7 +146,9 @@ public class UserService : IUserService
             Phone = user.Phone,
             IsActive = user.IsActive,
             LastLoginAt = user.LastLoginAt,
-            CreatedAt = user.CreatedAt
+            CreatedAt = user.CreatedAt,
+            RoleId = firstRole?.Id,
+            RoleName = firstRole?.Name ?? "Sin asignar"
         };
     }
 

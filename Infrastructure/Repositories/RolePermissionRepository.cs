@@ -335,6 +335,15 @@ public class RolePermissionRepository : IRolePermissionRepository
         });
     }
 
+    public async Task<int> GetUserCountByRoleAsync(Guid roleId, Guid organizationId)
+    {
+        return await _context.UserRoles
+            .AsNoTracking()
+            .Where(ur => ur.RoleId == roleId && ur.OrganizationId == organizationId)
+            .Where(ur => !ur.User.IsDeleted)
+            .CountAsync();
+    }
+
     // ==================== USER-PERMISSIONS (overrides directos) ====================
 
     public async Task<IEnumerable<UserPermission>> GetDirectPermissionsByUserAsync(Guid userId, Guid organizationId)

@@ -60,4 +60,9 @@ public class UserResponse
     public bool IsActive { get; set; }
     public DateTime? LastLoginAt { get; set; }
     public DateTime CreatedAt { get; set; }
+    public Guid? RoleId { get; set; }
+    /// <summary>
+    /// Nombre del rol asignado. Nunca será null; si no tiene rol asignado, será "Sin asignar"
+    /// </summary>
+    public string RoleName { get; set; } = "Sin asignar";
 }

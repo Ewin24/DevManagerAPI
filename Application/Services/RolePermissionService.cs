@@ -36,12 +36,14 @@ public class RolePermissionService : IRolePermissionService
         foreach (var role in roles)
         {
             var permissions = await _repository.GetPermissionsByRoleAsync(role.Id);
+            var userCount = await _repository.GetUserCountByRoleAsync(role.Id, organizationId);
             result.Add(new RoleSummaryResponse
             {
                 Id = role.Id,
                 Name = role.Name,
                 Description = role.Description,
-                PermissionCount = permissions.Count()
+                PermissionCount = permissions.Count(),
+                UserCount = userCount
             });
         }
 
