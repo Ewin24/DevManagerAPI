@@ -26,7 +26,7 @@ public interface IReportsService
     /// </summary>
     /// <param name="organizationId">ID de la organización</param>
     /// <returns>Resumen en formato Markdown</returns>
-    Task<AiSummaryResponse> GetAiSummaryAsync(Guid organizationId);
+    Task<AiSummaryResponse> GetAiSummaryAsync(Guid organizationId, Guid userId);
 
     /// <summary>
     /// Obtiene el estado de utilización de los empleados en la organización

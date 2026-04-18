@@ -197,10 +197,12 @@ public class ReportsController : ControllerBase
     public async Task<IActionResult> GetAiSummary()
     {
         var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userId = string.IsNullOrEmpty(userIdStr) ? Guid.Empty : Guid.Parse(userIdStr);
         
         _logger.LogInformation("Generando resumen ejecutivo por IA para org {OrgId}", organizationId);
 
-        var summary = await _reportsService.GetAiSummaryAsync(organizationId);
+        var summary = await _reportsService.GetAiSummaryAsync(organizationId, userId);
         
          return Ok(ApiResponse<AiSummaryResponse>.SuccessResponse(
             summary,
