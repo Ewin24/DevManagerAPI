@@ -1,0 +1,139 @@
+# =========================================================
+# DevManager API - Pruebas del Agente IA
+# =========================================================
+# Usa REST Client extension en VS Code para ejecutar estas requests
+
+@baseUrl = https://localhost:7265
+@token = TU_TOKEN_AQUI_DESPUES_DE_LOGIN
+
+### PASO 1: Login (obtener token JWT)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@devmanager.com",
+  "password": "Admin123!"
+}
+
+###
+# Copia el token de la respuesta anterior y pégalo arriba en @token
+
+### =========================================================
+### PASO 2: POST /agent/query - Consulta en lenguaje natural
+### =========================================================
+
+### Consulta 1: Mejores candidatos para .NET
+POST {{baseUrl}}/agent/query
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "query": "¿Cuáles son los mejores candidatos para un proyecto de desarrollo .NET Core?",
+  "context": "Necesito un equipo de 3 desarrolladores senior con experiencia en microservicios",
+  "requireApproval": false
+}
+
+### Consulta 2: Análisis de brechas de capacitación
+POST {{baseUrl}}/agent/query
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "query": "Analiza las brechas de capacitación en el equipo de frontend",
+  "context": "Enfócate en tecnologías modernas como React, Vue y Angular",
+  "requireApproval": false
+}
+
+### Consulta 3: Skills más demandadas
+POST {{baseUrl}}/agent/query
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "query": "¿Qué habilidades están más demandadas en los proyectos activos?",
+  "context": "",
+  "requireApproval": false
+}
+
+### =========================================================
+### PASO 3: POST /agent/validate-skill - Validación semántica
+### =========================================================
+
+### Primero: Obtener mi perfil para saber mi UserId
+GET {{baseUrl}}/profile
+Authorization: Bearer {{token}}
+
+### Luego: Validar una skill (reemplaza userId y skillId con valores reales)
+POST {{baseUrl}}/agent/validate-skill
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": "REEMPLAZAR_CON_USER_ID_REAL",
+  "skillId": "REEMPLAZAR_CON_SKILL_ID_REAL",
+  "level": 4,
+  "evidence": "5 años de experiencia en proyectos enterprise. Certificación Microsoft Azure Developer Associate. Proyectos recientes: Sistema de gestión hospitalaria (6 meses), ERP para manufactura (1 año). Líder técnico de equipo de 5 personas."
+}
+
+### =========================================================
+### PASO 4: POST /agent/match-candidates - Matching inteligente
+### =========================================================
+
+### Primero: Listar proyectos disponibles
+GET {{baseUrl}}/projects
+Authorization: Bearer {{token}}
+
+### Luego: Match candidates (reemplaza projectId con uno real)
+POST {{baseUrl}}/agent/match-candidates
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "projectId": "REEMPLAZAR_CON_PROJECT_ID_REAL",
+  "topN": 10,
+  "minExperience": 2
+}
+
+### =========================================================
+### PASO 5: HITL Workflow - Crear acción que requiere aprobación
+### =========================================================
+
+### Crear acción que requiere aprobación
+POST {{baseUrl}}/agent/query
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "query": "Realizar cambios masivos en los niveles de habilidades del equipo de backend",
+  "context": "Esta es una operación sensible que debe ser revisada por un manager",
+  "requireApproval": true
+}
+
+### Aprobar la acción (reemplaza ACTION_ID con el ID de la respuesta anterior)
+POST {{baseUrl}}/agent/actions/ACTION_ID_AQUI/approve
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Rechazar la acción (alternativa)
+POST {{baseUrl}}/agent/actions/ACTION_ID_AQUI/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "No es el momento adecuado para realizar estos cambios. Posponer hasta próxima revisión trimestral."
+}
+
+### =========================================================
+### VERIFICACIÓN: Ver mi perfil completo
+### =========================================================
+GET {{baseUrl}}/profile
+Authorization: Bearer {{token}}
+
+### Ver mis skills
+GET {{baseUrl}}/employeeSkills/user/TU_USER_ID
+Authorization: Bearer {{token}}
+
+### =========================================================
+### SWAGGER UI (abre en el navegador)
+### =========================================================
+# https://localhost:7265/swagger

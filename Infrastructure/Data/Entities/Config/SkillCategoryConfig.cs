@@ -1,0 +1,39 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Infrastructure.Data.Entities.Config;
+
+/// <summary>
+/// Entidad EF Core para config.SkillCategories
+/// </summary>
+[Table("SkillCategories", Schema = "config")]
+public class SkillCategoryConfig
+{
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public int Id { get; set; }
+
+    [Required]
+    [StringLength(40)]
+    public string Code { get; set; } = null!;
+
+    [Required]
+    [StringLength(80)]
+    public string Name { get; set; } = null!;
+
+    [StringLength(200)]
+    public string? Description { get; set; }
+
+    public int? ParentCategoryId { get; set; }
+
+    public byte DisplayOrder { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
+    // Navegación
+    [ForeignKey("ParentCategoryId")]
+    public virtual SkillCategoryConfig? ParentCategory { get; set; }
+
+    [InverseProperty("ParentCategory")]
+    public virtual ICollection<SkillCategoryConfig> SubCategories { get; set; } = new List<SkillCategoryConfig>();
+}

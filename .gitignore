@@ -1,0 +1,35 @@
+# Build output
+bin/
+obj/
+packages/
+
+# IDE
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+
+# Secrets — NEVER commit real credentials
+appsettings.*.json
+appsettings.json
+*.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temp
+nul
+
+# Binary artifacts
+*.exe
+*.zip
+*.rar
+*.pdf
