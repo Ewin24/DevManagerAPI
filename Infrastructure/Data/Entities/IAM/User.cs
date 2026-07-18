@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -35,6 +36,18 @@ public partial class User
 
     [Precision(3)]
     public DateTime? LastLoginAt { get; set; }
+
+    // ===== Persona (sector solidario) =====
+    public PersonType PersonType { get; set; }
+
+    [StringLength(5)]
+    public string? DocumentType { get; set; }
+
+    [StringLength(20)]
+    public string? DocumentNumber { get; set; }
+
+    [Precision(3)]
+    public DateTime? BirthDate { get; set; }
 
     [Precision(3)]
     public DateTime CreatedAt { get; set; }
@@ -95,4 +108,7 @@ public partial class User
 
     [InverseProperty("User")]
     public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
+
+    [InverseProperty("Person")]
+    public virtual ICollection<PersonOrganization> PersonOrganizations { get; set; } = new List<PersonOrganization>();
 }

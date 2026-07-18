@@ -20,6 +20,8 @@ public partial class DevManagerDbContext : DbContext
 
     public virtual DbSet<UserRole> UserRoles { get; set; }
 
+    public virtual DbSet<PersonOrganization> PersonOrganizations { get; set; }
+
     public virtual DbSet<Permission> Permissions { get; set; }
 
     public virtual DbSet<RolePermission> RolePermissions { get; set; }

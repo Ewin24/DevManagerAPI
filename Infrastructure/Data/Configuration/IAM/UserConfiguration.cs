@@ -16,6 +16,18 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
         entity.Property(e => e.IsActive).HasDefaultValue(true);
 
+        entity.Property(e => e.PersonType)
+            .HasConversion<int>()
+            .HasDefaultValue(Domain.Enums.PersonType.Empleado);
+
+        entity.Property(e => e.DocumentType)
+            .HasMaxLength(5)
+            .IsRequired(false);
+
+        entity.Property(e => e.DocumentNumber)
+            .HasMaxLength(20)
+            .IsRequired(false);
+
         entity.HasOne(d => d.Organization).WithMany(p => p.Users)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_Users_Organizations");

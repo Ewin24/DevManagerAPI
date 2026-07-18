@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -22,6 +23,13 @@ public partial class Organization
 
     public bool IsActive { get; set; }
 
+    // ===== Jerarquía solidaria =====
+    public TipoOrganizacionSolidaria? TipoOrganizacionSolidaria { get; set; }
+
+    public Guid? ParentId { get; set; }
+
+    public int HierarchyLevel { get; set; }
+
     [Precision(3)]
     public DateTime CreatedAt { get; set; }
 
@@ -38,6 +46,13 @@ public partial class Organization
     public DateTime? DeletedAt { get; set; }
 
     public Guid? DeletedByUserId { get; set; }
+
+    [ForeignKey("ParentId")]
+    [InverseProperty("Children")]
+    public virtual Organization? Parent { get; set; }
+
+    [InverseProperty("Parent")]
+    public virtual ICollection<Organization> Children { get; set; } = new List<Organization>();
 
     [InverseProperty("Organization")]
     public virtual ICollection<Certification> Certifications { get; set; } = new List<Certification>();
@@ -92,4 +107,7 @@ public partial class Organization
 
     [InverseProperty("Organization")]
     public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
+
+    [InverseProperty("Organization")]
+    public virtual ICollection<PersonOrganization> PersonOrganizations { get; set; } = new List<PersonOrganization>();
 }
