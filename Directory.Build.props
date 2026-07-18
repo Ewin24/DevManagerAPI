@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>CS1998;CS8601;CS8604;CS8625;CS8618;CS0168</NoWarn>
+  </PropertyGroup>
+</Project>
