@@ -61,6 +61,10 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IAssignmentService, AssignmentService>();
 
+        // Servicios de aplicación - Nomina (Sector Solidario)
+        services.AddScoped<ICompensacionService, Application.Services.Nomina.CompensacionService>();
+        services.AddScoped<IPilaService, Application.Services.Nomina.PilaService>();
+
         // Servicios de Reportes
         services.AddScoped<IReportsService, ReportsService>();
 

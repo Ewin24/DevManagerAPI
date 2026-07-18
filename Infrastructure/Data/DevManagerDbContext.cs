@@ -64,6 +64,11 @@ public partial class DevManagerDbContext : DbContext
 
     public virtual DbSet<Domain.Entities.Agent.AgentConfiguration> AgentConfigurations { get; set; }
 
+    // ========= Nomina (Sector Solidario) =========
+    public virtual DbSet<Compensacion> Compensaciones { get; set; }
+
+    public virtual DbSet<PilaAporte> PilaAportes { get; set; }
+
     // ========= Config (Catálogos) =========
     public virtual DbSet<ProjectStatusConfig> ProjectStatuses { get; set; }
 
