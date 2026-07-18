@@ -1,536 +1,118 @@
-# 📋 Especificación Formal de Requerimientos Funcionales
+Especificación Formal de Requerimientos Funcionales: Sistema DevManager
 
-## Sistema DevManager - Gestión de Talento con IA
+Este documento detalla la especificación formal de requerimientos para el sistema DevManager, una plataforma integral diseñada para la gestión estratégica del talento y la ejecución de proyectos. El análisis se fundamenta en una arquitectura de software robusta, alineada con los estándares académicos de las Unidades Tecnológicas de Santander (UTS) y orientada a resolver la fragmentación de la información profesional en el sector productivo de Bucaramanga.
 
-**Versión:** 1.0  
-**Fecha:** 2 de Febrero de 2026  
-**Estado:** En Revisión
 
----
+--------------------------------------------------------------------------------
 
-## 📑 Índice
 
-1. [Resumen Ejecutivo](#1-resumen-ejecutivo)
-2. [Módulo IAM - Identidad y Gestión de Acceso](#2-módulo-iam---identidad-y-gestión-de-acceso)
-3. [Módulo Talent - Gestión de Talento y Perfiles](#3-módulo-talent---gestión-de-talento-y-perfiles)
-4. [Módulo Projects - Gestión de Proyectos y Postulaciones](#4-módulo-projects---gestión-de-proyectos-y-postulaciones)
-5. [Módulo Reporting - Reportes y Agente Inteligente](#5-módulo-reporting---reportes-y-agente-inteligente)
-6. [Requerimientos Transversales - Accesibilidad](#6-requerimientos-transversales---accesibilidad-wcag-22-aa)
-7. [Matriz de Trazabilidad](#7-matriz-de-trazabilidad)
+1. Resumen del Análisis de Sistemas y Modelado de Actores
 
----
+La propuesta de DevManager surge como una respuesta técnica a la ineficiencia operativa generada por la gestión descentralizada del talento. La dependencia histórica de herramientas aisladas ha impedido que las organizaciones identifiquen con precisión las competencias de su capital humano, resultando en una asignación de personal subóptima. DevManager propone una arquitectura unificada que transforma el historial de participación en proyectos y las evaluaciones técnicas en un activo dinámico. Mediante un modelo de datos normalizado, el sistema garantiza que la información profesional no sea estática, sino una métrica evolutiva del crecimiento organizacional.
 
-## 1. Resumen Ejecutivo
+La deconstrucción del sistema identifica los siguientes actores y responsabilidades fundamentales:
 
-### 1.1 Propósito del Documento
+* Administrador de Organización: Gestiona la configuración global de la entidad, garantiza la unicidad legal (NIT) y supervisa las políticas de acceso multi-tenant.
+* Gerente de Proyecto: Estructura las necesidades técnicas, define niveles de complejidad (1-3) y evalúa la idoneidad de los colaboradores.
+* Empleado / Colaborador: Autogestiona su perfil, registra niveles de competencia (1-5) y lidera su crecimiento mediante postulaciones proactivas.
+* Agente Inteligente: Motor lógico que procesa reglas de recomendación, identifica brechas de habilidades (skill gaps) y audita la evolución del talento.
 
-Este documento especifica los requerimientos funcionales del sistema DevManager, diseñado para optimizar la gestión del capital humano tecnológico. La especificación sigue el formato **EARS (Easy Approach to Requirements Syntax)** para garantizar claridad y verificabilidad.
+La integridad del sistema se apoya en entidades centrales como Organizations, Users, Projects, Skills y Applications. La interrelación de estos objetos bajo un esquema de aislamiento lógico mediante el identificador de organización (OrganizationId) asegura que, aunque múltiples empresas compartan la infraestructura, los datos permanezcan estrictamente confidenciales y segregados. Esta segmentación es la base sobre la cual se edifican los controles de acceso detallados a continuación.
 
-### 1.2 Análisis de Deconstrucción
 
-#### Actores Principales
+--------------------------------------------------------------------------------
 
-| Actor | Responsabilidades |
-|-------|-------------------|
-| **Administrador Global** | Gestión de roles base y configuración multi-tenancy |
-| **Administrador de Organización** | Gestión de usuarios y políticas internas |
-| **Líder de Proyecto** | Definición de requisitos técnicos y evaluación de candidatos |
-| **Talento/Empleado** | Gestión de competencias y postulación proactiva |
 
-#### Dominios de Datos (Esquemas SQL)
+2. Módulo de Gestión de Identidad y Acceso (IAM)
 
-| Esquema | Propósito |
-|---------|-----------|
-| `iam.*` | Identidad, acceso y segregación multi-tenant |
-| `talent.*` | Repositorio de competencias y evidencias |
-| `projects.*` | Ciclo de vida operativo y asignaciones |
-| `reporting.*` | Inteligencia de negocios y motor de reglas IA |
+En un entorno corporativo que procesa datos personales y trayectorias profesionales, la seguridad y el control de acceso basado en roles (RBAC) son críticos. Este módulo implementa la seguridad desde el diseño (security by design), asegurando el cumplimiento de la Ley 1581 de 2012 (Habeas Data) mediante mecanismos de cifrado y aislamiento estricto que impiden la fuga de información entre inquilinos.
 
-### 1.3 Inferencias Críticas
+* RF-001: Registro y administración de Organizaciones (Multi-tenancy): El sistema debe permitir al Administrador crear organizaciones validando la unicidad del NIT (UQ_Organizations_Nit) para evitar duplicidad legal en el sistema.
+* RF-002: Gestión de Usuarios y Roles (RBAC): El sistema debe permitir al Administrador de Organización crear usuarios y asignar roles dentro de su entorno lógico.
+* RF-003: Autenticación Segura: El sistema debe autenticar usuarios utilizando campos varbinary(512) para PasswordHash y varbinary(256) para PasswordSalt, prohibiendo explícitamente el almacenamiento de contraseñas en texto plano.
+* RF-004: Activación y Desactivación de Cuentas (Soft delete): El sistema debe permitir el borrado lógico de registros configurando el campo IsDeleted = 1. El software debe filtrar automáticamente estos registros en todas las consultas de visualización.
 
-1. **Motor de Validación de Habilidades**: Distinción entre validaciones humanas (`ValidatedByUserId`) y automáticas (reglas del agente).
-2. **Impacto de Complejidad**: `ComplexityLevel` (1-3) funciona como multiplicador para actualización de niveles en `talent.EmployeeSkills`.
-3. **Segregación Multi-tenant**: Roles globales (sistema) y roles personalizados por empresa con aislamiento de datos.
+Criterios de Aceptación: Integridad y Aislamiento IAM
 
----
+ID	Criterio de Aceptación	Validación Técnica
+CA-IAM-01	Aislamiento de Datos	El sistema debe rechazar cualquier solicitud de acceso a registros cuyo OrganizationId no coincida con el del usuario autenticado.
+CA-IAM-02	Unicidad de Roles	No se permitirá la creación de dos roles con el mismo nombre dentro de la misma organización, respetando el índice UX_Roles_Org_Name.
 
-## 2. Módulo IAM - Identidad y Gestión de Acceso
+Establecida la identidad y seguridad del usuario, el sistema habilita la construcción del inventario de capacidades técnicas en el módulo de talento.
 
-> **Esquema SQL:** `iam.*`  
-> **Controladores:** `AuthController`, `UsersController`  
-> **Tablas:** `Organizations`, `Users`, `Roles`, `UserRoles`
 
-### 2.1 Descripción del Módulo
+--------------------------------------------------------------------------------
 
-Constituye el núcleo de seguridad y multi-tenencia del sistema. Garantiza el aislamiento lógico de los datos empresariales y la correcta gestión de identidades, cumpliendo con la **Ley 1581 de 2012 (Habeas Data)**.
 
-### 2.2 Requerimientos Funcionales
+3. Módulo de Gestión de Talento y Perfiles Profesionales
 
-#### RF-101: Registro y Gestión de Organizaciones
+El perfil dinámico del trabajador en DevManager trasciende el currículum tradicional, convirtiendo la información estática en un activo estratégico. Al centralizar habilidades y certificaciones, la organización puede realizar un mapeo de competencias en tiempo real, facilitando la toma de decisiones basada en la evidencia técnica y no en suposiciones sobre el potencial del personal.
 
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-101 |
-| **Nombre** | Registro y Gestión de Organizaciones |
-| **Descripción** | El sistema debe proveer una interfaz para Crear, Leer, Actualizar y Desactivar (CRUD) organizaciones en la tabla `iam.Organizations` para habilitar el aislamiento de datos en el entorno multi-tenant. |
-| **Prioridad** | Alta |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Tabla Relacionada** | `iam.Organizations` |
+* RF-005: Gestión de Bio y Perfil Profesional: El sistema debe permitir al Empleado mantener su EmployeeProfile con biografía, años de experiencia y portafolios digitales.
+* RF-006: Administración de Catálogo de Habilidades: El sistema debe permitir definir habilidades categorizadas estrictamente como Hard, Soft o Language para fines de análisis comparativo.
+* RF-007: Registro de Certificaciones con Evidencia: El sistema debe permitir al Empleado registrar logros académicos adjuntando una EvidenceUrl para validación documental.
+* RF-008: Autogestión de Niveles de Habilidad: El sistema debe permitir al Empleado declarar un nivel de competencia en una escala de 1 (Básico) a 5 (Experto).
+* RF-009: Validación de Competencias por Terceros: El sistema debe permitir a un Validador (Humano o Agente Inteligente) confirmar niveles de habilidad, registrando el ValidatedByUserId para garantizar la trazabilidad del dato.
 
----
+La validación rigurosa de estas habilidades permite que la estructuración de proyectos cuente con un mercado interno de talento confiable.
 
-#### RF-102: Gestión de Cuentas de Usuario
 
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-102 |
-| **Nombre** | Gestión de Cuentas de Usuario |
-| **Descripción** | El sistema debe permitir al Administrador de Organización gestionar el ciclo de vida de los usuarios asociados a su `OrganizationId` para controlar el acceso del personal activo a la plataforma. |
-| **Prioridad** | Alta |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Tabla Relacionada** | `iam.Users` |
+--------------------------------------------------------------------------------
 
----
 
-#### RF-103: Asignación de Roles Jerárquicos
+4. Módulo de Estructuración y Requerimientos de Proyectos
 
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-103 |
-| **Nombre** | Asignación de Roles Jerárquicos |
-| **Descripción** | El sistema debe permitir al Administrador de Organización asignar roles mediante la tabla `iam.UserRoles`, distinguiendo entre roles globales y específicos de la organización, para garantizar que cada usuario acceda únicamente a las funcionalidades permitidas por su cargo. |
-| **Prioridad** | Alta |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Tablas Relacionadas** | `iam.Roles`, `iam.UserRoles` |
+La definición técnica precisa de los proyectos es el pilar para una asignación de personal basada en datos. Al integrar niveles de complejidad y requisitos obligatorios, el sistema elimina la subjetividad en la conformación de equipos, asegurando que los desafíos técnicos del proyecto estén alineados con las capacidades reales de los colaboradores asignados.
 
----
+* RF-010: Gestión del Ciclo de Vida del Proyecto: El sistema debe permitir la gestión de estados según el dominio técnico: 1-Draft, 2-Open, 3-InProgress, 4-Closed, 5-Cancelled (CK_Projects_Status).
+* RF-011: Definición de Requerimientos de Habilidades: El sistema debe permitir al Gerente especificar habilidades mandatorias y opcionales con un nivel mínimo requerido (escala 1-5).
+* RF-012: Configuración de Roles y Vacantes: El sistema debe permitir definir los ProjectRoles especificando la cantidad necesaria de personas (NeededCount >= 1) para cada función.
+* RF-013: Cálculo de Impacto por Complejidad: El sistema debe capturar el ComplexityLevel (escala tinyint 1-3). Esta métrica es obligatoria, ya que actúa como multiplicador en el cálculo del DeltaLevel del empleado al finalizar el proyecto.
 
-#### RF-104: Control de Acceso Basado en Tenencia
+Una vez estructurado el proyecto y sus necesidades, se activa el flujo de postulación interna para los colaboradores disponibles.
 
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-104 |
-| **Nombre** | Control de Acceso Basado en Tenencia |
-| **Descripción** | El sistema debe validar el `OrganizationId` en cada petición de datos para prevenir el acceso no autorizado a información confidencial de otras empresas dentro de la base de datos compartida. |
-| **Prioridad** | Crítica |
-| **Estado** | ✅ Implementado |
-| **Implementación** | Extracción de `OrganizationId` desde JWT claim en cada Controller |
 
----
+--------------------------------------------------------------------------------
 
-#### RF-105: Trazabilidad y Auditoría de Transacciones
 
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-105 |
-| **Nombre** | Trazabilidad y Auditoría de Transacciones |
-| **Descripción** | El sistema debe registrar automáticamente la marca de tiempo (`CreatedAt`) y el identificador del autor (`UpdatedByUserId`) en cada cambio de estado de los esquemas IAM y Talent para generar un historial de auditoría verificable ante incidentes de seguridad. |
-| **Prioridad** | Alta |
-| **Estado** | ✅ Implementado |
-| **Implementación** | Clase base `AuditableEntity` en Domain |
+5. Ciclo de Vida de Postulación y Asignación de Talento
 
----
+La proactividad del empleado es fundamental para el desarrollo de carrera. El sistema de postulaciones internas no solo democratiza el acceso a las oportunidades, sino que permite a los gerentes filtrar el interés genuino y la motivación, elementos cualitativos que complementan la idoneidad técnica.
 
-## 3. Módulo Talent - Gestión de Talento y Perfiles
+* RF-014: Visualización de Oportunidades según Perfil: El sistema debe presentar al Empleado solo proyectos en estado "Open" (2) que tengan requerimientos de habilidades compatibles con su perfil.
+* RF-015: Proceso de Postulación y Mensaje de Motivación: El sistema debe permitir al Empleado postularse registrando un texto de motivación en ProjectApplications.
+* RF-016: Gestión de Revisiones y Retroalimentación: El sistema debe permitir al Gerente cambiar el estado de postulación (1-Applied, 2-Approved, 3-Rejected, 4-Withdrawn). En caso de rechazo, el campo ReviewNotes es obligatorio.
+* RF-017: Asignación Directa y Gestión de Participación: El sistema debe permitir la asignación directa de personal, creando el registro correspondiente en ProjectAssignments vinculado a un ProjectRole.
 
-> **Esquema SQL:** `talent.*`  
-> **Controladores:** `ProfileController`, `SkillsController`, `EmployeeSkillsController`  
-> **Tablas:** `EmployeeProfiles`, `Skills`, `EmployeeSkills`, `Certifications`, `SkillEvaluations`
+Criterio de Aceptación de Flujo: No se permitirán nuevas postulaciones ni aprobaciones si el proyecto ha transicionado a estado 3 (InProgress), 4 (Closed) o 5 (Cancelled).
 
-### 3.1 Descripción del Módulo
+La finalización de estas asignaciones desencadena el proceso de captura de resultados y evaluación de competencias.
 
-Permite la transición de un perfil profesional estático a uno dinámico basado en la ejecución verificable de proyectos y certificaciones. Fundamental para la competitividad empresarial.
 
-### 3.2 Requerimientos Funcionales
+--------------------------------------------------------------------------------
 
-#### RF-201: Mantenimiento del Perfil Profesional
 
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-201 |
-| **Nombre** | Mantenimiento del Perfil Profesional |
-| **Descripción** | El sistema debe permitir al Empleado gestionar su biografía, años de experiencia y URLs de portafolio (LinkedIn/GitHub) en la tabla `talent.EmployeeProfiles` para visibilizar su trayectoria ante los líderes de proyecto. |
-| **Prioridad** | Media |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Tabla Relacionada** | `talent.EmployeeProfiles` |
+6. Módulo de Evaluación de Desempeño y Evolución de Habilidades (Feedback Loop)
 
----
-
-#### RF-202: Clasificación de Competencias
+La captura de datos post-ejecución es vital para alimentar los procesos de Procesamiento de Lenguaje Natural (NLP). El sistema no solo registra el "qué" se hizo, sino el "cómo", transformando comentarios cualitativos en insumos para el crecimiento técnico y el análisis inteligente de patrones de desempeño.
 
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-202 |
-| **Nombre** | Clasificación de Competencias |
-| **Descripción** | El sistema debe permitir la gestión de habilidades categorizadas por tipo (Hard, Soft, Language) mediante `talent.Skills` para facilitar la búsqueda y el filtrado técnico de candidatos idóneos. |
-| **Prioridad** | Alta |
-| **Estado** | ✅ Implementado |
-| **Tabla Relacionada** | `talent.Skills` |
-| **Campos Clave** | `Category`, `SkillType` |
-
----
-
-#### RF-203: Calificación Automática de Habilidades
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-203 |
-| **Nombre** | Calificación Automática de Habilidades |
-| **Descripción** | El sistema debe actualizar el nivel de dominio del empleado tras el cierre de un proyecto, calculando el incremento basado en el `ComplexityLevel` (1-3) y el `ContributionScore` (1-5) registrado en `projects.ProjectParticipation`, para asegurar que el perfil del trabajador refleje su crecimiento técnico real. |
-| **Prioridad** | Alta |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Tablas Relacionadas** | `talent.EmployeeSkills`, `talent.SkillEvaluations`, `projects.ProjectParticipation` |
-
-##### Criterios de Aceptación
-
-| ID | Criterio | Detalle Técnico |
-|----|----------|-----------------|
-| CA-203.1 | Fuente de Validación | El sistema debe registrar en `talent.SkillEvaluations.Source` si el cambio de nivel fue por cierre de proyecto (1), manual (2) o regla de sistema (3). |
-| CA-203.2 | Integridad de Niveles | El sistema debe impedir actualizaciones que superen el nivel 5 o sean inferiores a 1, respetando la restricción `CK_EmployeeSkills_Level`. |
-| CA-203.3 | Registro del Validador | En validaciones manuales, el sistema debe poblar `ValidatedByUserId` con el ID del Líder de Proyecto; para validaciones automáticas, debe asignar el ID del Agente de Sistema. |
-
----
-
-#### RF-204: Validación de Evidencias de Certificación
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-204 |
-| **Nombre** | Validación de Evidencias de Certificación |
-| **Descripción** | El sistema debe permitir al Empleado registrar certificaciones adjuntando una `EvidenceUrl` en `talent.Certifications` para sustentar documentalmente las competencias declaradas. |
-| **Prioridad** | Media |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Tabla Relacionada** | `talent.Certifications` |
-
----
-
-## 4. Módulo Projects - Gestión de Proyectos y Postulaciones
-
-> **Esquema SQL:** `projects.*`  
-> **Controladores:** `ProjectsController`, `ProjectApplicationsController`, `AssignmentsController`  
-> **Tablas:** `Projects`, `ProjectSkillRequirements`, `ProjectRoles`, `ProjectApplications`, `ProjectAssignments`, `ProjectParticipation`
-
-### 4.1 Descripción del Módulo
-
-Vincula estratégicamente los requisitos de habilidades de un proyecto con el talento real disponible, optimizando la eficiencia operativa y permitiendo el empoderamiento del empleado mediante la postulación activa.
-
-### 4.2 Requerimientos Funcionales
-
-#### RF-301: Definición de Proyectos por Niveles
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-301 |
-| **Nombre** | Definición de Proyectos por Niveles |
-| **Descripción** | El sistema debe permitir al Líder de Proyecto crear iniciativas asignando un `ComplexityLevel` entre 1 y 3 para establecer los parámetros de crecimiento y dificultad de la tarea. |
-| **Prioridad** | Alta |
-| **Estado** | ✅ Implementado |
-| **Tabla Relacionada** | `projects.Projects` |
-| **Restricción** | `CK_Projects_Complexity CHECK (ComplexityLevel BETWEEN 1 AND 3)` |
-
----
-
-#### RF-302: Configuración de Requisitos Técnicos
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-302 |
-| **Nombre** | Configuración de Requisitos Técnicos |
-| **Descripción** | El sistema debe permitir definir habilidades obligatorias (`IsMandatory`) y niveles mínimos requeridos (`RequiredLevel`) mediante `projects.ProjectSkillRequirements` para filtrar automáticamente a los candidatos que no cumplen con el perfil base. |
-| **Prioridad** | Alta |
-| **Estado** | ✅ Implementado |
-| **Tabla Relacionada** | `projects.ProjectSkillRequirements` |
-| **Endpoints** | `POST /api/projects/{id}/reqs`, `GET /api/projects/{id}/reqs` |
-
----
-
-#### RF-303: Gestión del Ciclo de Vida del Proyecto
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-303 |
-| **Nombre** | Gestión del Ciclo de Vida del Proyecto |
-| **Descripción** | El sistema debe controlar la transición de estados del proyecto (1-Draft, 2-Open, 3-InProgress, 4-Closed, 5-Cancelled) según la restricción `CK_Projects_Status` para asegurar la coherencia en los procesos de postulación y feedback. |
-| **Prioridad** | Alta |
-| **Estado** | ✅ Implementado |
-| **Tabla Relacionada** | `projects.Projects` |
-| **Enum** | `ProjectStatus` en Domain/Enums |
-
-##### Estados del Proyecto
-
-```
-┌─────────┐    Activar    ┌─────────┐    Iniciar    ┌─────────────┐
-│  DRAFT  │──────────────▶│  OPEN   │──────────────▶│ IN_PROGRESS │
-│   (1)   │               │   (2)   │               │     (3)     │
-└─────────┘               └─────────┘               └─────────────┘
-     │                         │                          │
-     │                         │                          │ Cerrar
-     │                         │                          ▼
-     │                         │                    ┌──────────┐
-     │                         │                    │  CLOSED  │
-     │                         │                    │    (4)   │
-     │                         │                    └──────────┘
-     │                         │
-     │      Cancelar (desde cualquier estado)
-     └─────────────────────────┴──────────────────────────┐
-                                                          ▼
-                                                   ┌───────────┐
-                                                   │ CANCELLED │
-                                                   │    (5)    │
-                                                   └───────────┘
-```
-
----
-
-#### RF-304: Postulación Activa y Feedback
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-304 |
-| **Nombre** | Postulación Activa y Feedback |
-| **Descripción** | El sistema debe permitir al Empleado postularse a proyectos con estado "Open" (2), exigiendo una nota de motivación, para fomentar la proactividad en el plan de carrera. |
-| **Prioridad** | Media |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Tabla Relacionada** | `projects.ProjectApplications` |
-| **Campo Requerido** | `Motivation` |
-
----
-
-#### RF-305: Resolución de Postulaciones
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-305 |
-| **Nombre** | Resolución de Postulaciones |
-| **Descripción** | El sistema debe permitir al Líder de Proyecto aprobar o rechazar postulaciones, siendo obligatorio el campo `ReviewNotes` en caso de rechazo, para proporcionar al empleado retroalimentación sobre sus brechas de capacitación. |
-| **Prioridad** | Media |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Tabla Relacionada** | `projects.ProjectApplications` |
-| **Campos Clave** | `Status`, `ReviewNotes`, `ReviewedByUserId`, `ReviewedAt` |
-
-##### Estados de Postulación
-
-| Valor | Estado | Descripción |
-|-------|--------|-------------|
-| 1 | Applied | Postulación enviada, pendiente de revisión |
-| 2 | Approved | Postulación aprobada |
-| 3 | Rejected | Postulación rechazada (requiere `ReviewNotes`) |
-| 4 | Withdrawn | Postulación retirada por el empleado |
-
----
-
-## 5. Módulo Reporting - Reportes y Agente Inteligente
-
-> **Esquema SQL:** `reporting.*`  
-> **Controlador:** `AgentController`  
-> **Tablas:** `ReportSnapshots`, `RecommendationRules`, `RecommendationLogs`, `AgentActions`, `AgentConfiguration`
-
-### 5.1 Descripción del Módulo
-
-Actúa como la capa de **Business Intelligence (BI)**, transformando datos transaccionales en decisiones estratégicas de capacitación y planificación de la fuerza laboral mediante un agente de IA basado en **Google Gemini**.
-
-### 5.2 Requerimientos Funcionales
-
-#### RF-401: Generación de Snapshots Históricos
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-401 |
-| **Nombre** | Generación de Snapshots Históricos |
-| **Descripción** | El sistema debe capturar el estado de proyectos y competencias en formato JSON dentro de `reporting.ReportSnapshots` de forma periódica para permitir el análisis de tendencias históricas de la organización. |
-| **Prioridad** | Media |
-| **Estado** | ✅ Implementado |
-| **Tabla Relacionada** | `reporting.ReportSnapshots` |
-| **Background Service** | `ReportSnapshotGeneratorService` (cada 24 horas) |
-
----
-
-#### RF-402: Configuración de Reglas de Recomendación
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-402 |
-| **Nombre** | Configuración de Reglas de Recomendación |
-| **Descripción** | El sistema debe permitir al Administrador configurar expresiones lógicas en `reporting.RecommendationRules` para definir umbrales críticos de escasez de habilidades o necesidades de capacitación. |
-| **Prioridad** | Media |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Tablas Relacionadas** | `reporting.RecommendationRules`, `reporting.RecommendationLogs` |
-
----
-
-#### RF-403: Ejecución del Agente Inteligente
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-403 |
-| **Nombre** | Ejecución del Agente Inteligente |
-| **Descripción** | El sistema debe procesar las reglas activas comparando los requisitos de proyectos futuros con el historial de `ProjectParticipation` para sugerir planes de formación específicos a empleados con potencial destacado. |
-| **Prioridad** | Alta |
-| **Estado** | ✅ Implementado |
-| **Implementación** | `AgentService.cs` con patrón Chain-of-Thought + Tool Use |
-| **Background Service** | `RecommendationOptimizerService` (cada 6 horas) |
-
-##### Capacidades del Agente IA
-
-| Endpoint | Funcionalidad |
-|----------|---------------|
-| `POST /agent/query` | Consultas en lenguaje natural sobre talento |
-| `POST /agent/validate-skill` | Validación semántica de skills con evidencia |
-| `POST /agent/match-candidates` | Matching inteligente de candidatos (score 0-100) |
-| `POST /agent/actions/{id}/approve` | Aprobación HITL de acciones críticas |
-| `POST /agent/actions/{id}/reject` | Rechazo HITL de acciones críticas |
-
----
-
-#### RF-404: Visualización de Patrones de Desempeño
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-404 |
-| **Nombre** | Visualización de Patrones de Desempeño |
-| **Descripción** | El sistema debe extraer información semántica de `FeedbackComments` mediante el agente inteligente para alertar a la dirección sobre riesgos en la ejecución de proyectos o talentos excepcionales. |
-| **Prioridad** | Baja |
-| **Estado** | ⬜ Pendiente de Revisión |
-| **Campos Analizados** | `projects.ProjectParticipation.FeedbackComments` |
-
----
-
-## 6. Requerimientos Transversales - Accesibilidad (WCAG 2.2 AA)
-
-> **Aplicación:** Frontend (cuando se implemente)  
-> **Estándar:** WCAG 2.2 Nivel AA  
-> **Normativas:** ADA Title III, Ley 1618 de 2013 (Colombia)
-
-### 6.1 Descripción
-
-La accesibilidad en DevManager es un imperativo legal y una ventaja competitiva en usabilidad, garantizando que el sistema sea operable por personas con diversas capacidades.
-
-### 6.2 Requerimientos Funcionales
-
-#### RF-501: Contraste y Redimensionamiento
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-501 |
-| **Nombre** | Contraste y Redimensionamiento |
-| **Descripción** | El sistema debe garantizar un contraste de color mínimo de 4.5:1 para texto normal y permitir el redimensionamiento de la fuente hasta un 200% sin pérdida de contenido para cumplir con el nivel AA de percepción visual. |
-| **Prioridad** | Alta |
-| **Estado** | ⬜ Pendiente (Frontend) |
-| **Criterio WCAG** | 1.4.3, 1.4.4 |
-
----
-
-#### RF-502: Navegación Estructural Eficiente
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-502 |
-| **Nombre** | Navegación Estructural Eficiente |
-| **Descripción** | El sistema debe incluir un enlace de "Saltar al contenido principal" (Skip to Main Content) y asegurar que el orden de foco del teclado sea lógico en cuadros de mando complejos para facilitar la operabilidad a usuarios con discapacidades motoras. |
-| **Prioridad** | Alta |
-| **Estado** | ⬜ Pendiente (Frontend) |
-| **Criterio WCAG** | 2.4.1, 2.4.3 |
-
----
-
-#### RF-503: Identificación y Prevención de Errores
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-503 |
-| **Nombre** | Identificación y Prevención de Errores |
-| **Descripción** | El sistema debe identificar errores de entrada de forma textual y sugerir correcciones en los formularios de postulación para reducir la carga cognitiva y mejorar la accesibilidad a tecnologías asistivas. |
-| **Prioridad** | Media |
-| **Estado** | ⬜ Pendiente (Frontend) |
-| **Criterio WCAG** | 3.3.1, 3.3.3 |
-
----
-
-#### RF-504: Compatibilidad con Tecnologías Asistivas
-
-| Campo | Valor |
-|-------|-------|
-| **ID** | RF-504 |
-| **Nombre** | Compatibilidad con Tecnologías Asistivas |
-| **Descripción** | El sistema debe asegurar que todos los elementos interactivos y estados dinámicos sean anunciados correctamente por lectores de pantalla (JAWS, NVDA, VoiceOver) mediante el uso correcto de atributos ARIA, para garantizar la inclusión total en el entorno laboral. |
-| **Prioridad** | Alta |
-| **Estado** | ⬜ Pendiente (Frontend) |
-| **Criterio WCAG** | 4.1.2 |
-
-### 6.3 Verificación de Calidad (Regla 30/70)
-
-| Tipo | Porcentaje | Herramientas/Método |
-|------|------------|---------------------|
-| Automática | 30% | axe-core, WAVE, Lighthouse |
-| Manual | 70% | Pruebas con lectores de pantalla, navegación por teclado, detección de Keyboard Traps |
-
----
-
-## 7. Matriz de Trazabilidad
-
-### 7.1 Resumen por Módulo
-
-| Módulo | Total RFs | Implementados | Pendientes |
-|--------|-----------|---------------|------------|
-| IAM | 5 | 2 | 3 |
-| Talent | 4 | 1 | 3 |
-| Projects | 5 | 3 | 2 |
-| Reporting | 4 | 2 | 2 |
-| Accesibilidad | 4 | 0 | 4 |
-| **TOTAL** | **22** | **8** | **14** |
-
-### 7.2 Mapeo RF → Tablas SQL
-
-| RF ID | Tablas Afectadas |
-|-------|------------------|
-| RF-101 | `iam.Organizations` |
-| RF-102 | `iam.Users` |
-| RF-103 | `iam.Roles`, `iam.UserRoles` |
-| RF-104 | Todas (filtro por `OrganizationId`) |
-| RF-105 | Todas (campos `AuditableEntity`) |
-| RF-201 | `talent.EmployeeProfiles` |
-| RF-202 | `talent.Skills` |
-| RF-203 | `talent.EmployeeSkills`, `talent.SkillEvaluations`, `projects.ProjectParticipation` |
-| RF-204 | `talent.Certifications` |
-| RF-301 | `projects.Projects` |
-| RF-302 | `projects.ProjectSkillRequirements` |
-| RF-303 | `projects.Projects` |
-| RF-304 | `projects.ProjectApplications` |
-| RF-305 | `projects.ProjectApplications` |
-| RF-401 | `reporting.ReportSnapshots` |
-| RF-402 | `reporting.RecommendationRules`, `reporting.RecommendationLogs` |
-| RF-403 | `reporting.AgentActions`, `reporting.AgentConfiguration` |
-| RF-404 | `projects.ProjectParticipation` |
-
-### 7.3 Mapeo RF → Controladores API
-
-| RF ID | Controller | Endpoints |
-|-------|------------|-----------|
-| RF-102 | `UsersController` | `GET/POST/PUT /api/users` |
-| RF-104 | Todos | Validación JWT claim `OrganizationId` |
-| RF-201 | `ProfileController` | `GET/PUT /api/profile` |
-| RF-202 | `SkillsController` | `GET/POST /api/skills` |
-| RF-203 | `EmployeeSkillsController` | `PUT /api/employee-skills/{id}` |
-| RF-301 | `ProjectsController` | `POST /api/projects` |
-| RF-302 | `ProjectsController` | `POST/GET /api/projects/{id}/reqs` |
-| RF-303 | `ProjectsController` | `PUT /api/projects/{id}` |
-| RF-304 | `ProjectApplicationsController` | `POST /api/applications` |
-| RF-305 | `ProjectApplicationsController` | `PUT /api/applications/{id}` |
-| RF-403 | `AgentController` | `POST /agent/*` |
-
----
-
-## 📝 Registro de Cambios
-
-| Fecha | Versión | Autor | Descripción |
-|-------|---------|-------|-------------|
-| 2026-02-02 | 1.0 | - | Creación inicial del documento |
-
----
-
-## 🔗 Referencias
-
-- [AGENT_GUIDE.md](../AGENT_GUIDE.md) - Guía del Agente IA
-- [DDL_Dev_Manager.sql](../Infrastructure/Database/DDL/DDL_Dev_Manager.sql) - Esquema de Base de Datos
-- [DDL_Agent_Tables.sql](../Infrastructure/Database/DDL/DDL_Agent_Tables.sql) - Tablas del Agente
-- [PROJECTS_IMPLEMENTATION_GUIDE.md](./PROJECTS_IMPLEMENTATION_GUIDE.md) - Guía de Implementación de Proyectos
+* RF-018: Registro de Contribución y Feedback Cualitativo: Al cierre de la participación, el Gerente debe registrar un ContributionScore (1-5) y FeedbackComments (nvarchar(max)). La ausencia de límite en los comentarios garantiza datos suficientes para análisis semántico profundo.
+* RF-019: Actualización de Niveles de Habilidad (DeltaLevel): El sistema debe registrar evaluaciones en SkillEvaluations permitiendo un diferencial DeltaLevel entre -5 y 5, basándose en el desempeño y la complejidad del proyecto.
+* RF-020: Categorización del Origen de la Evaluación: El sistema debe clasificar cada actualización de habilidad según su Source: 1-Project, 2-Manual, 3-SystemRule, para mantener la auditoría sobre la evolución del colaborador.
+
+Este historial verificable permite que el sistema pase de la simple visualización de datos a la generación de inteligencia de negocios.
+
+
+--------------------------------------------------------------------------------
+
+
+7. Módulo de Reportes Estratégicos y Agente de Recomendación Inteligente
+
+El valor final de DevManager reside en la transición de reportes descriptivos a recomendaciones prescriptivas. Mediante el uso de un Agente Inteligente, la plataforma identifica brechas de conocimiento y sugiere acciones correctivas, alineando el capital humano con los objetivos de competitividad regional de Bucaramanga y las líneas de investigación de las UTS.
+
+* RF-021: Generación de Instantáneas de Datos (Snapshots): El sistema debe persistir el estado del talento en ReportSnapshots (formato JSON) para permitir análisis histórico de tendencias y comparativas temporales.
+* RF-022: Motor de Reglas de Recomendación: El sistema debe proveer un motor que evalúe ConditionExpr (expresiones lógicas) sobre los datos de los perfiles y proyectos para disparar sugerencias automáticas.
+* RF-023: Interfaz del Agente para Skill Gaps: El sistema debe presentar al Gerente recomendaciones de capacitación o rotación basadas en el análisis de brechas de habilidades detectadas por el motor de reglas.
+* RF-024: Auditoría de Recomendaciones (Logs): Todas las acciones del agente deben registrarse en RecommendationLogs, capturando el ResultJson para la mejora continua del algoritmo.
+
+La integración sistemática de estos requerimientos funcionales garantiza que DevManager cumpla su objetivo de optimizar el capital humano, impulsando la productividad empresarial y el desarrollo profesional sostenible a través de una gestión basada rigurosamente en datos.
