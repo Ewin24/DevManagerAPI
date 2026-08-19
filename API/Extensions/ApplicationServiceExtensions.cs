@@ -65,6 +65,34 @@ public static class ApplicationServiceExtensions
         services.AddScoped<ICompensacionService, Application.Services.Nomina.CompensacionService>();
         services.AddScoped<IPilaService, Application.Services.Nomina.PilaService>();
 
+        // Servicios de aplicación - Bienestar y Compensación (Sector Solidario)
+        services.AddScoped<IBienestarService, Application.Services.Bienestar.BienestarService>();
+
+        // Servicios de aplicación - Gestión Humana Solidaria
+        services.AddScoped<IGestionHumanaService, Application.Services.GestionHumana.GestionHumanaService>();
+        services.AddScoped<IEducacionService, Application.Services.GestionHumana.EducacionService>();
+
+        // Servicios de aplicación - Balance Social
+        services.AddScoped<IBalanceSocialService, Application.Services.BalanceSocial.BalanceSocialService>();
+
+        // Servicios de aplicación - Seguridad y Salud en el Trabajo (SST)
+        services.AddScoped<ISstService, Application.Services.SST.SstService>();
+
+        // Servicios de aplicación - Excedentes
+        services.AddScoped<IExcedenteService, Application.Services.Excedentes.ExcedenteService>();
+
+        // Servicios de aplicación - Habeas Data
+        services.AddScoped<IHabeasDataService, Application.Services.HabeasData.HabeasDataService>();
+
+        // Servicios de aplicación - Reportes Supersolidaria
+        services.AddScoped<IReportGeneratorService, Application.Services.Reportes.ReportGeneratorService>();
+
+        // Servicios de aplicación - Órganos de Administración
+        services.AddScoped<IOrganoService, Application.Services.Organos.OrganoService>();
+
+        // Servicios de aplicación - Asistente Cooperativo (IA)
+        services.AddScoped<ICooperativaAIService, Application.Services.CooperativaAIService>();
+
         // Servicios de Reportes
         services.AddScoped<IReportsService, ReportsService>();
 

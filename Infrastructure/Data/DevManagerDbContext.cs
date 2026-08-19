@@ -69,6 +69,57 @@ public partial class DevManagerDbContext : DbContext
 
     public virtual DbSet<PilaAporte> PilaAportes { get; set; }
 
+    // ========= Bienestar y Compensacion (Sector Solidario) =========
+    public virtual DbSet<Domain.Entities.Bienestar.ProgramaBienestar> ProgramasBienestar { get; set; }
+
+    public virtual DbSet<Domain.Entities.Bienestar.SolicitudBienestar> SolicitudesBienestar { get; set; }
+
+    public virtual DbSet<Domain.Entities.Bienestar.FondoSolidaridad> FondosSolidaridad { get; set; }
+
+    public virtual DbSet<Domain.Entities.Bienestar.Auxilio> Auxilios { get; set; }
+
+    // ========= Gestion Humana Solidaria =========
+    public virtual DbSet<Domain.Entities.GestionHumana.CompetenciaAsociado> CompetenciasAsociado { get; set; }
+
+    public virtual DbSet<Domain.Entities.GestionHumana.ProgramaEducacion> ProgramasEducacion { get; set; }
+
+    public virtual DbSet<Domain.Entities.GestionHumana.AsociadoEducacion> AsociadosEducacion { get; set; }
+
+    // ========= Balance Social =========
+    public virtual DbSet<Domain.Entities.BalanceSocial.IndicadorBalanceSocial> IndicadoresBalanceSocial { get; set; }
+
+    // ========= Seguridad y Salud en el Trabajo (SST) =========
+    public virtual DbSet<Domain.Entities.SST.ExamenMedico> ExamenesMedicos { get; set; }
+
+    public virtual DbSet<Domain.Entities.SST.Accidente> Accidentes { get; set; }
+
+    public virtual DbSet<Domain.Entities.SST.Riesgo> Riesgos { get; set; }
+
+    // ========= Excedentes =========
+    public virtual DbSet<Domain.Entities.Excedentes.Excedente> Excedentes { get; set; }
+
+    // ========= Habeas Data =========
+    public virtual DbSet<Domain.Entities.HabeasData.Autorizacion> Autorizaciones { get; set; }
+
+    public virtual DbSet<Domain.Entities.HabeasData.SolicitudARCO> SolicitudesARCO { get; set; }
+
+    // ========= Reportes Supersolidaria =========
+    public virtual DbSet<Domain.Entities.Reportes.ReporteSupersolidaria> ReportesSupersolidaria { get; set; }
+
+    // ========= Organos de Administracion =========
+    public virtual DbSet<Domain.Entities.Organos.Organo> Organos { get; set; }
+
+    public virtual DbSet<Domain.Entities.Organos.MiembroOrgano> MiembrosOrgano { get; set; }
+
+    public virtual DbSet<Domain.Entities.Organos.Acta> Actas { get; set; }
+
+    public virtual DbSet<Domain.Entities.Organos.Asamblea> Asambleas { get; set; }
+
+    public virtual DbSet<Domain.Entities.Organos.Voto> Votos { get; set; }
+
+    // ========= Asistente Cooperativo (IA) =========
+    public virtual DbSet<Domain.Entities.Agent.HerramientaCooperativa> HerramientasCooperativas { get; set; }
+
     // ========= Config (Catálogos) =========
     public virtual DbSet<ProjectStatusConfig> ProjectStatuses { get; set; }
 
