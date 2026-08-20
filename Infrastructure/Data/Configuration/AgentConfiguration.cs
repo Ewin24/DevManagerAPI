@@ -50,8 +50,7 @@ public class AgentActionConfiguration : IEntityTypeConfiguration<AgentAction>
             .HasDatabaseName("IX_AgentActions_Org_Status_Date");
 
         builder.HasIndex(e => new { e.OrganizationId, e.ActionType })
-            .HasDatabaseName("IX_AgentActions_Org_Type")
-            .HasFilter("IsDeleted = 0");
+            .HasDatabaseName("IX_AgentActions_Org_Type");
     }
 }
 

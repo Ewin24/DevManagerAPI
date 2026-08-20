@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Data.Migrations
 {
     [DbContext(typeof(DevManagerDbContext))]
-    [Migration("20260820014903_AddSolidarioModules")]
+    [Migration("20260820024735_AddSolidarioModules")]
     partial class AddSolidarioModules
     {
         /// <inheritdoc />
@@ -75,8 +75,7 @@ namespace Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId", "ActionType")
-                        .HasDatabaseName("IX_AgentActions_Org_Type")
-                        .HasFilter("IsDeleted = 0");
+                        .HasDatabaseName("IX_AgentActions_Org_Type");
 
                     b.HasIndex("OrganizationId", "Status", "CreatedAt")
                         .HasDatabaseName("IX_AgentActions_Org_Status_Date");

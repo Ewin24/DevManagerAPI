@@ -72,8 +72,7 @@ namespace Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId", "ActionType")
-                        .HasDatabaseName("IX_AgentActions_Org_Type")
-                        .HasFilter("IsDeleted = 0");
+                        .HasDatabaseName("IX_AgentActions_Org_Type");
 
                     b.HasIndex("OrganizationId", "Status", "CreatedAt")
                         .HasDatabaseName("IX_AgentActions_Org_Status_Date");

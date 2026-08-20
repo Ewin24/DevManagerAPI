@@ -1835,8 +1835,7 @@ namespace Infrastructure.Data.Migrations
                 name: "IX_AgentActions_Org_Type",
                 schema: "reporting",
                 table: "AgentActions",
-                columns: new[] { "OrganizationId", "ActionType" },
-                filter: "IsDeleted = 0");
+                columns: new[] { "OrganizationId", "ActionType" });
 
             migrationBuilder.CreateIndex(
                 name: "UQ_AgentActionStatuses_Code",

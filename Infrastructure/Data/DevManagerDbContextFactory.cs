@@ -15,7 +15,7 @@ public class DevManagerDbContextFactory : IDesignTimeDbContextFactory<DevManager
     {
         var options = new DbContextOptionsBuilder<DevManagerDbContext>()
             .UseSqlServer(
-                "Server=localhost;Database=GestionHumanaSolidaria;TrustServerCertificate=true;User Id=sa;Password=DesignTimeOnly;MultipleActiveResultSets=true")
+                "Server=localhost;Database=GestionHumanaSolidaria;TrustServerCertificate=true;Integrated Security=true;MultipleActiveResultSets=true")
             .Options;
 
         return new DevManagerDbContext(options);
