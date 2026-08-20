@@ -7,11 +7,13 @@ namespace Application.Services;
 /// <summary>
 /// Implementación del Asistente Cooperativo IA
 /// Consultas normativas, balance social, cumplimiento y atención al asociado
-/// Implementación en memoria con respuestas template-based (extensible a Gemini)
+/// Gemini-first: si el servicio Gemini está disponible genera las respuestas en lenguaje natural;
+/// si no está configurado, falla o devuelve vacío, cae al modo template-based en memoria.
 /// </summary>
 public class CooperativaAIService : ICooperativaAIService
 {
     private readonly ILogger<CooperativaAIService> _logger;
+    private readonly IGeminiService? _geminiService;
 
     // Base de conocimiento normativo cooperativo
     private static readonly List<NormaEntry> Normatividad = new()
@@ -111,12 +113,15 @@ public class CooperativaAIService : ICooperativaAIService
             "y posibilidad de apelación ante la Asamblea.")
     };
 
-    public CooperativaAIService(ILogger<CooperativaAIService> logger)
+    public CooperativaAIService(
+        ILogger<CooperativaAIService> logger,
+        IGeminiService? geminiService = null)
     {
         _logger = logger;
+        _geminiService = geminiService;
     }
 
-    public Task<CooperativaQueryResponse> ConsultarNormatividadAsync(
+    public async Task<CooperativaQueryResponse> ConsultarNormatividadAsync(
         Guid organizationId,
         CooperativaQueryRequest request,
         CancellationToken cancellationToken = default)
@@ -166,11 +171,35 @@ public class CooperativaAIService : ICooperativaAIService
             })
             .ToList();
 
-        var respuesta = citaciones.Any()
+        // Respuesta template (fallback exacto cuando Gemini no está disponible)
+        var respuestaTemplate = citaciones.Any()
             ? $"Según la normatividad cooperativa colombiana, encontré {citaciones.Count} referencias relevantes a tu consulta."
             : "No encontré normas específicas para tu consulta. Te sugiero contactar al Revisor Fiscal o consultar la Circular Básica Jurídica de Supersolidaria.";
 
-        return Task.FromResult(new CooperativaQueryResponse
+        // Gemini-first: la respuesta en lenguaje natural se delega a Gemini si está disponible;
+        // la estructura (citaciones, markdown, acciones) siempre proviene de la lógica local.
+        var contextoNormas = citaciones.Any()
+            ? string.Join("\n", citaciones.Select(c => $"- {c.Norma} {c.Articulo}: {c.Descripcion}"))
+            : "No se encontraron referencias normativas específicas para esta consulta.";
+
+        var prompt = $@"
+Eres el Asistente Cooperativo IA de una cooperativa colombiana.
+Responde la consulta de un asociado usando SOLO las referencias normativas proporcionadas.
+
+CONSULTA DEL USUARIO: {request.Consulta}
+
+REFERENCIAS NORMATIVAS RELEVANTES:
+{contextoNormas}
+
+INSTRUCCIONES:
+- Responde en español, de forma clara y concisa (máximo 200 palabras).
+- Cita la norma y el artículo concreto cuando aplique.
+- NO inventes normas, artículos ni datos que no estén en las referencias.
+- Si no hay referencias relevantes, recomienda consultar la Circular Básica Jurídica de Supersolidaria o contactar al Revisor Fiscal.";
+
+        var respuesta = await TryGetGeminiResponseAsync(prompt, cancellationToken) ?? respuestaTemplate;
+
+        return new CooperativaQueryResponse
         {
             Respuesta = respuesta,
             Markdown = FormatNormasMarkdown(citaciones, request.Consulta),
@@ -181,10 +210,10 @@ public class CooperativaAIService : ICooperativaAIService
                 "Verifique el Balance Social de su cooperativa",
                 "Contacte a Supersolidaria para una pre-consulta formal"
             }
-        });
+        };
     }
 
-    public Task<BalanceSocialReportDto> GenerarBalanceSocialAsync(
+        public async Task<BalanceSocialReportDto> GenerarBalanceSocialAsync(
         Guid organizationId,
         GenerarBalanceSocialRequest request,
         CancellationToken cancellationToken = default)
@@ -332,17 +361,39 @@ La cooperativa presenta un cumplimiento social del **{coberturaPromedio:F1}%** e
 3. Establecer más alianzas intercooperativas y federativas.
 4. Implementar programas de bienestar para alcanzar al menos el 50% de asociados." : "Ninguna.")}";
 
-        return Task.FromResult(new BalanceSocialReportDto
+        // Resumen ejecutivo template (fallback exacto cuando Gemini no está disponible)
+        var resumenTemplate = $"Cobertura social general: {coberturaPromedio:F1}%. {fortalezas.Count} fortalezas, {oportunidades.Count} oportunidades de mejora.";
+
+        // Gemini-first: redactar el resumen ejecutivo solo si el servicio está disponible;
+        // las dimensiones, indicadores y la narrativa detallada siempre provienen de la lógica local.
+        var fortalezasTexto = fortalezas.Any() ? string.Join(", ", fortalezas) : "Ninguna";
+        var oportunidadesTexto = oportunidades.Any() ? string.Join(", ", oportunidades) : "Ninguna";
+        var resumenPrompt = $@"
+Eres un experto en Balance Social del sector cooperativo colombiano.
+Genera un resumen ejecutivo de 1-2 oraciones en español sobre el cumplimiento social de la cooperativa.
+
+DATOS:
+- Cobertura social general: {coberturaPromedio:F1}%
+- Dimensiones destacadas (cobertura >= 80%): {fortalezasTexto}
+- Áreas de mejora (cobertura < 70%): {oportunidadesTexto}
+
+INSTRUCCIONES:
+- Sé concreto con los números del reporte.
+- NO inventes datos que no estén en los DATOS.";
+
+        var resumenEjecutivo = await TryGetGeminiResponseAsync(resumenPrompt, cancellationToken) ?? resumenTemplate;
+
+        return new BalanceSocialReportDto
         {
             OrganizationId = organizationId,
             OrganizationName = $"Organización {organizationId.ToString()[..8]}",
             Anio = request.Anio,
             Dimensiones = dimensiones,
-            ResumenEjecutivo = $"Cobertura social general: {coberturaPromedio:F1}%. {fortalezas.Count} fortalezas, {oportunidades.Count} oportunidades de mejora.",
+            ResumenEjecutivo = resumenEjecutivo,
             Fortalezas = fortalezas,
             OportunidadesMejora = oportunidades,
             Narrativa = request.IncluirRecomendaciones ? narrativa : null
-        });
+        };
     }
 
     public Task<CumplimientoDto> VerificarCumplimientoAsync(
@@ -444,7 +495,7 @@ La cooperativa presenta un cumplimiento social del **{coberturaPromedio:F1}%** e
         });
     }
 
-    public Task<CooperativaQueryResponse> ResponderDudaAsociadoAsync(
+    public async Task<CooperativaQueryResponse> ResponderDudaAsociadoAsync(
         Guid organizationId,
         ResponderDudaRequest request,
         CancellationToken cancellationToken = default)
@@ -463,7 +514,7 @@ La cooperativa presenta un cumplimiento social del **{coberturaPromedio:F1}%** e
 
         if (plantilla == null)
         {
-            return Task.FromResult(new CooperativaQueryResponse
+            return new CooperativaQueryResponse
             {
                 Respuesta = "No encontré una respuesta específica para tu pregunta. " +
                            "Te recomiendo consultar directamente con el área de atención al asociado " +
@@ -474,7 +525,7 @@ La cooperativa presenta un cumplimiento social del **{coberturaPromedio:F1}%** e
                     "Contacte al área de atención al asociado",
                     "Solicite una consulta formal al Revisor Fiscal"
                 }
-            });
+            };
         }
 
         var citacion = plantilla.Categoria switch
@@ -543,10 +594,30 @@ La cooperativa presenta un cumplimiento social del **{coberturaPromedio:F1}%** e
             }
         };
 
-        return Task.FromResult(new CooperativaQueryResponse
+        // Gemini-first: la respuesta natural se delega a Gemini si está disponible;
+        // la referencia normativa y las acciones sugeridas siempre provienen de la lógica local.
+        var dudaPrompt = $@"
+Eres el Asistente Cooperativo IA de una cooperativa colombiana.
+Responde la duda de un asociado con base en la respuesta de referencia y la normativa indicada.
+
+PREGUNTA DEL ASOCIADO: {request.Pregunta}
+
+RESPUESTA DE REFERENCIA:
+{plantilla.Respuesta}
+
+REFERENCIA NORMATIVA: {citacion.Norma} {citacion.Articulo} - {citacion.Descripcion}
+
+INSTRUCCIONES:
+- Responde en español, de forma clara y cercana (máximo 200 palabras).
+- Usa la respuesta de referencia como base; puedes ampliarla o redactarla mejor.
+- NO inventes normas, artículos ni datos que no estén en la referencia.";
+
+        var respuesta = await TryGetGeminiResponseAsync(dudaPrompt, cancellationToken) ?? plantilla.Respuesta;
+
+        return new CooperativaQueryResponse
         {
-            Respuesta = plantilla.Respuesta,
-            Markdown = $"## Respuesta a tu consulta\n\n{plantilla.Respuesta}\n\n---\n*Basado en {citacion.Norma} {citacion.Articulo}*",
+            Respuesta = respuesta,
+            Markdown = $"## Respuesta a tu consulta\n\n{respuesta}\n\n---\n*Basado en {citacion.Norma} {citacion.Articulo}*",
             Citations = new List<CitacionNormativa> { citacion },
             AccionesSugeridas = plantilla.Categoria switch
             {
@@ -555,7 +626,30 @@ La cooperativa presenta un cumplimiento social del **{coberturaPromedio:F1}%** e
                 "financiero" => new List<string> { "Revise su extracto de aportes", "Consulte sobre aportes extraordinarios", "Verifique el capital mínimo irreducible" },
                 _ => new List<string> { "Consulte la Circular Básica Jurídica", "Contacte a su cooperativa", "Participe en programas de educación cooperativa" }
             }
-        });
+        };
+    }
+
+    /// <summary>
+    /// Intenta generar una respuesta con Gemini. Devuelve null (→ fallback a plantillas) cuando
+    /// el servicio no está configurado, lanza una excepción o devuelve texto vacío.
+    /// </summary>
+    private async Task<string?> TryGetGeminiResponseAsync(string prompt, CancellationToken cancellationToken)
+    {
+        if (_geminiService is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var response = await _geminiService.QueryAsync(prompt, cancellationToken);
+            return string.IsNullOrWhiteSpace(response) ? null : response.Trim();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Gemini no disponible para el Asistente Cooperativo, usando respuesta template");
+            return null;
+        }
     }
 
     private static string FormatNormasMarkdown(List<CitacionNormativa> citaciones, string consulta)

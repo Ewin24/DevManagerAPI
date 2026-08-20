@@ -151,6 +151,24 @@ public partial class DevManagerDbContext : DbContext
         // This automatically discovers and applies all IEntityTypeConfiguration<T> implementations
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DevManagerDbContext).Assembly);
 
+        // IAM PersonOrganization composite key (dual-entity safety net)
+        modelBuilder.Entity<Infrastructure.Data.Entities.PersonOrganization>()
+            .HasKey(e => new { e.PersonId, e.OrganizationId });
+
+        // The Domain POCOs in Domain/Entities/IAM are discovery-only placeholders for the
+        // dual-entity pattern; the real EF mappings live in Infrastructure.Data.Entities.
+        // Navigation from module Domain entities (e.g. ProgramaBienestar.Organization)
+        // would otherwise drag the unkeyed Domain User/Organization/PersonOrganization chain
+        // into the model. Exclude them explicitly.
+        modelBuilder.Ignore<Domain.Entities.IAM.User>();
+        modelBuilder.Ignore<Domain.Entities.IAM.Organization>();
+        modelBuilder.Ignore<Domain.Entities.IAM.PersonOrganization>();
+        modelBuilder.Ignore<Domain.Entities.IAM.UserRole>();
+        modelBuilder.Ignore<Domain.Entities.IAM.UserPermission>();
+        modelBuilder.Ignore<Domain.Entities.IAM.Role>();
+        modelBuilder.Ignore<Domain.Entities.IAM.Permission>();
+        modelBuilder.Ignore<Domain.Entities.IAM.RolePermission>();
+
         OnModelCreatingPartial(modelBuilder);
     }
 

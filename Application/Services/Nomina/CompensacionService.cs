@@ -2,7 +2,9 @@ namespace Application.Services.Nomina;
 
 using Application.DTOs.Nomina;
 using Application.Interfaces;
+using Domain.Entities.Nomina;
 using Domain.Enums;
+using Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -11,10 +13,12 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class CompensacionService : ICompensacionService
 {
+    private readonly ICompensacionRepository _repository;
     private readonly ILogger<CompensacionService> _logger;
 
-    public CompensacionService(ILogger<CompensacionService> logger)
+    public CompensacionService(ICompensacionRepository repository, ILogger<CompensacionService> logger)
     {
+        _repository = repository;
         _logger = logger;
     }
 
@@ -27,7 +31,7 @@ public class CompensacionService : ICompensacionService
 
         var calculado = await CalcularByModeloAsync(dto.Modelo, dto.ValorBase);
 
-        var compensacion = new CompensacionDto
+        var compensacion = new Compensacion
         {
             Id = Guid.NewGuid(),
             AsociadoId = dto.AsociadoId,
@@ -40,7 +44,8 @@ public class CompensacionService : ICompensacionService
             CreatedAt = DateTime.UtcNow
         };
 
-        return compensacion;
+        var creada = await _repository.CreateAsync(compensacion);
+        return MapToDto(creada);
     }
 
     /// <inheritdoc/>
@@ -59,14 +64,13 @@ public class CompensacionService : ICompensacionService
     }
 
     /// <inheritdoc/>
-    public Task<List<CompensacionDto>> GetByAsociadoAsync(Guid asociadoId, int anio)
+    public async Task<List<CompensacionDto>> GetByAsociadoAsync(Guid asociadoId, int anio)
     {
         _logger.LogInformation("Obteniendo compensaciones de asociado {AsociadoId}, año {Anio}",
             asociadoId, anio);
 
-        // Implementación base retorna lista vacía
-        // En producción se consultaría desde BD
-        return Task.FromResult(new List<CompensacionDto>());
+        var compensaciones = await _repository.GetByAsociadoAsync(asociadoId, anio);
+        return compensaciones.Select(MapToDto).ToList();
     }
 
     /// <summary>
@@ -88,4 +92,17 @@ public class CompensacionService : ICompensacionService
 
         return Task.FromResult(resultado);
     }
+
+    private static CompensacionDto MapToDto(Compensacion c) => new()
+    {
+        Id = c.Id,
+        AsociadoId = c.AsociadoId,
+        OrganizationId = c.OrganizationId,
+        Periodo = c.Periodo,
+        Modelo = c.Modelo,
+        ValorBase = c.ValorBase,
+        ValorCalculado = c.ValorCalculado,
+        Observaciones = c.Observaciones,
+        CreatedAt = c.CreatedAt
+    };
 }

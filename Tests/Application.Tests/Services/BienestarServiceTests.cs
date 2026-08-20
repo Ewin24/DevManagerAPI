@@ -20,7 +20,13 @@ public class BienestarServiceTests
     public BienestarServiceTests()
     {
         _loggerMock = new Mock<ILogger<BienestarService>>();
-        _service = new BienestarService(_loggerMock.Object);
+        var stores = new InMemoryStores();
+        _service = new BienestarService(
+            new InMemoryProgramaBienestarRepository(stores),
+            new InMemorySolicitudBienestarRepository(stores),
+            new InMemoryAuxilioRepository(stores),
+            new InMemoryFondoSolidaridadRepository(stores),
+            _loggerMock.Object);
     }
 
     [Fact]

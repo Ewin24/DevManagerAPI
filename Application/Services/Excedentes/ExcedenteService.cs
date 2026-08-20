@@ -2,6 +2,8 @@ namespace Application.Services.Excedentes;
 
 using Application.DTOs.Excedentes;
 using Application.Interfaces;
+using Domain.Entities.Excedentes;
+using Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -11,20 +13,21 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class ExcedenteService : IExcedenteService
 {
+    private readonly IExcedenteRepository _repository;
     private readonly ILogger<ExcedenteService> _logger;
-    private readonly List<ExcedenteDto> _excedentesStore = new();
 
     private const decimal PorcentajeReserva = 0.20m;
     private const decimal PorcentajeEducacion = 0.20m;
     private const decimal PorcentajeSolidaridad = 0.10m;
 
-    public ExcedenteService(ILogger<ExcedenteService> logger)
+    public ExcedenteService(IExcedenteRepository repository, ILogger<ExcedenteService> logger)
     {
+        _repository = repository;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public Task<ExcedenteDto> CalcularDistribucionAsync(CreateExcedenteDto dto)
+    public async Task<ExcedenteDto> CalcularDistribucionAsync(CreateExcedenteDto dto)
     {
         _logger.LogInformation(
             "Calculando distribución de excedentes para org {OrgId}, período {Periodo}, total {Total:N2}",
@@ -41,26 +44,21 @@ public class ExcedenteService : IExcedenteService
         var solidaridad = Math.Round(dto.TotalExcedentes * PorcentajeSolidaridad, 2, MidpointRounding.AwayFromZero);
 
         // Verificar si ya existe distribución para el mismo período
-        var existing = _excedentesStore.FirstOrDefault(e =>
-            e.OrganizationId == dto.OrganizationId && e.Periodo == dto.Periodo);
+        var existing = await _repository.GetByOrganizationAndPeriodoAsync(dto.OrganizationId, dto.Periodo);
 
         if (existing != null)
         {
-            var updated = existing with
-            {
-                TotalExcedentes = dto.TotalExcedentes,
-                ReservaProteccionAportes = reserva,
-                FondoEducacion = educacion,
-                FondoSolidaridad = solidaridad,
-                Observaciones = dto.Observaciones ?? existing.Observaciones
-            };
+            existing.TotalExcedentes = dto.TotalExcedentes;
+            existing.ReservaProteccionAportes = reserva;
+            existing.FondoEducacion = educacion;
+            existing.FondoSolidaridad = solidaridad;
+            existing.Observaciones = dto.Observaciones ?? existing.Observaciones;
 
-            var index = _excedentesStore.IndexOf(existing);
-            _excedentesStore[index] = updated;
-            return Task.FromResult(updated);
+            var updated = await _repository.UpdateAsync(existing);
+            return MapToDto(updated);
         }
 
-        var excedente = new ExcedenteDto
+        var excedente = new Excedente
         {
             Id = Guid.NewGuid(),
             OrganizationId = dto.OrganizationId,
@@ -74,39 +72,33 @@ public class ExcedenteService : IExcedenteService
             CreatedAt = DateTime.UtcNow
         };
 
-        _excedentesStore.Add(excedente);
-        return Task.FromResult(excedente);
+        var creado = await _repository.CreateAsync(excedente);
+        return MapToDto(creado);
     }
 
     /// <inheritdoc/>
-    public Task<ExcedenteDto?> GetByPeriodoAsync(Guid organizationId, DateTime periodo)
+    public async Task<ExcedenteDto?> GetByPeriodoAsync(Guid organizationId, DateTime periodo)
     {
-        var result = _excedentesStore.FirstOrDefault(e =>
-            e.OrganizationId == organizationId && e.Periodo == periodo);
-
-        return Task.FromResult(result);
+        var result = await _repository.GetByOrganizationAndPeriodoAsync(organizationId, periodo);
+        return result != null ? MapToDto(result) : null;
     }
 
     /// <inheritdoc/>
-    public Task<List<ExcedenteDto>> GetByOrganizacionAsync(Guid organizationId)
+    public async Task<List<ExcedenteDto>> GetByOrganizacionAsync(Guid organizationId)
     {
-        var result = _excedentesStore
-            .Where(e => e.OrganizationId == organizationId)
-            .OrderByDescending(e => e.Periodo)
-            .ToList();
-
-        return Task.FromResult(result);
+        var result = await _repository.GetByOrganizationAsync(organizationId);
+        return result.Select(MapToDto).ToList();
     }
 
     /// <inheritdoc/>
-    public Task<ExcedenteDto> AprobarDistribucionAsync(
+    public async Task<ExcedenteDto> AprobarDistribucionAsync(
         Guid excedenteId, decimal? revalorizacion, decimal? retornoCooperativo)
     {
         _logger.LogInformation(
             "Aprobando distribución de excedentes {ExcedenteId} en Asamblea",
             excedenteId);
 
-        var existing = _excedentesStore.FirstOrDefault(e => e.Id == excedenteId);
+        var existing = await _repository.GetByIdAsync(excedenteId);
         if (existing == null)
             throw new KeyNotFoundException($"Excedente {excedenteId} no encontrado");
 
@@ -125,16 +117,27 @@ public class ExcedenteService : IExcedenteService
                 $"excede el remanente disponible ({remanente:N2})");
         }
 
-        var updated = existing with
-        {
-            Revalorizacion = revalorizacion,
-            RetornoCooperativo = retornoCooperativo,
-            AprobadoPorAsamblea = true
-        };
+        existing.Revalorizacion = revalorizacion;
+        existing.RetornoCooperativo = retornoCooperativo;
+        existing.AprobadoPorAsamblea = true;
 
-        var index = _excedentesStore.IndexOf(existing);
-        _excedentesStore[index] = updated;
-
-        return Task.FromResult(updated);
+        var updated = await _repository.UpdateAsync(existing);
+        return MapToDto(updated);
     }
+
+    private static ExcedenteDto MapToDto(Excedente e) => new()
+    {
+        Id = e.Id,
+        OrganizationId = e.OrganizationId,
+        Periodo = e.Periodo,
+        TotalExcedentes = e.TotalExcedentes,
+        ReservaProteccionAportes = e.ReservaProteccionAportes,
+        FondoEducacion = e.FondoEducacion,
+        FondoSolidaridad = e.FondoSolidaridad,
+        Revalorizacion = e.Revalorizacion,
+        RetornoCooperativo = e.RetornoCooperativo,
+        AprobadoPorAsamblea = e.AprobadoPorAsamblea,
+        Observaciones = e.Observaciones,
+        CreatedAt = e.CreatedAt
+    };
 }

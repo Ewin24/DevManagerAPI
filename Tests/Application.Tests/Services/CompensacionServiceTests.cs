@@ -20,7 +20,9 @@ public class CompensacionServiceTests
     public CompensacionServiceTests()
     {
         _loggerMock = new Mock<ILogger<CompensacionService>>();
-        _compensacionService = new CompensacionService(_loggerMock.Object);
+        _compensacionService = new CompensacionService(
+            new InMemoryCompensacionRepository(new InMemoryStores()),
+            _loggerMock.Object);
     }
 
     [Fact]

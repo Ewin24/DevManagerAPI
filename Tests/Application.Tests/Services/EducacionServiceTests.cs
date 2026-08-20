@@ -20,7 +20,11 @@ public class EducacionServiceTests
     public EducacionServiceTests()
     {
         _loggerMock = new Mock<ILogger<EducacionService>>();
-        _service = new EducacionService(_loggerMock.Object);
+        var stores = new InMemoryStores();
+        _service = new EducacionService(
+            new InMemoryProgramaEducacionRepository(stores),
+            new InMemoryAsociadoEducacionRepository(stores),
+            _loggerMock.Object);
     }
 
     [Fact]

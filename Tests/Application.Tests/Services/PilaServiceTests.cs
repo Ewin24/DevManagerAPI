@@ -20,7 +20,9 @@ public class PilaServiceTests
     public PilaServiceTests()
     {
         _loggerMock = new Mock<ILogger<PilaService>>();
-        _pilaService = new PilaService(_loggerMock.Object);
+        _pilaService = new PilaService(
+            new InMemoryPilaAporteRepository(new InMemoryStores()),
+            _loggerMock.Object);
     }
 
     [Fact]

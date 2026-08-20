@@ -2,6 +2,8 @@ namespace Application.Services.BalanceSocial;
 
 using Application.DTOs.BalanceSocial;
 using Application.Interfaces;
+using Domain.Entities.BalanceSocial;
+using Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -11,31 +13,30 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class BalanceSocialService : IBalanceSocialService
 {
+    private readonly IIndicadorBalanceSocialRepository _repository;
     private readonly ILogger<BalanceSocialService> _logger;
-    private readonly List<IndicadorBalanceSocialDto> _indicadoresStore = new();
 
     private const int HorasMinimasEducacion = 20;
 
-    public BalanceSocialService(ILogger<BalanceSocialService> logger)
+    public BalanceSocialService(IIndicadorBalanceSocialRepository repository, ILogger<BalanceSocialService> logger)
     {
+        _repository = repository;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public Task<IndicadorBalanceSocialDto?> GetIndicadorAsync(Guid asociadoId, int anio)
+    public async Task<IndicadorBalanceSocialDto?> GetIndicadorAsync(Guid asociadoId, int anio)
     {
         _logger.LogInformation(
             "Obteniendo indicador de balance social para asociado {AsociadoId}, año {Anio}",
             asociadoId, anio);
 
-        var indicador = _indicadoresStore
-            .FirstOrDefault(i => i.AsociadoId == asociadoId && i.Anio == anio);
-
-        return Task.FromResult(indicador);
+        var indicador = await _repository.GetByAsociadoAndAnioAsync(asociadoId, anio);
+        return indicador != null ? MapToDto(indicador) : null;
     }
 
     /// <inheritdoc/>
-    public Task<IndicadorBalanceSocialDto> CalcularIndicadorAsync(Guid asociadoId, Guid organizationId, int anio)
+    public async Task<IndicadorBalanceSocialDto> CalcularIndicadorAsync(Guid asociadoId, Guid organizationId, int anio)
     {
         _logger.LogInformation(
             "Calculando indicador de balance social para asociado {AsociadoId}, año {Anio}",
@@ -57,10 +58,9 @@ public class BalanceSocialService : IBalanceSocialService
         var puntajeAportes = Math.Min(aportesSociales > 0 ? 30 : 0, 30);
         var indiceCompuesto = Math.Round(puntajeEducacion + puntajeParticipacion + puntajeAportes, 2);
 
-        var existing = _indicadoresStore
-            .FirstOrDefault(i => i.AsociadoId == asociadoId && i.Anio == anio);
+        var existing = await _repository.GetByAsociadoAndAnioAsync(asociadoId, anio);
 
-        var indicador = new IndicadorBalanceSocialDto
+        var indicador = new IndicadorBalanceSocial
         {
             Id = existing?.Id ?? Guid.NewGuid(),
             AsociadoId = asociadoId,
@@ -72,49 +72,59 @@ public class BalanceSocialService : IBalanceSocialService
             AportesSociales = aportesSociales,
             BeneficiosRecibidos = beneficiosRecibidos,
             CumpleEducacion = cumpleEducacion,
-            IndiceBalanceSocial = indiceCompuesto
+            IndiceBalanceSocial = indiceCompuesto,
+            CreatedAt = existing?.CreatedAt ?? DateTime.UtcNow
         };
 
         if (existing != null)
         {
-            var index = _indicadoresStore.IndexOf(existing);
-            _indicadoresStore[index] = indicador;
-        }
-        else
-        {
-            _indicadoresStore.Add(indicador);
+            var updated = await _repository.UpdateAsync(indicador);
+            return MapToDto(updated);
         }
 
-        return Task.FromResult(indicador);
+        var creado = await _repository.CreateAsync(indicador);
+        return MapToDto(creado);
     }
 
     /// <inheritdoc/>
-    public Task<List<IndicadorBalanceSocialDto>> GetIndicadoresByOrganizacionAsync(Guid organizationId, int anio)
+    public async Task<List<IndicadorBalanceSocialDto>> GetIndicadoresByOrganizacionAsync(Guid organizationId, int anio)
     {
         _logger.LogInformation(
             "Obteniendo indicadores de balance social de organización {OrgId}, año {Anio}",
             organizationId, anio);
 
-        var result = _indicadoresStore
-            .Where(i => i.OrganizationId == organizationId && i.Anio == anio)
-            .ToList();
-
-        return Task.FromResult(result);
+        var indicadores = await _repository.GetByOrganizationAndAnioAsync(organizationId, anio);
+        return indicadores.Select(MapToDto).ToList();
     }
 
     /// <inheritdoc/>
-    public Task<List<IndicadorBalanceSocialDto>> GetNoCumplenEducacionAsync(Guid organizationId, int anio)
+    public async Task<List<IndicadorBalanceSocialDto>> GetNoCumplenEducacionAsync(Guid organizationId, int anio)
     {
         _logger.LogInformation(
             "Obteniendo asociados que NO cumplen educación mínima en organización {OrgId}, año {Anio}",
             organizationId, anio);
 
-        var result = _indicadoresStore
-            .Where(i => i.OrganizationId == organizationId
-                        && i.Anio == anio
-                        && !i.CumpleEducacion)
+        var indicadores = await _repository.GetByOrganizationAndAnioAsync(organizationId, anio);
+        var result = indicadores
+            .Where(i => !i.CumpleEducacion)
             .ToList();
 
-        return Task.FromResult(result);
+        return result.Select(MapToDto).ToList();
     }
+
+    private static IndicadorBalanceSocialDto MapToDto(IndicadorBalanceSocial i) => new()
+    {
+        Id = i.Id,
+        AsociadoId = i.AsociadoId,
+        OrganizationId = i.OrganizationId,
+        Anio = i.Anio,
+        HorasEducacion = i.HorasEducacion,
+        ParticipacionAsambleas = i.ParticipacionAsambleas,
+        ParticipacionComites = i.ParticipacionComites,
+        AportesSociales = i.AportesSociales,
+        BeneficiosRecibidos = i.BeneficiosRecibidos,
+        CumpleEducacion = i.CumpleEducacion,
+        IndiceBalanceSocial = i.IndiceBalanceSocial,
+        Observaciones = i.Observaciones
+    };
 }

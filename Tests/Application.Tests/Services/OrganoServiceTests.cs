@@ -5,6 +5,8 @@ using Application.Interfaces;
 using Application.Services.Organos;
 using Domain.Enums;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 /// <summary>
@@ -17,7 +19,14 @@ public class OrganoServiceTests
 
     public OrganoServiceTests()
     {
-        _service = new OrganoService();
+        var stores = new InMemoryStores();
+        _service = new OrganoService(
+            new InMemoryOrganoRepository(stores),
+            new InMemoryMiembroOrganoRepository(stores),
+            new InMemoryActaRepository(stores),
+            new InMemoryAsambleaRepository(stores),
+            new InMemoryVotoRepository(stores),
+            new Mock<ILogger<OrganoService>>().Object);
     }
 
     // ========= Órganos (4 scenarios) =========

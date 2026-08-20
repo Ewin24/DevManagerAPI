@@ -4,22 +4,41 @@ using Application.DTOs.Organos;
 using Application.Interfaces;
 using Domain.Entities.Organos;
 using Domain.Enums;
+using Domain.Interfaces.Repositories;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Implementación en memoria de IOrganoService
+/// Implementación de IOrganoService con persistencia EF Core
 /// Gestión de órganos de administración, asambleas y votación
 /// </summary>
 public class OrganoService : IOrganoService
 {
-    private readonly List<Organo> _organos = new();
-    private readonly List<MiembroOrgano> _miembros = new();
-    private readonly List<Acta> _actas = new();
-    private readonly List<Asamblea> _asambleas = new();
-    private readonly List<Voto> _votos = new();
+    private readonly IOrganoRepository _organosRepository;
+    private readonly IMiembroOrganoRepository _miembrosRepository;
+    private readonly IActaRepository _actasRepository;
+    private readonly IAsambleaRepository _asambleasRepository;
+    private readonly IVotoRepository _votosRepository;
+    private readonly ILogger<OrganoService> _logger;
+
+    public OrganoService(
+        IOrganoRepository organosRepository,
+        IMiembroOrganoRepository miembrosRepository,
+        IActaRepository actasRepository,
+        IAsambleaRepository asambleasRepository,
+        IVotoRepository votosRepository,
+        ILogger<OrganoService> logger)
+    {
+        _organosRepository = organosRepository;
+        _miembrosRepository = miembrosRepository;
+        _actasRepository = actasRepository;
+        _asambleasRepository = asambleasRepository;
+        _votosRepository = votosRepository;
+        _logger = logger;
+    }
 
     // ========= Órganos =========
 
-    public Task<OrganoDto> CreateOrganoAsync(CreateOrganoDto dto)
+    public async Task<OrganoDto> CreateOrganoAsync(CreateOrganoDto dto)
     {
         var organo = new Organo
         {
@@ -29,59 +48,62 @@ public class OrganoService : IOrganoService
             OrganizationId = dto.OrganizationId,
             FechaConstitucion = dto.FechaConstitucion,
             Descripcion = dto.Descripcion,
-            Activo = true
+            Activo = true,
+            CreatedAt = DateTime.UtcNow
         };
-        _organos.Add(organo);
-        return Task.FromResult(MapToDto(organo));
+        var creado = await _organosRepository.CreateAsync(organo);
+        return await MapToDtoAsync(creado);
     }
 
-    public Task<OrganoDto?> GetOrganoByIdAsync(Guid id)
+    public async Task<OrganoDto?> GetOrganoByIdAsync(Guid id)
     {
-        var organo = _organos.FirstOrDefault(o => o.Id == id);
-        return Task.FromResult(organo != null ? MapToDto(organo) : null);
+        var organo = await _organosRepository.GetByIdAsync(id);
+        return organo != null ? await MapToDtoAsync(organo) : null;
     }
 
-    public Task<List<OrganoDto>> GetOrganosByOrganizationAsync(Guid organizationId)
+    public async Task<List<OrganoDto>> GetOrganosByOrganizationAsync(Guid organizationId)
     {
-        var result = _organos
-            .Where(o => o.OrganizationId == organizationId)
-            .Select(MapToDto)
-            .ToList();
-        return Task.FromResult(result);
+        var organos = await _organosRepository.GetByOrganizationAsync(organizationId);
+        var result = new List<OrganoDto>();
+        foreach (var o in organos)
+        {
+            result.Add(await MapToDtoAsync(o));
+        }
+        return result;
     }
 
-    public Task<List<OrganoDto>> GetOrganosByTypeAsync(Guid organizationId, TipoOrgano tipo)
+    public async Task<List<OrganoDto>> GetOrganosByTypeAsync(Guid organizationId, TipoOrgano tipo)
     {
-        var result = _organos
-            .Where(o => o.OrganizationId == organizationId && o.Tipo == tipo)
-            .Select(MapToDto)
-            .ToList();
-        return Task.FromResult(result);
+        var organos = await _organosRepository.GetByTypeAsync(organizationId, tipo);
+        var result = new List<OrganoDto>();
+        foreach (var o in organos)
+        {
+            result.Add(await MapToDtoAsync(o));
+        }
+        return result;
     }
 
-    public Task<OrganoDto> UpdateOrganoAsync(Guid id, UpdateOrganoDto dto)
+    public async Task<OrganoDto> UpdateOrganoAsync(Guid id, UpdateOrganoDto dto)
     {
-        var organo = _organos.FirstOrDefault(o => o.Id == id)
+        var organo = await _organosRepository.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Órgano {id} no encontrado");
 
         if (dto.Nombre != null) organo.Nombre = dto.Nombre;
         if (dto.Descripcion != null) organo.Descripcion = dto.Descripcion;
         if (dto.Activo.HasValue) organo.Activo = dto.Activo.Value;
 
-        return Task.FromResult(MapToDto(organo));
+        var updated = await _organosRepository.UpdateAsync(organo);
+        return await MapToDtoAsync(updated);
     }
 
-    public Task<bool> DeleteOrganoAsync(Guid id)
+    public async Task<bool> DeleteOrganoAsync(Guid id)
     {
-        var organo = _organos.FirstOrDefault(o => o.Id == id);
-        if (organo == null) return Task.FromResult(false);
-        _organos.Remove(organo);
-        return Task.FromResult(true);
+        return await _organosRepository.DeleteAsync(id);
     }
 
     // ========= Miembros =========
 
-    public Task<MiembroOrganoDto> AsignarMiembroAsync(AsignarMiembroDto dto)
+    public async Task<MiembroOrganoDto> AsignarMiembroAsync(AsignarMiembroDto dto)
     {
         var miembro = new MiembroOrgano
         {
@@ -90,44 +112,40 @@ public class OrganoService : IOrganoService
             AsociadoId = dto.AsociadoId,
             Cargo = dto.Cargo,
             FechaInicio = dto.FechaInicio,
-            Activo = true
+            Activo = true,
+            CreatedAt = DateTime.UtcNow
         };
-        _miembros.Add(miembro);
-        return Task.FromResult(MapToDto(miembro));
+        var creado = await _miembrosRepository.CreateAsync(miembro);
+        return MapToDto(creado);
     }
 
-    public Task<List<MiembroOrganoDto>> GetMiembrosByOrganoAsync(Guid organoId)
+    public async Task<List<MiembroOrganoDto>> GetMiembrosByOrganoAsync(Guid organoId)
     {
-        var result = _miembros
-            .Where(m => m.OrganoId == organoId)
-            .Select(MapToDto)
-            .ToList();
-        return Task.FromResult(result);
+        var miembros = await _miembrosRepository.GetByOrganoAsync(organoId);
+        return miembros.Select(MapToDto).ToList();
     }
 
-    public Task<MiembroOrganoDto> UpdateMiembroAsync(Guid id, UpdateMiembroDto dto)
+    public async Task<MiembroOrganoDto> UpdateMiembroAsync(Guid id, UpdateMiembroDto dto)
     {
-        var miembro = _miembros.FirstOrDefault(m => m.Id == id)
+        var miembro = await _miembrosRepository.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Miembro {id} no encontrado");
 
         if (dto.Cargo != null) miembro.Cargo = dto.Cargo;
         if (dto.FechaFin.HasValue) miembro.FechaFin = dto.FechaFin;
         if (dto.Activo.HasValue) miembro.Activo = dto.Activo.Value;
 
-        return Task.FromResult(MapToDto(miembro));
+        var updated = await _miembrosRepository.UpdateAsync(miembro);
+        return MapToDto(updated);
     }
 
-    public Task<bool> RemoveMiembroAsync(Guid id)
+    public async Task<bool> RemoveMiembroAsync(Guid id)
     {
-        var miembro = _miembros.FirstOrDefault(m => m.Id == id);
-        if (miembro == null) return Task.FromResult(false);
-        _miembros.Remove(miembro);
-        return Task.FromResult(true);
+        return await _miembrosRepository.DeleteAsync(id);
     }
 
     // ========= Actas =========
 
-    public Task<ActaDto> CreateActaAsync(CreateActaDto dto)
+    public async Task<ActaDto> CreateActaAsync(CreateActaDto dto)
     {
         var acta = new Acta
         {
@@ -140,30 +158,28 @@ public class OrganoService : IOrganoService
             Decisiones = dto.Decisiones,
             ConvocatoriaUrl = dto.ConvocatoriaUrl,
             ActaUrl = dto.ActaUrl,
-            Observaciones = dto.Observaciones
+            Observaciones = dto.Observaciones,
+            CreatedAt = DateTime.UtcNow
         };
-        _actas.Add(acta);
-        return Task.FromResult(MapToDto(acta));
+        var creada = await _actasRepository.CreateAsync(acta);
+        return MapToDto(creada);
     }
 
-    public Task<ActaDto?> GetActaByIdAsync(Guid id)
+    public async Task<ActaDto?> GetActaByIdAsync(Guid id)
     {
-        var acta = _actas.FirstOrDefault(a => a.Id == id);
-        return Task.FromResult(acta != null ? MapToDto(acta) : null);
+        var acta = await _actasRepository.GetByIdAsync(id);
+        return acta != null ? MapToDto(acta) : null;
     }
 
-    public Task<List<ActaDto>> GetActasByOrganoAsync(Guid organoId)
+    public async Task<List<ActaDto>> GetActasByOrganoAsync(Guid organoId)
     {
-        var result = _actas
-            .Where(a => a.OrganoId == organoId)
-            .Select(MapToDto)
-            .ToList();
-        return Task.FromResult(result);
+        var actas = await _actasRepository.GetByOrganoAsync(organoId);
+        return actas.Select(MapToDto).ToList();
     }
 
     // ========= Asambleas =========
 
-    public Task<AsambleaDto> ConvocarAsambleaAsync(ConvocarAsambleaDto dto)
+    public async Task<AsambleaDto> ConvocarAsambleaAsync(ConvocarAsambleaDto dto)
     {
         var asamblea = new Asamblea
         {
@@ -174,58 +190,65 @@ public class OrganoService : IOrganoService
             Tipo = dto.Tipo,
             Convocatoria = dto.Convocatoria,
             QuorumMinimo = dto.QuorumMinimo,
-            Cerrada = false
+            Cerrada = false,
+            CreatedAt = DateTime.UtcNow
         };
-        _asambleas.Add(asamblea);
-        return Task.FromResult(MapToDto(asamblea));
+        var creada = await _asambleasRepository.CreateAsync(asamblea);
+        return await MapToDtoAsync(creada);
     }
 
-    public Task<AsambleaDto?> GetAsambleaByIdAsync(Guid id)
+    public async Task<AsambleaDto?> GetAsambleaByIdAsync(Guid id)
     {
-        var asamblea = _asambleas.FirstOrDefault(a => a.Id == id);
-        return Task.FromResult(asamblea != null ? MapToDto(asamblea) : null);
+        var asamblea = await _asambleasRepository.GetByIdAsync(id);
+        return asamblea != null ? await MapToDtoAsync(asamblea) : null;
     }
 
-    public Task<List<AsambleaDto>> GetAsambleasByOrganizationAsync(Guid organizationId)
+    public async Task<List<AsambleaDto>> GetAsambleasByOrganizationAsync(Guid organizationId)
     {
-        var result = _asambleas
-            .Where(a => a.OrganizationId == organizationId)
-            .Select(MapToDto)
-            .ToList();
-        return Task.FromResult(result);
+        var asambleas = await _asambleasRepository.GetByOrganizationAsync(organizationId);
+        var result = new List<AsambleaDto>();
+        foreach (var a in asambleas)
+        {
+            result.Add(await MapToDtoAsync(a));
+        }
+        return result;
     }
 
-    public Task<AsambleaDto> RegistrarAsistenciaAsync(Guid id, RegistrarAsistenciaDto dto)
+    public async Task<AsambleaDto> RegistrarAsistenciaAsync(Guid id, RegistrarAsistenciaDto dto)
     {
-        var asamblea = _asambleas.FirstOrDefault(a => a.Id == id)
+        var asamblea = await _asambleasRepository.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Asamblea {id} no encontrada");
 
         asamblea.Asistentes = dto.Asistentes;
-        return Task.FromResult(MapToDto(asamblea));
+
+        var updated = await _asambleasRepository.UpdateAsync(asamblea);
+        return await MapToDtoAsync(updated);
     }
 
-    public Task<AsambleaDto> CerrarAsambleaAsync(Guid id, CerrarAsambleaDto dto)
+    public async Task<AsambleaDto> CerrarAsambleaAsync(Guid id, CerrarAsambleaDto dto)
     {
-        var asamblea = _asambleas.FirstOrDefault(a => a.Id == id)
+        var asamblea = await _asambleasRepository.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Asamblea {id} no encontrada");
 
         asamblea.Cerrada = true;
         asamblea.FechaCierre = DateTime.UtcNow;
         asamblea.Resultados = dto.Resultados;
-        return Task.FromResult(MapToDto(asamblea));
+
+        var updated = await _asambleasRepository.UpdateAsync(asamblea);
+        return await MapToDtoAsync(updated);
     }
 
     // ========= Voto =========
 
-    public Task<VotoDto> EmitirVotoAsync(EmitirVotoDto dto)
+    public async Task<VotoDto> EmitirVotoAsync(EmitirVotoDto dto)
     {
-        var asamblea = _asambleas.FirstOrDefault(a => a.Id == dto.AsambleaId)
+        var asamblea = await _asambleasRepository.GetByIdAsync(dto.AsambleaId)
             ?? throw new KeyNotFoundException($"Asamblea {dto.AsambleaId} no encontrada");
 
         if (asamblea.Cerrada)
             throw new InvalidOperationException("La asamblea ya está cerrada, no se pueden recibir votos");
 
-        if (_votos.Any(v => v.AsambleaId == dto.AsambleaId && v.AsociadoId == dto.AsociadoId))
+        if (await _votosRepository.ExistsByAsambleaAndAsociadoAsync(dto.AsambleaId, dto.AsociadoId))
             throw new InvalidOperationException("El asociado ya ha votado en esta asamblea");
 
         var voto = new Voto
@@ -235,16 +258,17 @@ public class OrganoService : IOrganoService
             AsociadoId = dto.AsociadoId,
             VotoEmitido = dto.VotoEmitido,
             Fecha = DateTime.UtcNow,
-            Observaciones = dto.Observaciones
+            Observaciones = dto.Observaciones,
+            CreatedAt = DateTime.UtcNow
         };
-        _votos.Add(voto);
-        return Task.FromResult(MapToDto(voto));
+        var creado = await _votosRepository.CreateAsync(voto);
+        return MapToDto(creado);
     }
 
-    public Task<ResultadoVotacionDto> GetResultadosAsync(Guid asambleaId)
+    public async Task<ResultadoVotacionDto> GetResultadosAsync(Guid asambleaId)
     {
-        var votos = _votos.Where(v => v.AsambleaId == asambleaId).ToList();
-        return Task.FromResult(new ResultadoVotacionDto
+        var votos = await _votosRepository.GetByAsambleaAsync(asambleaId);
+        return new ResultadoVotacionDto
         {
             AsambleaId = asambleaId,
             TotalVotos = votos.Count,
@@ -252,18 +276,17 @@ public class OrganoService : IOrganoService
             Rechazados = votos.Count(v => v.VotoEmitido == TipoVoto.Rechazado),
             Abstenciones = votos.Count(v => v.VotoEmitido == TipoVoto.Abstencion),
             Blancos = votos.Count(v => v.VotoEmitido == TipoVoto.Blanco)
-        });
+        };
     }
 
-    public Task<bool> HaVotadoAsync(Guid asambleaId, Guid asociadoId)
+    public async Task<bool> HaVotadoAsync(Guid asambleaId, Guid asociadoId)
     {
-        var haVotado = _votos.Any(v => v.AsambleaId == asambleaId && v.AsociadoId == asociadoId);
-        return Task.FromResult(haVotado);
+        return await _votosRepository.ExistsByAsambleaAndAsociadoAsync(asambleaId, asociadoId);
     }
 
     // ========= Mapping =========
 
-    private OrganoDto MapToDto(Organo o) => new()
+    private async Task<OrganoDto> MapToDtoAsync(Organo o) => new()
     {
         Id = o.Id,
         Tipo = o.Tipo,
@@ -272,11 +295,11 @@ public class OrganoService : IOrganoService
         FechaConstitucion = o.FechaConstitucion,
         Descripcion = o.Descripcion,
         Activo = o.Activo,
-        MiembrosCount = _miembros.Count(m => m.OrganoId == o.Id),
-        ActasCount = _actas.Count(a => a.OrganoId == o.Id)
+        MiembrosCount = await _miembrosRepository.CountByOrganoAsync(o.Id),
+        ActasCount = await _actasRepository.CountByOrganoAsync(o.Id)
     };
 
-    private MiembroOrganoDto MapToDto(MiembroOrgano m) => new()
+    private static MiembroOrganoDto MapToDto(MiembroOrgano m) => new()
     {
         Id = m.Id,
         OrganoId = m.OrganoId,
@@ -287,7 +310,7 @@ public class OrganoService : IOrganoService
         Activo = m.Activo
     };
 
-    private ActaDto MapToDto(Acta a) => new()
+    private static ActaDto MapToDto(Acta a) => new()
     {
         Id = a.Id,
         OrganoId = a.OrganoId,
@@ -301,7 +324,7 @@ public class OrganoService : IOrganoService
         Observaciones = a.Observaciones
     };
 
-    private AsambleaDto MapToDto(Asamblea a) => new()
+    private async Task<AsambleaDto> MapToDtoAsync(Asamblea a) => new()
     {
         Id = a.Id,
         OrganizationId = a.OrganizationId,
@@ -314,10 +337,10 @@ public class OrganoService : IOrganoService
         Cerrada = a.Cerrada,
         FechaCierre = a.FechaCierre,
         Resultados = a.Resultados,
-        VotosCount = _votos.Count(v => v.AsambleaId == a.Id)
+        VotosCount = await _votosRepository.CountByAsambleaAsync(a.Id)
     };
 
-    private VotoDto MapToDto(Voto v) => new()
+    private static VotoDto MapToDto(Voto v) => new()
     {
         Id = v.Id,
         AsambleaId = v.AsambleaId,

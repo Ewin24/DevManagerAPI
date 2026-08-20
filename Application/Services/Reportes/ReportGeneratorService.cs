@@ -2,6 +2,8 @@ namespace Application.Services.Reportes;
 
 using Application.DTOs.Reportes;
 using Application.Interfaces;
+using Domain.Entities.Reportes;
+using Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
@@ -11,16 +13,17 @@ using System.Text.Json;
 /// </summary>
 public class ReportGeneratorService : IReportGeneratorService
 {
+    private readonly IReporteSupersolidariaRepository _repository;
     private readonly ILogger<ReportGeneratorService> _logger;
-    private readonly List<ReporteSupersolidariaDto> _reportesStore = new();
 
-    public ReportGeneratorService(ILogger<ReportGeneratorService> logger)
+    public ReportGeneratorService(IReporteSupersolidariaRepository repository, ILogger<ReportGeneratorService> logger)
     {
+        _repository = repository;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public Task<ReporteSupersolidariaDto> GenerarReporteAsync(
+    public async Task<ReporteSupersolidariaDto> GenerarReporteAsync(
         Guid organizationId, DateTime periodo, string tipoReporte)
     {
         _logger.LogInformation(
@@ -77,27 +80,22 @@ public class ReportGeneratorService : IReportGeneratorService
         var cumplimientoJson = JsonSerializer.Serialize(cumplimiento);
 
         // Verificar si ya existe reporte para el mismo período
-        var existing = _reportesStore.FirstOrDefault(r =>
-            r.OrganizationId == organizationId && r.Periodo == periodo);
+        var existing = await _repository.GetByOrganizationAndPeriodoAsync(organizationId, periodo);
 
         if (existing != null)
         {
-            var updated = existing with
-            {
-                BalanceSocialJson = balanceSocialJson,
-                AsociadosJson = asociadosJson,
-                CumplimientoJson = cumplimientoJson,
-                TipoReporte = tipoReporte,
-                Enviado = false,
-                FechaEnvio = null
-            };
+            existing.BalanceSocialJson = balanceSocialJson;
+            existing.AsociadosJson = asociadosJson;
+            existing.CumplimientoJson = cumplimientoJson;
+            existing.TipoReporte = tipoReporte;
+            existing.Enviado = false;
+            existing.FechaEnvio = null;
 
-            var index = _reportesStore.IndexOf(existing);
-            _reportesStore[index] = updated;
-            return Task.FromResult(updated);
+            var updated = await _repository.UpdateAsync(existing);
+            return MapToDto(updated);
         }
 
-        var reporte = new ReporteSupersolidariaDto
+        var reporte = new ReporteSupersolidaria
         {
             Id = Guid.NewGuid(),
             OrganizationId = organizationId,
@@ -110,48 +108,52 @@ public class ReportGeneratorService : IReportGeneratorService
             CreatedAt = DateTime.UtcNow
         };
 
-        _reportesStore.Add(reporte);
-        return Task.FromResult(reporte);
+        var creado = await _repository.CreateAsync(reporte);
+        return MapToDto(creado);
     }
 
     /// <inheritdoc/>
-    public Task<ReporteSupersolidariaDto?> GetReporteByPeriodoAsync(Guid organizationId, DateTime periodo)
+    public async Task<ReporteSupersolidariaDto?> GetReporteByPeriodoAsync(Guid organizationId, DateTime periodo)
     {
-        var result = _reportesStore.FirstOrDefault(r =>
-            r.OrganizationId == organizationId && r.Periodo == periodo);
-
-        return Task.FromResult(result);
+        var result = await _repository.GetByOrganizationAndPeriodoAsync(organizationId, periodo);
+        return result != null ? MapToDto(result) : null;
     }
 
     /// <inheritdoc/>
-    public Task<List<ReporteSupersolidariaDto>> GetReportesByOrganizacionAsync(Guid organizationId)
+    public async Task<List<ReporteSupersolidariaDto>> GetReportesByOrganizacionAsync(Guid organizationId)
     {
-        var result = _reportesStore
-            .Where(r => r.OrganizationId == organizationId)
-            .OrderByDescending(r => r.Periodo)
-            .ToList();
-
-        return Task.FromResult(result);
+        var result = await _repository.GetByOrganizationAsync(organizationId);
+        return result.Select(MapToDto).ToList();
     }
 
     /// <inheritdoc/>
-    public Task<ReporteSupersolidariaDto> MarcarEnviadoAsync(Guid reporteId)
+    public async Task<ReporteSupersolidariaDto> MarcarEnviadoAsync(Guid reporteId)
     {
         _logger.LogInformation("Marcando reporte {ReporteId} como enviado a Supersolidaria", reporteId);
 
-        var existing = _reportesStore.FirstOrDefault(r => r.Id == reporteId);
+        var existing = await _repository.GetByIdAsync(reporteId);
         if (existing == null)
             throw new KeyNotFoundException($"Reporte {reporteId} no encontrado");
 
-        var updated = existing with
-        {
-            Enviado = true,
-            FechaEnvio = DateTime.UtcNow
-        };
+        existing.Enviado = true;
+        existing.FechaEnvio = DateTime.UtcNow;
 
-        var index = _reportesStore.IndexOf(existing);
-        _reportesStore[index] = updated;
-
-        return Task.FromResult(updated);
+        var updated = await _repository.UpdateAsync(existing);
+        return MapToDto(updated);
     }
+
+    private static ReporteSupersolidariaDto MapToDto(ReporteSupersolidaria r) => new()
+    {
+        Id = r.Id,
+        OrganizationId = r.OrganizationId,
+        Periodo = r.Periodo,
+        BalanceSocialJson = r.BalanceSocialJson,
+        AsociadosJson = r.AsociadosJson,
+        CumplimientoJson = r.CumplimientoJson,
+        TipoReporte = r.TipoReporte,
+        Enviado = r.Enviado,
+        FechaEnvio = r.FechaEnvio,
+        Observaciones = r.Observaciones,
+        CreatedAt = r.CreatedAt
+    };
 }

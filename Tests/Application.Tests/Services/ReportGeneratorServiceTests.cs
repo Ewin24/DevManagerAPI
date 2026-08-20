@@ -20,7 +20,9 @@ public class ReportGeneratorServiceTests
     public ReportGeneratorServiceTests()
     {
         _loggerMock = new Mock<ILogger<ReportGeneratorService>>();
-        _service = new ReportGeneratorService(_loggerMock.Object);
+        _service = new ReportGeneratorService(
+            new InMemoryReporteSupersolidariaRepository(new InMemoryStores()),
+            _loggerMock.Object);
     }
 
     [Fact]

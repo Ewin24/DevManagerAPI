@@ -2,7 +2,9 @@ namespace Application.Services.Nomina;
 
 using Application.DTOs.Nomina;
 using Application.Interfaces;
+using Domain.Entities.Nomina;
 using Domain.Enums;
+using Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -14,6 +16,7 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class PilaService : IPilaService
 {
+    private readonly IPilaAporteRepository _repository;
     private readonly ILogger<PilaService> _logger;
 
     // Tasas PILA tipo 51 (Independiente CTA)
@@ -23,13 +26,14 @@ public class PilaService : IPilaService
     // Tasas ARL por nivel de riesgo (Decreto 2150/2017, tabla)
     private static readonly decimal[] TasasARL = { 0m, 0.00522m, 0.01044m, 0.02436m, 0.04350m, 0.06960m };
 
-    public PilaService(ILogger<PilaService> logger)
+    public PilaService(IPilaAporteRepository repository, ILogger<PilaService> logger)
     {
+        _repository = repository;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public Task<PilaAporteDto> CalcularAportesAsync(Guid asociadoId, decimal ingresos, int nivelRiesgoARL)
+    public async Task<PilaAporteDto> CalcularAportesAsync(Guid asociadoId, decimal ingresos, int nivelRiesgoARL)
     {
         _logger.LogInformation(
             "Calculando aportes PILA para asociado {AsociadoId}, ingresos {Ingresos}, riesgo ARL {Riesgo}",
@@ -42,7 +46,7 @@ public class PilaService : IPilaService
         var aporteARL = Math.Round(ingresos * tasaARL, 2, MidpointRounding.AwayFromZero);
         var total = aporteEPS + aportePension + aporteARL;
 
-        var dto = new PilaAporteDto
+        var aporte = new PilaAporte
         {
             Id = Guid.NewGuid(),
             AsociadoId = asociadoId,
@@ -53,21 +57,23 @@ public class PilaService : IPilaService
             AporteEPS = aporteEPS,
             AportePension = aportePension,
             AporteARL = aporteARL,
-            Total = total
+            Total = total,
+            CreatedAt = DateTime.UtcNow
         };
 
-        return Task.FromResult(dto);
+        var creado = await _repository.CreateAsync(aporte);
+        return MapToDto(creado);
     }
 
     /// <inheritdoc/>
-    public Task<List<PilaAporteDto>> GenerarPlanillaAsync(int mes, int anio, Guid organizationId)
+    public async Task<List<PilaAporteDto>> GenerarPlanillaAsync(int mes, int anio, Guid organizationId)
     {
         _logger.LogInformation(
             "Generando planilla PILA para organización {OrgId}, período {Mes}/{Anio}",
             organizationId, mes, anio);
 
-        // Implementación base — en producción consultaría los asociados activos
-        return Task.FromResult(new List<PilaAporteDto>());
+        var aportes = await _repository.GetByOrganizationAndPeriodoAsync(organizationId, mes, anio);
+        return aportes.Select(MapToDto).ToList();
     }
 
     /// <summary>
@@ -82,4 +88,18 @@ public class PilaService : IPilaService
 
         return TasasARL[nivelRiesgo];
     }
+
+    private static PilaAporteDto MapToDto(PilaAporte p) => new()
+    {
+        Id = p.Id,
+        AsociadoId = p.AsociadoId,
+        OrganizationId = p.OrganizationId,
+        Periodo = p.Periodo,
+        TipoAportante = p.TipoAportante,
+        IngresoBase = p.IngresoBase,
+        AporteEPS = p.AporteEPS,
+        AportePension = p.AportePension,
+        AporteARL = p.AporteARL,
+        Total = p.Total
+    };
 }

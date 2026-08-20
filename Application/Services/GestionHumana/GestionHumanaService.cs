@@ -2,6 +2,8 @@ namespace Application.Services.GestionHumana;
 
 using Application.DTOs.GestionHumana;
 using Application.Interfaces;
+using Domain.Entities.GestionHumana;
+using Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -10,83 +12,85 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class GestionHumanaService : IGestionHumanaService
 {
+    private readonly ICompetenciaAsociadoRepository _repository;
     private readonly ILogger<GestionHumanaService> _logger;
-    private readonly List<CompetenciaAsociadoDto> _competenciasStore; // Simulación en memoria
 
-    public GestionHumanaService(ILogger<GestionHumanaService> logger)
+    public GestionHumanaService(ICompetenciaAsociadoRepository repository, ILogger<GestionHumanaService> logger)
     {
+        _repository = repository;
         _logger = logger;
-        _competenciasStore = new List<CompetenciaAsociadoDto>();
     }
 
     /// <inheritdoc/>
-    public Task<List<CompetenciaAsociadoDto>> GetCompetenciasAsync(Guid asociadoId)
+    public async Task<List<CompetenciaAsociadoDto>> GetCompetenciasAsync(Guid asociadoId)
     {
         _logger.LogInformation("Obteniendo competencias del asociado {AsociadoId}", asociadoId);
 
-        var result = _competenciasStore
-            .Where(c => c.AsociadoId == asociadoId)
-            .ToList();
-
-        return Task.FromResult(result);
+        var competencias = await _repository.GetByAsociadoAsync(asociadoId);
+        return competencias.Select(MapToDto).ToList();
     }
 
     /// <inheritdoc/>
-    public Task<CompetenciaAsociadoDto> CreateCompetenciaAsync(Guid asociadoId, Guid organizationId, string competencia, int nivel)
+    public async Task<CompetenciaAsociadoDto> CreateCompetenciaAsync(Guid asociadoId, Guid organizationId, string competencia, int nivel)
     {
         _logger.LogInformation(
             "Registrando competencia '{Competencia}' nivel {Nivel} para asociado {AsociadoId}",
             competencia, nivel, asociadoId);
 
-        var dto = new CompetenciaAsociadoDto
+        var entity = new CompetenciaAsociado
         {
             Id = Guid.NewGuid(),
             AsociadoId = asociadoId,
+            OrganizationId = organizationId,
             Competencia = competencia,
             Nivel = Math.Clamp(nivel, 1, 5),
             Disponible = true,
-            FechaActualizacion = DateTime.UtcNow
+            FechaActualizacion = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
         };
 
-        _competenciasStore.Add(dto);
-        return Task.FromResult(dto);
+        var creada = await _repository.CreateAsync(entity);
+        return MapToDto(creada);
     }
 
     /// <inheritdoc/>
-    public Task<CompetenciaAsociadoDto> UpdateDisponibilidadAsync(Guid competenciaId, bool disponible)
+    public async Task<CompetenciaAsociadoDto> UpdateDisponibilidadAsync(Guid competenciaId, bool disponible)
     {
         _logger.LogInformation(
             "Actualizando disponibilidad de competencia {CompetenciaId} a {Disponible}",
             competenciaId, disponible);
 
-        var existing = _competenciasStore.FirstOrDefault(c => c.Id == competenciaId);
+        var existing = await _repository.GetByIdAsync(competenciaId);
         if (existing == null)
         {
             throw new KeyNotFoundException($"Competencia {competenciaId} no encontrada");
         }
 
-        var updated = existing with { Disponible = disponible };
-        var index = _competenciasStore.IndexOf(existing);
-        _competenciasStore[index] = updated;
+        existing.Disponible = disponible;
 
-        return Task.FromResult(updated);
+        var updated = await _repository.UpdateAsync(existing);
+        return MapToDto(updated);
     }
 
     /// <inheritdoc/>
-    public Task<List<CompetenciaAsociadoDto>> BuscarPorCompetenciaAsync(string competencia, bool soloDisponibles = true)
+    public async Task<List<CompetenciaAsociadoDto>> BuscarPorCompetenciaAsync(string competencia, bool soloDisponibles = true)
     {
         _logger.LogInformation(
             "Buscando asociados por competencia '{Competencia}', solo disponibles: {SoloDisponibles}",
             competencia, soloDisponibles);
 
-        var query = _competenciasStore
-            .Where(c => c.Competencia.Contains(competencia, StringComparison.OrdinalIgnoreCase));
-
-        if (soloDisponibles)
-        {
-            query = query.Where(c => c.Disponible);
-        }
-
-        return Task.FromResult(query.ToList());
+        var resultados = await _repository.SearchByCompetenciaAsync(competencia, soloDisponibles);
+        return resultados.Select(MapToDto).ToList();
     }
+
+    private static CompetenciaAsociadoDto MapToDto(CompetenciaAsociado c) => new()
+    {
+        Id = c.Id,
+        AsociadoId = c.AsociadoId,
+        Competencia = c.Competencia,
+        Nivel = c.Nivel,
+        Disponible = c.Disponible,
+        FechaActualizacion = c.FechaActualizacion,
+        Observaciones = c.Observaciones
+    };
 }

@@ -21,7 +21,11 @@ public class HabeasDataServiceTests
     public HabeasDataServiceTests()
     {
         _loggerMock = new Mock<ILogger<HabeasDataService>>();
-        _service = new HabeasDataService(_loggerMock.Object);
+        var stores = new InMemoryStores();
+        _service = new HabeasDataService(
+            new InMemoryAutorizacionRepository(stores),
+            new InMemorySolicitudARCORepository(stores),
+            _loggerMock.Object);
     }
 
     [Fact]

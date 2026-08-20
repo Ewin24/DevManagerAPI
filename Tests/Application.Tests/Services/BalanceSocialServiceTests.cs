@@ -18,7 +18,9 @@ public class BalanceSocialServiceTests
     public BalanceSocialServiceTests()
     {
         _loggerMock = new Mock<ILogger<BalanceSocialService>>();
-        _service = new BalanceSocialService(_loggerMock.Object);
+        _service = new BalanceSocialService(
+            new InMemoryIndicadorBalanceSocialRepository(new InMemoryStores()),
+            _loggerMock.Object);
     }
 
     [Fact]

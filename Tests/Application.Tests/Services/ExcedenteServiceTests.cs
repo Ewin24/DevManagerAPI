@@ -20,7 +20,9 @@ public class ExcedenteServiceTests
     public ExcedenteServiceTests()
     {
         _loggerMock = new Mock<ILogger<ExcedenteService>>();
-        _service = new ExcedenteService(_loggerMock.Object);
+        _service = new ExcedenteService(
+            new InMemoryExcedenteRepository(new InMemoryStores()),
+            _loggerMock.Object);
     }
 
     [Fact]

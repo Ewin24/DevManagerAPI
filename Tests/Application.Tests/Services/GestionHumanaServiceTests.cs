@@ -19,7 +19,9 @@ public class GestionHumanaServiceTests
     public GestionHumanaServiceTests()
     {
         _loggerMock = new Mock<ILogger<GestionHumanaService>>();
-        _service = new GestionHumanaService(_loggerMock.Object);
+        _service = new GestionHumanaService(
+            new InMemoryCompetenciaAsociadoRepository(new InMemoryStores()),
+            _loggerMock.Object);
     }
 
     [Fact]

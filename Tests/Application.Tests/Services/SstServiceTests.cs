@@ -21,7 +21,12 @@ public class SstServiceTests
     public SstServiceTests()
     {
         _loggerMock = new Mock<ILogger<SstService>>();
-        _service = new SstService(_loggerMock.Object);
+        var stores = new InMemoryStores();
+        _service = new SstService(
+            new InMemoryExamenMedicoRepository(stores),
+            new InMemoryAccidenteRepository(stores),
+            new InMemoryRiesgoRepository(stores),
+            _loggerMock.Object);
     }
 
     [Fact]

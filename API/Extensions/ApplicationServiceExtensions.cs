@@ -44,6 +44,30 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IApplicationRepository, ApplicationRepository>();
         services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 
+        // Repositorios EF Core - Módulos Solidarios (single-entity: Domain IS the EF entity)
+        services.AddScoped<ICompensacionRepository, CompensacionRepository>();
+        services.AddScoped<IPilaAporteRepository, PilaAporteRepository>();
+        services.AddScoped<IProgramaBienestarRepository, ProgramaBienestarRepository>();
+        services.AddScoped<ISolicitudBienestarRepository, SolicitudBienestarRepository>();
+        services.AddScoped<IAuxilioRepository, AuxilioRepository>();
+        services.AddScoped<IFondoSolidaridadRepository, FondoSolidaridadRepository>();
+        services.AddScoped<ICompetenciaAsociadoRepository, CompetenciaAsociadoRepository>();
+        services.AddScoped<IProgramaEducacionRepository, ProgramaEducacionRepository>();
+        services.AddScoped<IAsociadoEducacionRepository, AsociadoEducacionRepository>();
+        services.AddScoped<IIndicadorBalanceSocialRepository, IndicadorBalanceSocialRepository>();
+        services.AddScoped<IExamenMedicoRepository, ExamenMedicoRepository>();
+        services.AddScoped<IAccidenteRepository, AccidenteRepository>();
+        services.AddScoped<IRiesgoRepository, RiesgoRepository>();
+        services.AddScoped<IExcedenteRepository, ExcedenteRepository>();
+        services.AddScoped<IAutorizacionRepository, AutorizacionRepository>();
+        services.AddScoped<ISolicitudARCORepository, SolicitudARCORepository>();
+        services.AddScoped<IReporteSupersolidariaRepository, ReporteSupersolidariaRepository>();
+        services.AddScoped<IOrganoRepository, OrganoRepository>();
+        services.AddScoped<IMiembroOrganoRepository, MiembroOrganoRepository>();
+        services.AddScoped<IActaRepository, ActaRepository>();
+        services.AddScoped<IAsambleaRepository, AsambleaRepository>();
+        services.AddScoped<IVotoRepository, VotoRepository>();
+
         // Servicios de aplicación - IAM
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
@@ -91,7 +115,21 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IOrganoService, Application.Services.Organos.OrganoService>();
 
         // Servicios de aplicación - Asistente Cooperativo (IA)
-        services.AddScoped<ICooperativaAIService, Application.Services.CooperativaAIService>();
+        // Gemini es OPCIONAL: si no hay API key configurada (GeminiService lanza en el ctor),
+        // el asistente se resuelve sin Gemini y cae al modo template-based.
+        services.AddScoped<ICooperativaAIService>(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<Application.Services.CooperativaAIService>>();
+            try
+            {
+                return new Application.Services.CooperativaAIService(logger, sp.GetService<IGeminiService>());
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Gemini no configurado; el Asistente Cooperativo usará respuestas template");
+                return new Application.Services.CooperativaAIService(logger);
+            }
+        });
 
         // Servicios de Reportes
         services.AddScoped<IReportsService, ReportsService>();
