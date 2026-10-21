@@ -31,7 +31,9 @@ public abstract class SolidarityTestBase : IAsyncDisposable
     protected IAssociateRepository Associates => new AssociateRepository(Context);
     protected IConsentRepository Consents => new ConsentRepository(Context);
 
-    protected AssociateService AssociateService => new(Associates, Users, Consents);
+    protected IEducationRepository Education => new EducationRepository(Context);
+    protected AssociateService AssociateService => new(Associates, Users, Consents, Education);
+    protected EducationService EducationService => new(Education, Associates);
     protected ConsentService ConsentService => new(Consents, Users);
     protected UserService UserService => new(Users, Mock.Of<IRolePermissionRepository>(), Consents, NullLogger<UserService>.Instance);
 

@@ -44,3 +44,31 @@ public interface IConsentRepository
     Task CreateConsentAsync(DataConsent consent);
     Task UpdateConsentAsync(DataConsent consent);
 }
+
+/// <summary>
+/// Repositorio de programas de educación cooperativa e inscripciones (todo filtrado por OrganizationId)
+/// </summary>
+public interface IEducationRepository
+{
+    Task<IEnumerable<EducationProgram>> GetProgramsAsync(Guid organizationId);
+    Task<EducationProgram?> GetProgramByIdAsync(Guid id, Guid organizationId);
+    Task CreateProgramAsync(EducationProgram program);
+    Task UpdateProgramAsync(EducationProgram program);
+
+    /// <summary>Borrado lógico del programa</summary>
+    Task DeleteProgramAsync(Guid id, Guid organizationId, Guid deletedByUserId);
+
+    /// <summary>Inscripciones de un programa (con nombre del asociado)</summary>
+    Task<IEnumerable<EducationEnrollment>> GetEnrollmentsByProgramAsync(Guid programId, Guid organizationId);
+
+    /// <summary>Todas las inscripciones de la organización en programas vigentes (con tipo de programa)</summary>
+    Task<IEnumerable<EducationEnrollment>> GetEnrollmentsAsync(Guid organizationId);
+
+    Task<EducationEnrollment?> GetEnrollmentByIdAsync(Guid id, Guid organizationId);
+    Task<bool> EnrollmentExistsAsync(Guid programId, Guid userId, Guid organizationId);
+    Task CreateEnrollmentAsync(EducationEnrollment enrollment);
+    Task UpdateEnrollmentAsync(EducationEnrollment enrollment);
+
+    /// <summary>Horas completadas de educación básica del asociado (todas las fechas)</summary>
+    Task<decimal> GetCompletedBasicHoursAsync(Guid userId, Guid organizationId);
+}

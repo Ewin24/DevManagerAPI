@@ -47,6 +47,7 @@ public static class ApplicationServiceExtensions
         // Repositorios EF Core - Solidarity
         services.AddScoped<IAssociateRepository, AssociateRepository>();
         services.AddScoped<IConsentRepository, ConsentRepository>();
+        services.AddScoped<IEducationRepository, EducationRepository>();
 
         // Servicios de aplicación - IAM
         services.AddScoped<IAuthService, AuthService>();
@@ -68,6 +69,7 @@ public static class ApplicationServiceExtensions
         // Servicios de aplicación - Solidarity
         services.AddScoped<IAssociateService, AssociateService>();
         services.AddScoped<IConsentService, ConsentService>();
+        services.AddScoped<IEducationService, EducationService>();
 
         // Servicios de Reportes
         services.AddScoped<IReportsService, ReportsService>();

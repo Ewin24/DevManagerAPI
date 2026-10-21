@@ -354,6 +354,27 @@ public class ReportsController : ControllerBase
     }
 
     /// <summary>
+    /// KPI de cobertura de educación cooperativa por año calendario (por defecto el año actual)
+    /// </summary>
+    /// <remarks>
+    /// Cubierto = asociado con una inscripción Completada cuya fecha de finalización cae en el año.
+    /// avgHours = horas completadas en el año / asociados activos en algún momento del año.
+    /// coverageRatio va de 0 a 1 (0 si no hay asociados activos).
+    /// </remarks>
+    /// <response code="200">KPI obtenido exitosamente</response>
+    /// <response code="400">Año fuera de rango</response>
+    [HttpGet("education-coverage")]
+    [ProducesResponseType(typeof(ApiResponse<EducationCoverageResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse<EducationCoverageResponse>>> GetEducationCoverage([FromQuery] int? year)
+    {
+        var coverage = await _reportsService.GetEducationCoverageAsync(
+            GetOrganizationId(), year ?? DateTime.UtcNow.Year);
+
+        return Ok(ApiResponse<EducationCoverageResponse>.SuccessResponse(coverage));
+    }
+
+    /// <summary>
     /// Helper para obtener el ID de la organización del token JWT
     /// </summary>
     private Guid GetOrganizationId() =>

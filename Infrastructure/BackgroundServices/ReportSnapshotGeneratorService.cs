@@ -84,7 +84,8 @@ public class ReportSnapshotGeneratorService : BackgroundService
                     skillsDistribution = await reportsService.GetSkillsDistributionAsync(organizationId),
                     projectMetrics = await reportsService.GetProjectMetricsAsync(organizationId),
                     employeeUtilization = await reportsService.GetEmployeeUtilizationAsync(organizationId),
-                    departmentMetrics = await reportsService.GetDepartmentMetricsAsync(organizationId)
+                    departmentMetrics = await reportsService.GetDepartmentMetricsAsync(organizationId),
+                    educationCoverage = await reportsService.GetEducationCoverageAsync(organizationId, today.Year)
                 };
 
                 context.ReportSnapshots.Add(new ReportSnapshot

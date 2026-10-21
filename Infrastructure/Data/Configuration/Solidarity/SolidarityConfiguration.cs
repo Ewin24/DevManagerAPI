@@ -72,3 +72,40 @@ public class DataConsentConfiguration : IEntityTypeConfiguration<DataConsent>
             .HasConstraintName("FK_DataConsents_PolicyVersions");
     }
 }
+
+public class EducationProgramConfiguration : IEntityTypeConfiguration<EducationProgram>
+{
+    public void Configure(EntityTypeBuilder<EducationProgram> entity)
+    {
+        entity.Property(e => e.Id).ValueGeneratedNever();
+        entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+
+        entity.HasOne(d => d.Organization).WithMany()
+            .HasForeignKey(d => d.OrganizationId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_EducationPrograms_Organizations");
+    }
+}
+
+public class EducationEnrollmentConfiguration : IEntityTypeConfiguration<EducationEnrollment>
+{
+    public void Configure(EntityTypeBuilder<EducationEnrollment> entity)
+    {
+        entity.HasIndex(e => new { e.OrganizationId, e.ProgramId, e.UserId }, "UX_EducationEnrollments_Org_Program_User")
+            .IsUnique()
+            .HasFilter("([IsDeleted]=(0))");
+
+        entity.Property(e => e.Id).ValueGeneratedNever();
+        entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+
+        entity.HasOne(d => d.Program).WithMany()
+            .HasForeignKey(d => d.ProgramId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_EducationEnrollments_Programs");
+
+        entity.HasOne(d => d.Associate).WithMany()
+            .HasForeignKey(d => d.UserId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_EducationEnrollments_Associates");
+    }
+}

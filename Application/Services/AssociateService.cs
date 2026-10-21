@@ -17,15 +17,18 @@ public class AssociateService : IAssociateService
     private readonly IAssociateRepository _associateRepository;
     private readonly IUserRepository _userRepository;
     private readonly IConsentRepository _consentRepository;
+    private readonly IEducationRepository _educationRepository;
 
     public AssociateService(
         IAssociateRepository associateRepository,
         IUserRepository userRepository,
-        IConsentRepository consentRepository)
+        IConsentRepository consentRepository,
+        IEducationRepository educationRepository)
     {
         _associateRepository = associateRepository;
         _userRepository = userRepository;
         _consentRepository = consentRepository;
+        _educationRepository = educationRepository;
     }
 
     public async Task<IEnumerable<AssociateDto>> GetAllAsync(Guid organizationId, AssociateStatus? status)
@@ -107,6 +110,11 @@ public class AssociateService : IAssociateService
             if (open == null || date < open.ApplicationDate)
                 throw new BusinessValidationException("La fecha de admisión no puede ser anterior a la fecha de solicitud");
             open.AdmissionDate = date;
+
+            // Warning only: admission is never blocked by missing basic education
+            var basicHours = await _educationRepository.GetCompletedBasicHoursAsync(userId, organizationId);
+            if (basicHours < EducationKpiCalculator.BasicEducationMinimumHours)
+                warnings.Add($"El asociado tiene {basicHours:0.#} h de educación básica completada (mínimo recomendado: {EducationKpiCalculator.BasicEducationMinimumHours:0} h)");
         }
         else if (to == AssociateStatus.Withdrawn)
         {

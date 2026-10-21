@@ -55,7 +55,7 @@ Sistema RBAC (Role-Based Access Control).
 ---
 
 ## 📂 Esquema: SOLIDARITY (Asociados y Habeas Data)
-*Ciclo de vida del asociado y consentimiento de tratamiento de datos (Ley 1581/2012). Script: `DDL/Updates/001_solidarity_core.sql` (rollback incluido, idempotente).*
+*Ciclo de vida del asociado, consentimiento de tratamiento de datos (Ley 1581/2012) y educación cooperativa. Scripts: `DDL/Updates/001_solidarity_core.sql` y `002_cooperative_education.sql` (rollback incluido, idempotentes).*
 
 ### `solidarity.Associates`
 Un registro por usuario (PK = `UserId`). `Status`: 1 Aspirante, 2 Activo, 3 Suspendido, 4 Retirado. La máquina de estados vive en código (`AssociateLifecycle`).
@@ -68,6 +68,12 @@ Políticas de datos versionadas (versión, finalidad, texto). El texto publicado
 
 ### `solidarity.DataConsents`
 Consentimientos *append-only* (sin soft delete). Registra quién otorgó, cuándo, y la revocación (fecha, usuario, motivo). Un consentimiento activo por usuario y política.
+
+### `solidarity.EducationPrograms`
+Programas de educación cooperativa (nombre, tipo, horas requeridas > 0, fechas). `Type`: 1 Básica, 2 Permanente, 3 Gobierno, 4 Informal. Soft delete.
+
+### `solidarity.EducationEnrollments`
+Inscripción de un asociado a un programa (una por programa y asociado, índice único filtrado). `Status`: 1 Inscrito, 2 Completado (exige `CompletionDate`), 3 Retirado. `HoursCompleted` >= 0. El KPI de cobertura cuenta inscripciones completadas con fecha de finalización en el año calendario.
 
 ---
 

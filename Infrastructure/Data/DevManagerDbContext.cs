@@ -35,6 +35,10 @@ public partial class DevManagerDbContext : DbContext
 
     public virtual DbSet<DataConsent> DataConsents { get; set; }
 
+    public virtual DbSet<EducationProgram> EducationPrograms { get; set; }
+
+    public virtual DbSet<EducationEnrollment> EducationEnrollments { get; set; }
+
     // ========= Talent =========
     public virtual DbSet<Certification> Certifications { get; set; }
 

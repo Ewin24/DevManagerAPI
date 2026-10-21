@@ -1081,6 +1081,26 @@ BEGIN
         INSERT INTO solidarity.DataConsents (Id, OrganizationId, UserId, PolicyVersionId, GrantedByUserId, CreatedByUserId)
         VALUES ('11111111-7000-0000-0000-000000000003', @SolOrg, @SolAna, @SolPolicy, @SolAdmin, @SolAdmin);
 
+    -- Educacion cooperativa (requiere Updates/002_cooperative_education.sql)
+    IF OBJECT_ID(N'[solidarity].[EducationPrograms]', N'U') IS NOT NULL
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM solidarity.EducationPrograms WHERE Id = '11111111-8000-0000-0000-000000000001')
+            INSERT INTO solidarity.EducationPrograms (Id, OrganizationId, Name, [Type], RequiredHours, StartDate, CreatedByUserId)
+            VALUES ('11111111-8000-0000-0000-000000000001', @SolOrg, N'Curso basico de economia solidaria', 1, 20, '2026-01-15', @SolAdmin);
+        IF NOT EXISTS (SELECT 1 FROM solidarity.EducationPrograms WHERE Id = '11111111-8000-0000-0000-000000000002')
+            INSERT INTO solidarity.EducationPrograms (Id, OrganizationId, Name, [Type], RequiredHours, StartDate, CreatedByUserId)
+            VALUES ('11111111-8000-0000-0000-000000000002', @SolOrg, N'Formacion en gobierno cooperativo', 3, 12, '2026-03-01', @SolAdmin);
+
+        -- Juan completo el curso basico (20 h); Ana lo cursa (8 h); Maria (aspirante) no tiene horas
+        IF NOT EXISTS (SELECT 1 FROM solidarity.EducationEnrollments WHERE Id = '11111111-9000-0000-0000-000000000001')
+            INSERT INTO solidarity.EducationEnrollments (Id, OrganizationId, ProgramId, UserId, Status, HoursCompleted, CompletionDate, CreatedByUserId)
+            VALUES ('11111111-9000-0000-0000-000000000001', @SolOrg, '11111111-8000-0000-0000-000000000001', @SolJuan, 2, 20, '2026-03-20', @SolAdmin);
+        IF NOT EXISTS (SELECT 1 FROM solidarity.EducationEnrollments WHERE Id = '11111111-9000-0000-0000-000000000002')
+            INSERT INTO solidarity.EducationEnrollments (Id, OrganizationId, ProgramId, UserId, Status, HoursCompleted, CompletionDate, CreatedByUserId)
+            VALUES ('11111111-9000-0000-0000-000000000002', @SolOrg, '11111111-8000-0000-0000-000000000001', @SolAna, 1, 8, NULL, @SolAdmin);
+        PRINT '   ✓ Educacion: 2 programas, 2 inscripciones';
+    END
+
     PRINT '   ✓ Solidarity: tipo de entidad, 4 documentos, 3 asociados (1 reingresada), politica v1, 3 consentimientos';
 END
 

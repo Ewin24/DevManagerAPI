@@ -41,4 +41,9 @@ public interface IReportsService
     /// <param name="organizationId">ID de la organización</param>
     /// <returns>Métricas departamentales</returns>
     Task<DepartmentMetricsResponse> GetDepartmentMetricsAsync(Guid organizationId);
+
+    /// <summary>
+    /// Obtiene el KPI de cobertura de educación cooperativa del año calendario indicado
+    /// </summary>
+    Task<EducationCoverageResponse> GetEducationCoverageAsync(Guid organizationId, int year);
 }

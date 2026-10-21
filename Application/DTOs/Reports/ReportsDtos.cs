@@ -234,3 +234,29 @@ public class ExperienceDistribution
     /// </summary>
     public int Lead { get; set; }
 }
+
+/// <summary>
+/// KPI de cobertura de educación cooperativa por año calendario
+/// </summary>
+public class EducationCoverageResponse
+{
+    public int Year { get; set; }
+
+    /// <summary>Asociados activos en algún momento del año</summary>
+    public int EligibleAssociates { get; set; }
+
+    /// <summary>Asociados elegibles con al menos una inscripción completada en el año</summary>
+    public int CoveredAssociates { get; set; }
+
+    /// <summary>Cobertura de 0 a 1 (0 si no hay asociados activos)</summary>
+    public decimal CoverageRatio { get; set; }
+
+    /// <summary>Horas completadas en el año / asociados activos en el año</summary>
+    public decimal AvgHours { get; set; }
+
+    /// <summary>True si todos los asociados elegibles acumulan 20 h o más de educación básica completada</summary>
+    public bool BasicCompliant { get; set; }
+
+    /// <summary>Horas completadas en el año por tipo de programa (Basic, Permanent, Governance, Informal)</summary>
+    public Dictionary<string, decimal> HoursByType { get; set; } = new();
+}

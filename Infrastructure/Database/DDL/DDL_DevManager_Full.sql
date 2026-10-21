@@ -1042,12 +1042,77 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_DataConsents_Org_User_
           ON solidarity.DataConsents(OrganizationId, UserId, PolicyVersionId)
           WHERE RevokedAt IS NULL');
 
+
+-- ---------- solidarity.EducationPrograms ----------
+IF OBJECT_ID('solidarity.EducationPrograms', 'U') IS NULL
+BEGIN
+    CREATE TABLE solidarity.EducationPrograms (
+        Id                uniqueidentifier NOT NULL CONSTRAINT PK_EducationPrograms PRIMARY KEY,
+        OrganizationId    uniqueidentifier NOT NULL,
+        Name              nvarchar(160)    NOT NULL,
+        [Type]            tinyint          NOT NULL, -- 1 Basic, 2 Permanent, 3 Governance, 4 Informal
+        RequiredHours     decimal(5,1)     NOT NULL,
+        StartDate         date             NOT NULL,
+        EndDate           date             NULL,
+
+        CreatedAt         datetime2(3)     NOT NULL CONSTRAINT DF_EducationPrograms_CreatedAt DEFAULT (sysutcdatetime()),
+        CreatedByUserId   uniqueidentifier NULL,
+        UpdatedAt         datetime2(3)     NULL,
+        UpdatedByUserId   uniqueidentifier NULL,
+        IsDeleted         bit              NOT NULL CONSTRAINT DF_EducationPrograms_IsDeleted DEFAULT (0),
+        DeletedAt         datetime2(3)     NULL,
+        DeletedByUserId   uniqueidentifier NULL,
+
+        CONSTRAINT FK_EducationPrograms_Organizations FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),
+        CONSTRAINT CK_EducationPrograms_Type CHECK ([Type] BETWEEN 1 AND 4),
+        CONSTRAINT CK_EducationPrograms_Hours CHECK (RequiredHours > 0),
+        CONSTRAINT CK_EducationPrograms_Dates CHECK (EndDate IS NULL OR EndDate >= StartDate)
+    );
+END
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_EducationPrograms_Org' AND object_id = OBJECT_ID('solidarity.EducationPrograms'))
+    CREATE INDEX IX_EducationPrograms_Org ON solidarity.EducationPrograms(OrganizationId);
+
+-- ---------- solidarity.EducationEnrollments ----------
+IF OBJECT_ID('solidarity.EducationEnrollments', 'U') IS NULL
+BEGIN
+    CREATE TABLE solidarity.EducationEnrollments (
+        Id                uniqueidentifier NOT NULL CONSTRAINT PK_EducationEnrollments PRIMARY KEY,
+        OrganizationId    uniqueidentifier NOT NULL,
+        ProgramId         uniqueidentifier NOT NULL,
+        UserId            uniqueidentifier NOT NULL,
+        Status            tinyint          NOT NULL, -- 1 Enrolled, 2 Completed, 3 Dropped
+        HoursCompleted    decimal(5,1)     NOT NULL CONSTRAINT DF_EducationEnrollments_Hours DEFAULT (0),
+        CompletionDate    date             NULL,
+
+        CreatedAt         datetime2(3)     NOT NULL CONSTRAINT DF_EducationEnrollments_CreatedAt DEFAULT (sysutcdatetime()),
+        CreatedByUserId   uniqueidentifier NULL,
+        UpdatedAt         datetime2(3)     NULL,
+        UpdatedByUserId   uniqueidentifier NULL,
+        IsDeleted         bit              NOT NULL CONSTRAINT DF_EducationEnrollments_IsDeleted DEFAULT (0),
+        DeletedAt         datetime2(3)     NULL,
+        DeletedByUserId   uniqueidentifier NULL,
+
+        CONSTRAINT FK_EducationEnrollments_Organizations FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),
+        CONSTRAINT FK_EducationEnrollments_Programs FOREIGN KEY (ProgramId) REFERENCES solidarity.EducationPrograms(Id),
+        CONSTRAINT FK_EducationEnrollments_Associates FOREIGN KEY (UserId) REFERENCES solidarity.Associates(UserId),
+        CONSTRAINT CK_EducationEnrollments_Status CHECK (Status BETWEEN 1 AND 3),
+        CONSTRAINT CK_EducationEnrollments_Hours CHECK (HoursCompleted >= 0),
+        CONSTRAINT CK_EducationEnrollments_Completed CHECK (Status <> 2 OR CompletionDate IS NOT NULL)
+    );
+END
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_EducationEnrollments_Org_Program_User' AND object_id = OBJECT_ID('solidarity.EducationEnrollments'))
+    EXEC('CREATE UNIQUE INDEX UX_EducationEnrollments_Org_Program_User
+          ON solidarity.EducationEnrollments(OrganizationId, ProgramId, UserId)
+          WHERE IsDeleted = 0');
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_EducationEnrollments_Org_User' AND object_id = OBJECT_ID('solidarity.EducationEnrollments'))
+    CREATE INDEX IX_EducationEnrollments_Org_User ON solidarity.EducationEnrollments(OrganizationId, UserId);
+
 PRINT '==========================================';
-PRINT '7) Tablas Solidarity creadas';
+PRINT '7) Tablas Solidarity creadas (asociados, consentimientos, educacion)';
 PRINT '==========================================';
 PRINT '';
 PRINT '══════════════════════════════════════════';
 PRINT ' DevManager DDL completo ejecutado OK';
 PRINT ' Schemas: config, iam, talent, projects, reporting, solidarity';
-PRINT ' Total tablas: 29';
+PRINT ' Total tablas: 31';
 PRINT '══════════════════════════════════════════';

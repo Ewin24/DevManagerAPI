@@ -2,7 +2,9 @@ namespace Application.Services;
 
 using Application.DTOs.Agent;
 using Application.DTOs.Reports;
+using Application.Common.Exceptions;
 using Application.Interfaces;
+using Domain.Entities.Solidarity;
 using Domain.Enums;
 using Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
@@ -19,6 +21,8 @@ public class ReportsService : IReportsService
     private readonly IUserRepository _userRepository;
     private readonly IProfileRepository _profileRepository;
     private readonly IAgentService _agentService;
+    private readonly IAssociateRepository _associateRepository;
+    private readonly IEducationRepository _educationRepository;
     private readonly ILogger<ReportsService> _logger;
 
     public ReportsService(
@@ -29,6 +33,8 @@ public class ReportsService : IReportsService
         IUserRepository userRepository,
         IProfileRepository profileRepository,
         IAgentService agentService,
+        IAssociateRepository associateRepository,
+        IEducationRepository educationRepository,
         ILogger<ReportsService> logger)
     {
         _employeeSkillRepository = employeeSkillRepository;
@@ -38,6 +44,8 @@ public class ReportsService : IReportsService
         _userRepository = userRepository;
         _profileRepository = profileRepository;
         _agentService = agentService;
+        _associateRepository = associateRepository;
+        _educationRepository = educationRepository;
         _logger = logger;
     }
 
@@ -468,5 +476,30 @@ Usa un tono profesional y sé conciso. Formato: Markdown con encabezados (##) y 
                 TotalRoles = 0
             };
         }
+    }
+
+    /// <summary>
+    /// KPI de cobertura de educación cooperativa del año calendario (solo la organización indicada)
+    /// </summary>
+    public async Task<EducationCoverageResponse> GetEducationCoverageAsync(Guid organizationId, int year)
+    {
+        if (year < 1900 || year > 2200)
+            throw new BusinessValidationException("Año fuera de rango");
+
+        var associates = await _associateRepository.GetAllAsync(organizationId);
+        var enrollments = await _educationRepository.GetEnrollmentsAsync(organizationId);
+
+        var kpi = EducationKpiCalculator.Compute(associates.SelectMany(a => a.Periods), enrollments, year);
+
+        return new EducationCoverageResponse
+        {
+            Year = kpi.Year,
+            EligibleAssociates = kpi.EligibleAssociates,
+            CoveredAssociates = kpi.CoveredAssociates,
+            CoverageRatio = kpi.CoverageRatio,
+            AvgHours = kpi.AvgHours,
+            BasicCompliant = kpi.BasicCompliant,
+            HoursByType = kpi.HoursByType
+        };
     }
 }
