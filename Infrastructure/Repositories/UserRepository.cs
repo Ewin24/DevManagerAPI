@@ -52,6 +52,44 @@ public class UserRepository : IUserRepository
                 (excludeUserId == null || u.Id != excludeUserId));
     }
 
+    public async Task<bool> DocumentExistsAsync(
+        Domain.Enums.DocumentType documentType,
+        string documentNumber,
+        Guid organizationId,
+        Guid? excludeUserId = null)
+    {
+        var type = (byte)documentType;
+        return await _context.Users
+            .AnyAsync(u =>
+                u.DocumentType == type &&
+                u.DocumentNumber == documentNumber &&
+                u.OrganizationId == organizationId &&
+                !u.IsDeleted &&
+                (excludeUserId == null || u.Id != excludeUserId));
+    }
+
+    public async Task<bool> SetDocumentAsync(
+        Guid id,
+        Guid organizationId,
+        Domain.Enums.DocumentType documentType,
+        string documentNumber,
+        Guid updatedByUserId)
+    {
+        var efUser = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == id && u.OrganizationId == organizationId && !u.IsDeleted);
+
+        if (efUser == null)
+            return false;
+
+        efUser.DocumentType = (byte)documentType;
+        efUser.DocumentNumber = documentNumber;
+        efUser.UpdatedAt = DateTime.UtcNow;
+        efUser.UpdatedByUserId = updatedByUserId;
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<Guid> CreateAsync(Domain.Entities.IAM.User user)
     {
         var efUser = new Infrastructure.Data.Entities.User
@@ -65,6 +103,7 @@ public class UserRepository : IUserRepository
             PasswordHash = user.PasswordHash,
             PasswordSalt = user.PasswordSalt,
             IsActive = user.IsActive,
+            IsEmployee = user.IsEmployee,
             CreatedAt = user.CreatedAt,
             CreatedByUserId = user.CreatedByUserId
         };
@@ -90,6 +129,7 @@ public class UserRepository : IUserRepository
         efUser.LastName = user.LastName;
         efUser.Phone = user.Phone;
         efUser.IsActive = user.IsActive;
+        efUser.IsEmployee = user.IsEmployee;
         efUser.UpdatedAt = DateTime.UtcNow;
         efUser.UpdatedByUserId = user.UpdatedByUserId;
 
@@ -142,6 +182,9 @@ public class UserRepository : IUserRepository
             PasswordSalt = efUser.PasswordSalt,
             IsActive = efUser.IsActive,
             LastLoginAt = efUser.LastLoginAt,
+            DocumentType = (Domain.Enums.DocumentType?)efUser.DocumentType,
+            DocumentNumber = efUser.DocumentNumber,
+            IsEmployee = efUser.IsEmployee,
             CreatedAt = efUser.CreatedAt,
             CreatedByUserId = efUser.CreatedByUserId,
             UpdatedAt = efUser.UpdatedAt,

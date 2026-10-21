@@ -26,6 +26,15 @@ public partial class DevManagerDbContext : DbContext
 
     public virtual DbSet<UserPermission> UserPermissions { get; set; }
 
+    // ========= Solidarity =========
+    public virtual DbSet<Associate> Associates { get; set; }
+
+    public virtual DbSet<MembershipPeriod> MembershipPeriods { get; set; }
+
+    public virtual DbSet<DataPolicyVersion> DataPolicyVersions { get; set; }
+
+    public virtual DbSet<DataConsent> DataConsents { get; set; }
+
     // ========= Talent =========
     public virtual DbSet<Certification> Certifications { get; set; }
 

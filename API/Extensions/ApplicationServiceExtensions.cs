@@ -44,6 +44,10 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IApplicationRepository, ApplicationRepository>();
         services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 
+        // Repositorios EF Core - Solidarity
+        services.AddScoped<IAssociateRepository, AssociateRepository>();
+        services.AddScoped<IConsentRepository, ConsentRepository>();
+
         // Servicios de aplicación - IAM
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
@@ -60,6 +64,10 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IAssignmentService, AssignmentService>();
+
+        // Servicios de aplicación - Solidarity
+        services.AddScoped<IAssociateService, AssociateService>();
+        services.AddScoped<IConsentService, ConsentService>();
 
         // Servicios de Reportes
         services.AddScoped<IReportsService, ReportsService>();

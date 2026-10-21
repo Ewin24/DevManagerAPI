@@ -18,6 +18,9 @@ public class RegisterOrganizationRequest
     [MaxLength(30)]
     public string? Nit { get; set; }
 
+    /// <summary>Tipo de entidad solidaria (1 CTA, 2 Ahorro y crédito, 3 Multiactiva, 4 Mutual, 5 Fondo de empleados, 6 Otra); opcional</summary>
+    public Domain.Enums.OrganizationEntityType? EntityType { get; set; }
+
     // Datos del Usuario Administrador
     [Required(ErrorMessage = "El nombre del administrador es requerido")]
     [MaxLength(80)]

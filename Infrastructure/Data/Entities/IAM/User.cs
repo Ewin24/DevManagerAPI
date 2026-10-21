@@ -36,6 +36,13 @@ public partial class User
     [Precision(3)]
     public DateTime? LastLoginAt { get; set; }
 
+    public byte? DocumentType { get; set; }
+
+    [StringLength(20)]
+    public string? DocumentNumber { get; set; }
+
+    public bool IsEmployee { get; set; } = true;
+
     [Precision(3)]
     public DateTime CreatedAt { get; set; }
 

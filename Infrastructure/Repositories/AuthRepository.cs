@@ -57,6 +57,7 @@ public class AuthRepository : IAuthRepository
                 Name = organization.Name,
                 LegalName = organization.LegalName,
                 Nit = organization.Nit,
+                EntityType = (byte?)organization.EntityType,
                 IsActive = organization.IsActive,
                 CreatedAt = organization.CreatedAt
             };

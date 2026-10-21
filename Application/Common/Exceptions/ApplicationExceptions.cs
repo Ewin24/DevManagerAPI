@@ -82,3 +82,15 @@ public class BusinessValidationException : ApplicationException
         Errors = errors;
     }
 }
+
+/// <summary>
+/// Excepción cuando la solicitud es válida pero una precondición de negocio no se cumple (HTTP 422),
+/// por ejemplo, falta de consentimiento de tratamiento de datos
+/// </summary>
+public class UnprocessableEntityException : ApplicationException
+{
+    public UnprocessableEntityException(string message, string errorCode = "UNPROCESSABLE_ENTITY")
+        : base(message, 422, errorCode)
+    {
+    }
+}

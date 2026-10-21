@@ -12,4 +12,7 @@ public interface IUserService
     Task<UserResponse> CreateAsync(CreateUserRequest request, Guid organizationId, Guid createdByUserId);
     Task<UserResponse> UpdateAsync(Guid id, UpdateUserRequest request, Guid organizationId, Guid updatedByUserId);
     Task DeleteAsync(Guid id, Guid organizationId, Guid deletedByUserId);
+
+    /// <summary>Único escritor del documento del usuario; exige consentimiento de datos activo</summary>
+    Task<UserResponse> SetDocumentAsync(Guid id, SetDocumentRequest request, Guid organizationId, Guid updatedByUserId);
 }

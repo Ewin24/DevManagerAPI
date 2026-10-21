@@ -16,15 +16,18 @@ public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
     private readonly IRolePermissionRepository _rolePermissionRepository;
+    private readonly IConsentRepository _consentRepository;
     private readonly ILogger<UserService> _logger;
 
     public UserService(
         IUserRepository userRepository,
         IRolePermissionRepository rolePermissionRepository,
+        IConsentRepository consentRepository,
         ILogger<UserService> logger)
     {
         _userRepository = userRepository;
         _rolePermissionRepository = rolePermissionRepository;
+        _consentRepository = consentRepository;
         _logger = logger;
     }
 
@@ -76,6 +79,7 @@ public class UserService : IUserService
             PasswordHash = passwordHash,
             PasswordSalt = passwordSalt,
             IsActive = true,
+            IsEmployee = request.IsEmployee,
             CreatedAt = DateTime.UtcNow,
             CreatedByUserId = createdByUserId
         };
@@ -102,6 +106,10 @@ public class UserService : IUserService
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;
         user.Phone = request.Phone;
+        if (request.IsEmployee.HasValue)
+        {
+            user.IsEmployee = request.IsEmployee.Value;
+        }
         if (request.IsActive.HasValue)
         {
             user.IsActive = request.IsActive.Value;
@@ -129,7 +137,49 @@ public class UserService : IUserService
         _logger.LogInformation("Usuario eliminado: {UserId}", id);
     }
 
+    public async Task<UserResponse> SetDocumentAsync(
+        Guid id,
+        SetDocumentRequest request,
+        Guid organizationId,
+        Guid updatedByUserId)
+    {
+        var number = request.DocumentNumber?.Trim();
+        if (!Enum.IsDefined(request.DocumentType))
+            throw new BusinessValidationException("Tipo de documento inválido");
+        if (string.IsNullOrEmpty(number) || number.Length > 20 || !DocumentNumberPattern.IsMatch(number))
+            throw new BusinessValidationException("El número de documento es obligatorio (máx. 20, solo letras, dígitos y guiones)");
+
+        var user = await _userRepository.GetByIdAsync(id, organizationId);
+        if (user == null)
+        {
+            throw new NotFoundException("Usuario", id);
+        }
+
+        // Habeas Data: sin consentimiento activo (nunca otorgado o revocado) no se escribe el documento
+        if (!await _consentRepository.HasActiveConsentAsync(id, organizationId))
+        {
+            throw new UnprocessableEntityException(
+                "Se requiere un consentimiento de tratamiento de datos activo para registrar o modificar el documento",
+                "CONSENT_REQUIRED");
+        }
+
+        if (await _userRepository.DocumentExistsAsync(request.DocumentType, number, organizationId, id))
+        {
+            throw new ConflictException($"El documento '{number}' ya está registrado en la organización");
+        }
+
+        await _userRepository.SetDocumentAsync(id, organizationId, request.DocumentType, number, updatedByUserId);
+        user.DocumentType = request.DocumentType;
+        user.DocumentNumber = number;
+
+        _logger.LogInformation("Documento actualizado para usuario: {UserId}", id);
+
+        return await MapToResponseAsync(user, organizationId);
+    }
+
     #region Helpers
+
+    private static readonly System.Text.RegularExpressions.Regex DocumentNumberPattern = new("^[A-Za-z0-9-]+$");
 
     private async Task<UserResponse> MapToResponseAsync(User user, Guid organizationId)
     {
@@ -146,6 +196,9 @@ public class UserService : IUserService
             Phone = user.Phone,
             IsActive = user.IsActive,
             LastLoginAt = user.LastLoginAt,
+            DocumentType = user.DocumentType,
+            DocumentNumber = user.DocumentNumber,
+            IsEmployee = user.IsEmployee,
             CreatedAt = user.CreatedAt,
             RoleId = firstRole?.Id,
             RoleName = firstRole?.Name ?? "Sin asignar"

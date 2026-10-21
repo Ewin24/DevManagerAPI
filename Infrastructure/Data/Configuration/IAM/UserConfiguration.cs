@@ -12,6 +12,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsUnique()
             .HasFilter("([IsDeleted]=(0))");
 
+        entity.HasIndex(e => new { e.OrganizationId, e.DocumentType, e.DocumentNumber }, "UX_Users_Org_Document")
+            .IsUnique()
+            .HasFilter("([DocumentNumber] IS NOT NULL AND [IsDeleted]=(0))");
+
         entity.Property(e => e.Id).ValueGeneratedNever();
         entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
         entity.Property(e => e.IsActive).HasDefaultValue(true);

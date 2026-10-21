@@ -26,6 +26,9 @@ public class CreateUserRequest
     [Required]
     [MinLength(8)]
     public string Password { get; set; } = null!;
+
+    /// <summary>Bandera explícita de empleado (por defecto true)</summary>
+    public bool IsEmployee { get; set; } = true;
 }
 
 /// <summary>
@@ -45,6 +48,9 @@ public class UpdateUserRequest
     public string? Phone { get; set; }
 
     public bool? IsActive { get; set; }
+
+    /// <summary>Bandera explícita de empleado; si se omite no cambia</summary>
+    public bool? IsEmployee { get; set; }
 }
 
 /// <summary>
@@ -59,10 +65,25 @@ public class UserResponse
     public string? Phone { get; set; }
     public bool IsActive { get; set; }
     public DateTime? LastLoginAt { get; set; }
+    public Domain.Enums.DocumentType? DocumentType { get; set; }
+    public string? DocumentNumber { get; set; }
+    public bool IsEmployee { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public Guid? RoleId { get; set; }
     /// <summary>
     /// Nombre del rol asignado. Nunca será null; si no tiene rol asignado, será "Sin asignar"
     /// </summary>
     public string RoleName { get; set; } = "Sin asignar";
+}
+
+/// <summary>
+/// DTO para fijar el documento de identidad (requiere consentimiento de datos activo)
+/// </summary>
+public class SetDocumentRequest
+{
+    public Domain.Enums.DocumentType DocumentType { get; set; }
+
+    [Required]
+    [MaxLength(20)]
+    public string DocumentNumber { get; set; } = null!;
 }

@@ -23,6 +23,16 @@ public interface IUserRepository
     Task<bool> EmailExistsAsync(string email, Guid organizationId, Guid? excludeUserId = null);
 
     /// <summary>
+    /// Verifica si un documento (tipo + número) ya existe en la organización
+    /// </summary>
+    Task<bool> DocumentExistsAsync(Domain.Enums.DocumentType documentType, string documentNumber, Guid organizationId, Guid? excludeUserId = null);
+
+    /// <summary>
+    /// Único escritor de los campos de documento del usuario
+    /// </summary>
+    Task<bool> SetDocumentAsync(Guid id, Guid organizationId, Domain.Enums.DocumentType documentType, string documentNumber, Guid updatedByUserId);
+
+    /// <summary>
     /// Crea un nuevo usuario
     /// </summary>
     Task<Guid> CreateAsync(User user);

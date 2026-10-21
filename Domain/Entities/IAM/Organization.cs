@@ -12,4 +12,5 @@ public class Organization : AuditableEntity
     public string? LegalName { get; set; }
     public string? Nit { get; set; }
     public bool IsActive { get; set; }
+    public Domain.Enums.OrganizationEntityType? EntityType { get; set; }
 }

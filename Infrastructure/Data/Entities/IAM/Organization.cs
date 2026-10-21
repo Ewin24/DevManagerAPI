@@ -20,6 +20,8 @@ public partial class Organization
     [StringLength(30)]
     public string? Nit { get; set; }
 
+    public byte? EntityType { get; set; }
+
     public bool IsActive { get; set; }
 
     [Precision(3)]

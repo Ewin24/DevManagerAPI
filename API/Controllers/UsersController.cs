@@ -300,6 +300,34 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Fija el documento de identidad del usuario (Habeas Data)
+    /// </summary>
+    /// <remarks>
+    /// Requiere un consentimiento de datos activo: sin consentimiento o tras revocarlo responde 422
+    /// (el documento ya guardado se conserva). Documento duplicado en la organización responde 409.
+    /// Tipos: 1 CC, 2 CE, 3 TI, 4 PA, 5 NIT, 6 PEP.
+    /// </remarks>
+    /// <response code="200">Documento guardado</response>
+    /// <response code="400">Tipo o número inválido</response>
+    /// <response code="403">Sin permisos (requiere rol Admin)</response>
+    /// <response code="404">Usuario no encontrado o de otra organización</response>
+    /// <response code="409">Documento duplicado en la organización</response>
+    /// <response code="422">Sin consentimiento de datos activo</response>
+    [Authorize(Roles = AppRoles.Admin)]
+    [HttpPut("{id}/document")]
+    [ProducesResponseType(typeof(ApiResponse<UserResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<ApiResponse<UserResponse>>> SetDocument(
+        Guid id,
+        [FromBody] SetDocumentRequest request)
+    {
+        var user = await _userService.SetDocumentAsync(id, request, GetOrganizationId(), GetCurrentUserId());
+
+        return Ok(ApiResponse<UserResponse>.SuccessResponse(user, "Documento actualizado exitosamente"));
+    }
+
     #region Helper Methods
 
     private Guid GetOrganizationId()

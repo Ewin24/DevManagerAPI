@@ -90,6 +90,11 @@ public class AuthService : IAuthService
     {
         _logger.LogInformation("Registrando nueva organización: {OrgName}", request.OrganizationName);
 
+        if (request.EntityType.HasValue && !Enum.IsDefined(request.EntityType.Value))
+        {
+            throw new BusinessValidationException("Tipo de entidad inválido");
+        }
+
         // Validar NIT único si se proporciona
         if (!string.IsNullOrWhiteSpace(request.Nit) && await _authRepository.NitExistsAsync(request.Nit))
         {
@@ -108,6 +113,7 @@ public class AuthService : IAuthService
             Name = request.OrganizationName,
             LegalName = request.LegalName,
             Nit = request.Nit,
+            EntityType = request.EntityType,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
