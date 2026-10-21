@@ -289,9 +289,11 @@ CREATE TABLE iam.Organizations (
     DeletedAt         datetime2(3)      NULL,
     DeletedByUserId   uniqueidentifier  NULL,
 
-    CONSTRAINT UQ_Organizations_Nit UNIQUE (Nit),
     CONSTRAINT CK_Organizations_EntityType CHECK (EntityType IS NULL OR EntityType BETWEEN 1 AND 6)
 );
+
+-- Filtered: Nit is optional, and a plain UNIQUE constraint allows only one NULL.
+CREATE UNIQUE INDEX UQ_Organizations_Nit ON iam.Organizations(Nit) WHERE Nit IS NOT NULL;
 
 
 CREATE TABLE iam.Users (
