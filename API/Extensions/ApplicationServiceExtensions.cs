@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Application.Services;
 using Domain.Interfaces.Repositories;
 using Infrastructure.Data;
+using Infrastructure.Database;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -27,6 +28,10 @@ public static class ApplicationServiceExtensions
         // Entity Framework Core DbContext
         services.AddDbContext<DevManagerDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+
+        // Inicialización de base de datos en el arranque (detección de esquema legacy, migración y seed)
+        services.AddScoped<IDatabaseSchemaProbe, SqlServerSchemaProbe>();
+        services.AddScoped<DatabaseInitializer>();
 
         // Repositorios EF Core - IAM
         services.AddScoped<IAuthRepository, AuthRepository>();

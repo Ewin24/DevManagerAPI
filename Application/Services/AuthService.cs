@@ -6,8 +6,6 @@ using Application.Interfaces;
 using Domain.Entities.IAM;
 using Domain.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
-using System.Security.Cryptography;
-using System.Text;
 
 /// <summary>
 /// Implementación del servicio de autenticación
@@ -124,19 +122,10 @@ public class AuthService : IAuthService
     #region Password Hashing Helpers
 
     private static (byte[] Hash, byte[] Salt) HashPassword(string password)
-    {
-        using var hmac = new HMACSHA512();
-        var salt = hmac.Key;
-        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return (hash, salt);
-    }
+        => PasswordHasher.HashPassword(password);
 
     private static bool VerifyPassword(string password, byte[] storedHash, byte[] storedSalt)
-    {
-        using var hmac = new HMACSHA512(storedSalt);
-        var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return computedHash.SequenceEqual(storedHash);
-    }
+        => PasswordHasher.VerifyPassword(password, storedHash, storedSalt);
 
     #endregion
 }

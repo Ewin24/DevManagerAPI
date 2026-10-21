@@ -1,5 +1,6 @@
 using API.Extensions;
 using API.Middleware;
+using Infrastructure.Database;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -59,6 +60,12 @@ app.MapControllers();
 try
 {
     Log.Information("Iniciando DevManager API");
+
+    // Inicializar la base de datos antes de servir el primer request:
+    // detecta esquema legacy, aplica migraciones y siembra org + admin (fail-fast).
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().InitializeAsync();
+
     app.Run();
 }
 catch (Exception ex)
