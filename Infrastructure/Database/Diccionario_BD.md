@@ -45,10 +45,29 @@ Usuarios del sistema (Administradores, Gerentes, Empleados).
     *   `PasswordHash/Salt`: Seguridad criptográfica.
     *   `OrganizationId`: 🔗 FK a Organizations.
 
+*   **Campos de economía solidaria** (Updates/001): `Organizations.EntityType` (1 CTA, 2 Ahorro y crédito, 3 Multiactiva, 4 Mutual, 5 Fondo de empleados, 6 Otra; nullable). `Users.DocumentType` (1 CC, 2 CE, 3 TI, 4 PA, 5 NIT, 6 PEP), `Users.DocumentNumber` (único por organización junto con el tipo), `Users.IsEmployee` (default 1).
+
 ### 3. `iam.Roles` y `iam.UserRoles`
 Sistema RBAC (Role-Based Access Control).
 *   **Lógica:** Un usuario puede tener múltiples roles (ej: "Desarrollador" y "Scrum Master").
 *   `iam.Roles.OrganizationId`: Si es `NULL`, es un rol del sistema (Global). Si tiene ID, es un rol personalizado por la empresa.
+
+---
+
+## 📂 Esquema: SOLIDARITY (Asociados y Habeas Data)
+*Ciclo de vida del asociado y consentimiento de tratamiento de datos (Ley 1581/2012). Script: `DDL/Updates/001_solidarity_core.sql` (rollback incluido, idempotente).*
+
+### `solidarity.Associates`
+Un registro por usuario (PK = `UserId`). `Status`: 1 Aspirante, 2 Activo, 3 Suspendido, 4 Retirado. La máquina de estados vive en código (`AssociateLifecycle`).
+
+### `solidarity.MembershipPeriods`
+Una fila por periodo de membresía (fecha de solicitud, admisión, retiro y motivo). El reingreso abre una fila nueva sin alterar las anteriores. Índice único filtrado: un solo periodo abierto por asociado.
+
+### `solidarity.DataPolicyVersions`
+Políticas de datos versionadas (versión, finalidad, texto). El texto publicado es inmutable; un cambio requiere una nueva versión.
+
+### `solidarity.DataConsents`
+Consentimientos *append-only* (sin soft delete). Registra quién otorgó, cuándo, y la revocación (fecha, usuario, motivo). Un consentimiento activo por usuario y política.
 
 ---
 

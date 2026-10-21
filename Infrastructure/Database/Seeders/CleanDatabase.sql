@@ -14,6 +14,12 @@ DELETE FROM [config].[AgentActionTypes];
 DELETE FROM [config].[SeniorityLevels];
 
 -- Eliminar datos en orden inverso a dependencies
+-- Solidarity (solo existe si se aplico Updates/001_solidarity_core.sql)
+IF OBJECT_ID(N'[solidarity].[DataConsents]', N'U') IS NOT NULL DELETE FROM [solidarity].[DataConsents];
+IF OBJECT_ID(N'[solidarity].[DataPolicyVersions]', N'U') IS NOT NULL DELETE FROM [solidarity].[DataPolicyVersions];
+IF OBJECT_ID(N'[solidarity].[MembershipPeriods]', N'U') IS NOT NULL DELETE FROM [solidarity].[MembershipPeriods];
+IF OBJECT_ID(N'[solidarity].[Associates]', N'U') IS NOT NULL DELETE FROM [solidarity].[Associates];
+
 DELETE FROM [reporting].[RecommendationLogs];
 DELETE FROM [reporting].[RecommendationRules];
 DELETE FROM [reporting].[ReportSnapshots];

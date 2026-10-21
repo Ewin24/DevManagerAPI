@@ -1019,6 +1019,71 @@ PRINT '  - RolePermissions: Admin = todos, Manager/Developer = subconjuntos real
 
 PRINT '   ✓ 2 recommendation rules';
 
+-- =============================================
+-- 18. SOLIDARITY: tipo de entidad, documentos, asociados, politica y consentimientos
+-- Requiere Updates/001_solidarity_core.sql (o el DDL completo actualizado)
+-- =============================================
+PRINT '18. Insertando datos de Solidarity...';
+
+IF OBJECT_ID(N'[solidarity].[Associates]', N'U') IS NULL
+    PRINT '  - Omitido: ejecute primero Updates/001_solidarity_core.sql';
+ELSE
+BEGIN
+    DECLARE @SolOrg UNIQUEIDENTIFIER = '11111111-1111-1111-1111-111111111111';
+    DECLARE @SolAdmin UNIQUEIDENTIFIER = '11111111-0000-0000-0000-000000000001';
+    DECLARE @SolMaria UNIQUEIDENTIFIER = '11111111-0000-0000-0000-000000000002';
+    DECLARE @SolJuan UNIQUEIDENTIFIER = '11111111-0000-0000-0000-000000000003';
+    DECLARE @SolAna UNIQUEIDENTIFIER = '11111111-0000-0000-0000-000000000004';
+    DECLARE @SolPolicy UNIQUEIDENTIFIER = '11111111-5000-0000-0000-000000000001';
+
+    -- Tipo de entidad (1 = Cooperativa de trabajo asociado) y documentos (1 = CC)
+    EXEC(N'UPDATE iam.Organizations SET EntityType = 1 WHERE Id = ''11111111-1111-1111-1111-111111111111'' AND EntityType IS NULL');
+    EXEC(N'UPDATE iam.Users SET DocumentType = 1, DocumentNumber = ''79000001'' WHERE Id = ''11111111-0000-0000-0000-000000000001'' AND DocumentNumber IS NULL');
+    EXEC(N'UPDATE iam.Users SET DocumentType = 1, DocumentNumber = ''52000002'' WHERE Id = ''11111111-0000-0000-0000-000000000002'' AND DocumentNumber IS NULL');
+    EXEC(N'UPDATE iam.Users SET DocumentType = 1, DocumentNumber = ''1010000003'' WHERE Id = ''11111111-0000-0000-0000-000000000003'' AND DocumentNumber IS NULL');
+    EXEC(N'UPDATE iam.Users SET DocumentType = 1, DocumentNumber = ''1020000004'' WHERE Id = ''11111111-0000-0000-0000-000000000004'' AND DocumentNumber IS NULL');
+
+    -- Asociados: Maria (Aspirante), Juan (Activo), Ana (Activa, reingresada: 2 periodos)
+    IF NOT EXISTS (SELECT 1 FROM solidarity.Associates WHERE UserId = @SolMaria)
+        INSERT INTO solidarity.Associates (UserId, OrganizationId, Status, CreatedByUserId) VALUES (@SolMaria, @SolOrg, 1, @SolAdmin);
+    IF NOT EXISTS (SELECT 1 FROM solidarity.Associates WHERE UserId = @SolJuan)
+        INSERT INTO solidarity.Associates (UserId, OrganizationId, Status, CreatedByUserId) VALUES (@SolJuan, @SolOrg, 2, @SolAdmin);
+    IF NOT EXISTS (SELECT 1 FROM solidarity.Associates WHERE UserId = @SolAna)
+        INSERT INTO solidarity.Associates (UserId, OrganizationId, Status, CreatedByUserId) VALUES (@SolAna, @SolOrg, 2, @SolAdmin);
+
+    IF NOT EXISTS (SELECT 1 FROM solidarity.MembershipPeriods WHERE Id = '11111111-6000-0000-0000-000000000001')
+        INSERT INTO solidarity.MembershipPeriods (Id, OrganizationId, UserId, ApplicationDate, AdmissionDate, WithdrawalDate, WithdrawalReason, CreatedByUserId)
+        VALUES ('11111111-6000-0000-0000-000000000001', @SolOrg, @SolMaria, CAST(DATEADD(DAY, -10, SYSUTCDATETIME()) AS date), NULL, NULL, NULL, @SolAdmin);
+    IF NOT EXISTS (SELECT 1 FROM solidarity.MembershipPeriods WHERE Id = '11111111-6000-0000-0000-000000000002')
+        INSERT INTO solidarity.MembershipPeriods (Id, OrganizationId, UserId, ApplicationDate, AdmissionDate, WithdrawalDate, WithdrawalReason, CreatedByUserId)
+        VALUES ('11111111-6000-0000-0000-000000000002', @SolOrg, @SolJuan, '2025-06-01', '2025-06-15', NULL, NULL, @SolAdmin);
+    IF NOT EXISTS (SELECT 1 FROM solidarity.MembershipPeriods WHERE Id = '11111111-6000-0000-0000-000000000003')
+        INSERT INTO solidarity.MembershipPeriods (Id, OrganizationId, UserId, ApplicationDate, AdmissionDate, WithdrawalDate, WithdrawalReason, CreatedByUserId)
+        VALUES ('11111111-6000-0000-0000-000000000003', @SolOrg, @SolAna, '2025-01-10', '2025-01-15', '2025-03-01', 'Retiro voluntario', @SolAdmin);
+    IF NOT EXISTS (SELECT 1 FROM solidarity.MembershipPeriods WHERE Id = '11111111-6000-0000-0000-000000000004')
+        INSERT INTO solidarity.MembershipPeriods (Id, OrganizationId, UserId, ApplicationDate, AdmissionDate, WithdrawalDate, WithdrawalReason, CreatedByUserId)
+        VALUES ('11111111-6000-0000-0000-000000000004', @SolOrg, @SolAna, '2026-01-05', '2026-01-20', NULL, NULL, @SolAdmin);
+
+    -- Politica de datos v1 y consentimientos vigentes
+    IF NOT EXISTS (SELECT 1 FROM solidarity.DataPolicyVersions WHERE Id = @SolPolicy)
+        INSERT INTO solidarity.DataPolicyVersions (Id, OrganizationId, Version, Purpose, [Text], EffectiveFrom, CreatedByUserId)
+        VALUES (@SolPolicy, @SolOrg, 'v1', N'Gestion de asociados y cumplimiento de obligaciones de la cooperativa',
+                N'Autorizo el tratamiento de mis datos personales conforme a la Ley 1581 de 2012 para la gestion de mi vinculacion como asociado.',
+                '2025-01-01', @SolAdmin);
+
+    IF NOT EXISTS (SELECT 1 FROM solidarity.DataConsents WHERE Id = '11111111-7000-0000-0000-000000000001')
+        INSERT INTO solidarity.DataConsents (Id, OrganizationId, UserId, PolicyVersionId, GrantedByUserId, CreatedByUserId)
+        VALUES ('11111111-7000-0000-0000-000000000001', @SolOrg, @SolMaria, @SolPolicy, @SolAdmin, @SolAdmin);
+    IF NOT EXISTS (SELECT 1 FROM solidarity.DataConsents WHERE Id = '11111111-7000-0000-0000-000000000002')
+        INSERT INTO solidarity.DataConsents (Id, OrganizationId, UserId, PolicyVersionId, GrantedByUserId, CreatedByUserId)
+        VALUES ('11111111-7000-0000-0000-000000000002', @SolOrg, @SolJuan, @SolPolicy, @SolAdmin, @SolAdmin);
+    IF NOT EXISTS (SELECT 1 FROM solidarity.DataConsents WHERE Id = '11111111-7000-0000-0000-000000000003')
+        INSERT INTO solidarity.DataConsents (Id, OrganizationId, UserId, PolicyVersionId, GrantedByUserId, CreatedByUserId)
+        VALUES ('11111111-7000-0000-0000-000000000003', @SolOrg, @SolAna, @SolPolicy, @SolAdmin, @SolAdmin);
+
+    PRINT '   ✓ Solidarity: tipo de entidad, 4 documentos, 3 asociados (1 reingresada), politica v1, 3 consentimientos';
+END
+
 PRINT '';
 PRINT '==========================================';
 PRINT 'SEEDING COMPLETADO';

@@ -27,6 +27,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'iam')       EXEC('CREATE 
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'talent')    EXEC('CREATE SCHEMA talent');
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'projects')  EXEC('CREATE SCHEMA projects');
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'reporting') EXEC('CREATE SCHEMA reporting');
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'solidarity') EXEC('CREATE SCHEMA solidarity');
 
 
 PRINT '==========================================';
@@ -277,6 +278,7 @@ CREATE TABLE iam.Organizations (
     Name              nvarchar(160)     NOT NULL,
     LegalName         nvarchar(200)     NULL,
     Nit               nvarchar(30)      NULL,
+    EntityType        tinyint           NULL, -- 1 CTA, 2 SavingsCredit, 3 Multiactive, 4 Mutual, 5 EmployeeFund, 6 Other
     IsActive          bit               NOT NULL CONSTRAINT DF_Organizations_IsActive DEFAULT (1),
 
     CreatedAt         datetime2(3)      NOT NULL CONSTRAINT DF_Organizations_CreatedAt DEFAULT (sysutcdatetime()),
@@ -287,7 +289,8 @@ CREATE TABLE iam.Organizations (
     DeletedAt         datetime2(3)      NULL,
     DeletedByUserId   uniqueidentifier  NULL,
 
-    CONSTRAINT UQ_Organizations_Nit UNIQUE (Nit)
+    CONSTRAINT UQ_Organizations_Nit UNIQUE (Nit),
+    CONSTRAINT CK_Organizations_EntityType CHECK (EntityType IS NULL OR EntityType BETWEEN 1 AND 6)
 );
 
 
@@ -305,6 +308,10 @@ CREATE TABLE iam.Users (
     IsActive          bit              NOT NULL CONSTRAINT DF_Users_IsActive DEFAULT (1),
     LastLoginAt       datetime2(3)     NULL,
 
+    DocumentType      tinyint          NULL, -- 1 CC, 2 CE, 3 TI, 4 PA, 5 NIT, 6 PEP
+    DocumentNumber    nvarchar(20)     NULL,
+    IsEmployee        bit              NOT NULL CONSTRAINT DF_Users_IsEmployee DEFAULT (1),
+
     CreatedAt         datetime2(3)     NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT (sysutcdatetime()),
     CreatedByUserId   uniqueidentifier NULL,
     UpdatedAt         datetime2(3)     NULL,
@@ -314,12 +321,18 @@ CREATE TABLE iam.Users (
     DeletedByUserId   uniqueidentifier NULL,
 
     CONSTRAINT FK_Users_Organizations
-        FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
+        FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),
+    CONSTRAINT CK_Users_DocumentType
+        CHECK (DocumentType IS NULL OR DocumentType BETWEEN 1 AND 6)
 );
 
 CREATE UNIQUE INDEX UX_Users_Org_Email
 ON iam.Users(OrganizationId, Email)
 WHERE IsDeleted = 0;
+
+CREATE UNIQUE INDEX UX_Users_Org_Document
+ON iam.Users(OrganizationId, DocumentType, DocumentNumber)
+WHERE DocumentNumber IS NOT NULL AND IsDeleted = 0;
 
 CREATE INDEX IX_Users_Org_IsActive
 ON iam.Users(OrganizationId, IsActive)
@@ -914,9 +927,127 @@ PRINT '';
 PRINT '==========================================';
 PRINT '6) Tablas Reporting/Agent creadas';
 PRINT '==========================================';
+
+/* ==========================================================
+   7) SOLIDARITY (Asociados, Habeas Data) - ver Updates/001
+   ========================================================== */
+-- ---------- solidarity.Associates ----------
+IF OBJECT_ID('solidarity.Associates', 'U') IS NULL
+BEGIN
+    CREATE TABLE solidarity.Associates (
+        UserId            uniqueidentifier NOT NULL CONSTRAINT PK_Associates PRIMARY KEY,
+        OrganizationId    uniqueidentifier NOT NULL,
+        Status            tinyint          NOT NULL, -- 1 Applicant, 2 Active, 3 Suspended, 4 Withdrawn
+
+        CreatedAt         datetime2(3)     NOT NULL CONSTRAINT DF_Associates_CreatedAt DEFAULT (sysutcdatetime()),
+        CreatedByUserId   uniqueidentifier NULL,
+        UpdatedAt         datetime2(3)     NULL,
+        UpdatedByUserId   uniqueidentifier NULL,
+        IsDeleted         bit              NOT NULL CONSTRAINT DF_Associates_IsDeleted DEFAULT (0),
+        DeletedAt         datetime2(3)     NULL,
+        DeletedByUserId   uniqueidentifier NULL,
+
+        CONSTRAINT FK_Associates_Users FOREIGN KEY (UserId) REFERENCES iam.Users(Id),
+        CONSTRAINT FK_Associates_Organizations FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),
+        CONSTRAINT CK_Associates_Status CHECK (Status BETWEEN 1 AND 4)
+    );
+END
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Associates_Org_Status' AND object_id = OBJECT_ID('solidarity.Associates'))
+    CREATE INDEX IX_Associates_Org_Status ON solidarity.Associates(OrganizationId, Status);
+
+-- ---------- solidarity.MembershipPeriods ----------
+IF OBJECT_ID('solidarity.MembershipPeriods', 'U') IS NULL
+BEGIN
+    CREATE TABLE solidarity.MembershipPeriods (
+        Id                uniqueidentifier NOT NULL CONSTRAINT PK_MembershipPeriods PRIMARY KEY,
+        OrganizationId    uniqueidentifier NOT NULL,
+        UserId            uniqueidentifier NOT NULL,
+        ApplicationDate   date             NOT NULL,
+        AdmissionDate     date             NULL,
+        WithdrawalDate    date             NULL,
+        WithdrawalReason  nvarchar(400)    NULL,
+
+        CreatedAt         datetime2(3)     NOT NULL CONSTRAINT DF_MembershipPeriods_CreatedAt DEFAULT (sysutcdatetime()),
+        CreatedByUserId   uniqueidentifier NULL,
+        UpdatedAt         datetime2(3)     NULL,
+        UpdatedByUserId   uniqueidentifier NULL,
+        IsDeleted         bit              NOT NULL CONSTRAINT DF_MembershipPeriods_IsDeleted DEFAULT (0),
+        DeletedAt         datetime2(3)     NULL,
+        DeletedByUserId   uniqueidentifier NULL,
+
+        CONSTRAINT FK_MembershipPeriods_Associates FOREIGN KEY (UserId) REFERENCES solidarity.Associates(UserId),
+        CONSTRAINT FK_MembershipPeriods_Organizations FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),
+        CONSTRAINT CK_MembershipPeriods_Dates
+            CHECK (WithdrawalDate IS NULL OR WithdrawalDate >= ISNULL(AdmissionDate, ApplicationDate))
+    );
+END
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_MembershipPeriods_Org_User_Open' AND object_id = OBJECT_ID('solidarity.MembershipPeriods'))
+    EXEC('CREATE UNIQUE INDEX UX_MembershipPeriods_Org_User_Open
+          ON solidarity.MembershipPeriods(OrganizationId, UserId)
+          WHERE WithdrawalDate IS NULL AND IsDeleted = 0');
+
+-- ---------- solidarity.DataPolicyVersions ----------
+IF OBJECT_ID('solidarity.DataPolicyVersions', 'U') IS NULL
+BEGIN
+    CREATE TABLE solidarity.DataPolicyVersions (
+        Id                uniqueidentifier NOT NULL CONSTRAINT PK_DataPolicyVersions PRIMARY KEY,
+        OrganizationId    uniqueidentifier NOT NULL,
+        Version           nvarchar(20)     NOT NULL,
+        Purpose           nvarchar(300)    NOT NULL,
+        [Text]            nvarchar(max)    NOT NULL,
+        EffectiveFrom     date             NOT NULL,
+
+        CreatedAt         datetime2(3)     NOT NULL CONSTRAINT DF_DataPolicyVersions_CreatedAt DEFAULT (sysutcdatetime()),
+        CreatedByUserId   uniqueidentifier NULL,
+        UpdatedAt         datetime2(3)     NULL,
+        UpdatedByUserId   uniqueidentifier NULL,
+        IsDeleted         bit              NOT NULL CONSTRAINT DF_DataPolicyVersions_IsDeleted DEFAULT (0),
+        DeletedAt         datetime2(3)     NULL,
+        DeletedByUserId   uniqueidentifier NULL,
+
+        CONSTRAINT FK_DataPolicyVersions_Organizations FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id)
+    );
+END
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_DataPolicyVersions_Org_Version' AND object_id = OBJECT_ID('solidarity.DataPolicyVersions'))
+    EXEC('CREATE UNIQUE INDEX UX_DataPolicyVersions_Org_Version
+          ON solidarity.DataPolicyVersions(OrganizationId, Version)
+          WHERE IsDeleted = 0');
+
+-- ---------- solidarity.DataConsents (append-only: never deleted) ----------
+IF OBJECT_ID('solidarity.DataConsents', 'U') IS NULL
+BEGIN
+    CREATE TABLE solidarity.DataConsents (
+        Id                uniqueidentifier NOT NULL CONSTRAINT PK_DataConsents PRIMARY KEY,
+        OrganizationId    uniqueidentifier NOT NULL,
+        UserId            uniqueidentifier NOT NULL,
+        PolicyVersionId   uniqueidentifier NOT NULL,
+        GrantedAt         datetime2(3)     NOT NULL CONSTRAINT DF_DataConsents_GrantedAt DEFAULT (sysutcdatetime()),
+        GrantedByUserId   uniqueidentifier NOT NULL,
+        RevokedAt         datetime2(3)     NULL,
+        RevokedByUserId   uniqueidentifier NULL,
+        RevocationReason  nvarchar(400)    NULL,
+
+        CreatedAt         datetime2(3)     NOT NULL CONSTRAINT DF_DataConsents_CreatedAt DEFAULT (sysutcdatetime()),
+        CreatedByUserId   uniqueidentifier NULL,
+
+        CONSTRAINT FK_DataConsents_Users FOREIGN KEY (UserId) REFERENCES iam.Users(Id),
+        CONSTRAINT FK_DataConsents_Organizations FOREIGN KEY (OrganizationId) REFERENCES iam.Organizations(Id),
+        CONSTRAINT FK_DataConsents_PolicyVersions FOREIGN KEY (PolicyVersionId) REFERENCES solidarity.DataPolicyVersions(Id),
+        CONSTRAINT CK_DataConsents_Revocation
+            CHECK ((RevokedAt IS NULL AND RevocationReason IS NULL) OR (RevokedAt IS NOT NULL AND RevocationReason IS NOT NULL))
+    );
+END
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_DataConsents_Org_User_Policy_Active' AND object_id = OBJECT_ID('solidarity.DataConsents'))
+    EXEC('CREATE UNIQUE INDEX UX_DataConsents_Org_User_Policy_Active
+          ON solidarity.DataConsents(OrganizationId, UserId, PolicyVersionId)
+          WHERE RevokedAt IS NULL');
+
+PRINT '==========================================';
+PRINT '7) Tablas Solidarity creadas';
+PRINT '==========================================';
 PRINT '';
 PRINT '══════════════════════════════════════════';
 PRINT ' DevManager DDL completo ejecutado OK';
-PRINT ' Schemas: config, iam, talent, projects, reporting';
-PRINT ' Total tablas: 25';
+PRINT ' Schemas: config, iam, talent, projects, reporting, solidarity';
+PRINT ' Total tablas: 29';
 PRINT '══════════════════════════════════════════';
