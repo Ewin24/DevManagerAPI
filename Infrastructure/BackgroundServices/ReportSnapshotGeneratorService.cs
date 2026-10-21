@@ -1,12 +1,17 @@
 using Application.Interfaces;
+using Infrastructure.Data;
+using Infrastructure.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Infrastructure.BackgroundServices;
 
 /// <summary>
-/// Servicio en segundo plano para generar snapshots predictivos de reporting
+/// Servicio en segundo plano que guarda un snapshot diario de reportes por organización
+/// en reporting.ReportSnapshots (uno por organización y día).
 /// </summary>
 public class ReportSnapshotGeneratorService : BackgroundService
 {
@@ -49,24 +54,57 @@ public class ReportSnapshotGeneratorService : BackgroundService
     private async Task GenerateSnapshotsAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var geminiService = scope.ServiceProvider.GetRequiredService<IGeminiService>();
+        var context = scope.ServiceProvider.GetRequiredService<DevManagerDbContext>();
+        var reportsService = scope.ServiceProvider.GetRequiredService<IReportsService>();
 
-        // TODO: Implementar cuando los servicios estén completos
-        // var profileService = scope.ServiceProvider.GetRequiredService<IProfileService>();
-        // var projectService = scope.ServiceProvider.GetRequiredService<IProjectService>();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        _logger.LogInformation("Generando snapshots de reporting...");
+        var organizationIds = await context.Organizations
+            .AsNoTracking()
+            .Where(o => o.IsActive && !o.IsDeleted)
+            .Select(o => o.Id)
+            .ToListAsync(cancellationToken);
 
-        // TODO: Implementar lógica de generación de snapshots
-        // 1. Obtener todas las organizaciones activas
-        // 2. Para cada organización:
-        //    - Analizar métricas de skills
-        //    - Analizar utilización de talento
-        //    - Identificar brechas de capacitación
-        //    - Generar predicciones con Gemini
-        // 3. Guardar en reporting.ReportSnapshots
+        _logger.LogInformation("Generando snapshots de reporting para {Count} organizaciones...", organizationIds.Count);
 
-        await Task.CompletedTask;
+        foreach (var organizationId in organizationIds)
+        {
+            // Índice único (OrganizationId, SnapshotDate): un snapshot por día
+            var exists = await context.ReportSnapshots
+                .AnyAsync(s => s.OrganizationId == organizationId && s.SnapshotDate == today, cancellationToken);
+
+            if (exists)
+                continue;
+
+            try
+            {
+                // Solo métricas calculadas localmente (sin llamadas a Gemini)
+                var payload = new
+                {
+                    skillsDistribution = await reportsService.GetSkillsDistributionAsync(organizationId),
+                    projectMetrics = await reportsService.GetProjectMetricsAsync(organizationId),
+                    employeeUtilization = await reportsService.GetEmployeeUtilizationAsync(organizationId),
+                    departmentMetrics = await reportsService.GetDepartmentMetricsAsync(organizationId)
+                };
+
+                context.ReportSnapshots.Add(new ReportSnapshot
+                {
+                    Id = Guid.NewGuid(),
+                    OrganizationId = organizationId,
+                    SnapshotDate = today,
+                    JsonPayload = JsonSerializer.Serialize(payload),
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "Error generando snapshot para organización {OrganizationId}", organizationId);
+                context.ChangeTracker.Clear();
+            }
+        }
+
         _logger.LogInformation("Snapshots generados exitosamente");
     }
 }

@@ -4,6 +4,7 @@ using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.DTOs.RolesPermissions;
 using Application.Interfaces;
+using API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -76,6 +77,7 @@ public class PermissionsController : ControllerBase
     /// <summary>
     /// Crea un nuevo permiso en el sistema
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<PermissionResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -96,6 +98,7 @@ public class PermissionsController : ControllerBase
     /// <summary>
     /// Actualiza un permiso existente
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(ApiResponse<PermissionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -115,6 +118,7 @@ public class PermissionsController : ControllerBase
     /// <summary>
     /// Elimina un permiso (soft delete)
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -141,6 +145,7 @@ public class PermissionsController : ControllerBase
     /// directamente a un usuario, independiente de sus roles.
     /// Los permisos denegados (IsGranted=false) tienen prioridad sobre los permisos del rol.
     /// </remarks>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost("assign-to-user")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -161,6 +166,7 @@ public class PermissionsController : ControllerBase
     /// <summary>
     /// Revoca un permiso directo de un usuario
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpDelete("revoke-from-user/{userId}/{permissionId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RevokeFromUser(Guid userId, Guid permissionId)

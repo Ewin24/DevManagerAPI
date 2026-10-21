@@ -92,6 +92,21 @@ public class ProjectRepository : Domain.Interfaces.Repositories.IProjectReposito
         return true;
     }
 
+    public async Task<bool> SoftDeleteAsync(Guid id, Guid organizationId)
+    {
+        var efProject = await _context.Projects
+            .FirstOrDefaultAsync(p => p.Id == id && p.OrganizationId == organizationId && !p.IsDeleted);
+
+        if (efProject == null)
+            return false;
+
+        efProject.IsDeleted = true;
+        efProject.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<ProjectComplexity?> GetComplexityAsync(Guid projectId, Guid organizationId)
     {
         var project = await _context.Projects

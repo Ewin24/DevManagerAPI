@@ -128,6 +128,57 @@ public class AssignmentRepository : Domain.Interfaces.Repositories.IAssignmentRe
         return efAssignments.Select(MapToDomain);
     }
 
+    public async Task<IEnumerable<DomainEntities.ProjectAssignment>> GetAllAsync(
+        Guid organizationId,
+        Guid? projectId = null,
+        Guid? userId = null)
+    {
+        var query = _context.ProjectAssignments
+            .AsNoTracking()
+            .Include(a => a.Project)
+            .Include(a => a.User)
+            .Include(a => a.ProjectRole)
+            .Where(a => a.OrganizationId == organizationId && !a.IsDeleted);
+
+        if (projectId.HasValue)
+            query = query.Where(a => a.ProjectId == projectId.Value);
+
+        if (userId.HasValue)
+            query = query.Where(a => a.UserId == userId.Value);
+
+        var efAssignments = await query
+            .OrderByDescending(a => a.AssignedAt)
+            .ToListAsync();
+
+        return efAssignments.Select(MapToDomain);
+    }
+
+    public async Task<bool> UpdateProjectRoleAsync(Guid id, Guid organizationId, Guid? projectRoleId)
+    {
+        var efAssignment = await _context.ProjectAssignments
+            .FirstOrDefaultAsync(a => a.Id == id && a.OrganizationId == organizationId && !a.IsDeleted);
+
+        if (efAssignment == null)
+            return false;
+
+        efAssignment.ProjectRoleId = projectRoleId;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> SoftDeleteAsync(Guid id, Guid organizationId)
+    {
+        var efAssignment = await _context.ProjectAssignments
+            .FirstOrDefaultAsync(a => a.Id == id && a.OrganizationId == organizationId && !a.IsDeleted);
+
+        if (efAssignment == null)
+            return false;
+
+        efAssignment.IsDeleted = true;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     private static DomainEntities.ProjectAssignment MapToDomain(EfEntities.ProjectAssignment ef)
     {
         return new DomainEntities.ProjectAssignment
@@ -140,7 +191,11 @@ public class AssignmentRepository : Domain.Interfaces.Repositories.IAssignmentRe
             Status = (AssignmentStatus)ef.Status,
             AssignedAt = ef.AssignedAt,
             EndedAt = ef.EndedAt,
-            OrganizationId = ef.OrganizationId
+            OrganizationId = ef.OrganizationId,
+            // Navegaciones (solo si fueron cargadas con Include)
+            Project = ef.Project == null ? null : new DomainEntities.Project { Id = ef.Project.Id, Name = ef.Project.Name },
+            User = ef.User == null ? null : new Domain.Entities.IAM.User { Id = ef.User.Id, FirstName = ef.User.FirstName, LastName = ef.User.LastName, Email = ef.User.Email },
+            ProjectRole = ef.ProjectRole == null ? null : new DomainEntities.ProjectRole { Id = ef.ProjectRole.Id, Name = ef.ProjectRole.Name }
         };
     }
 }

@@ -4,6 +4,7 @@ using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.DTOs.Assignments;
 using Application.Interfaces;
+using API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -81,6 +82,7 @@ public class AssignmentsController : ControllerBase
     /// <response code="404">Proyecto o Usuario no encontrado</response>
     /// <response code="401">No autenticado</response>
     /// <response code="403">Sin permisos (requiere rol Manager o Admin)</response>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -110,5 +112,71 @@ public class AssignmentsController : ControllerBase
         {
             return BadRequest();
         }
+    }
+
+    /// <summary>
+    /// Lista las asignaciones de la organización
+    /// </summary>
+    /// <remarks>
+    ///     GET /api/assignments?projectId={guid}&amp;userId={guid}
+    ///
+    /// Ambos filtros son opcionales y combinables.
+    /// </remarks>
+    /// <param name="projectId">Filtrar por proyecto (opcional)</param>
+    /// <param name="userId">Filtrar por usuario (opcional)</param>
+    /// <response code="200">Lista de asignaciones</response>
+    [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<AssignmentResponse>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll([FromQuery] Guid? projectId = null, [FromQuery] Guid? userId = null)
+    {
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+
+        var assignments = await _assignmentService.GetAssignmentsAsync(organizationId, projectId, userId);
+
+        return Ok(ApiResponse<IEnumerable<AssignmentResponse>>.SuccessResponse(assignments, "Asignaciones obtenidas exitosamente"));
+    }
+
+    /// <summary>
+    /// Actualiza el rol de proyecto de una asignación
+    /// </summary>
+    /// <remarks>
+    ///     PUT /api/assignments/{id}
+    ///     {
+    ///         "projectRoleId": "ffffffff-0000-0000-0000-000000000001"
+    ///     }
+    /// </remarks>
+    /// <response code="200">Asignación actualizada</response>
+    /// <response code="404">Asignación no encontrada</response>
+    /// <response code="403">Sin permisos (requiere rol Admin)</response>
+    [Authorize(Roles = AppRoles.Admin)]
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(ApiResponse<AssignmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAssignmentRequest request)
+    {
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+
+        var assignment = await _assignmentService.UpdateAssignmentAsync(id, request, organizationId);
+
+        return Ok(ApiResponse<AssignmentResponse>.SuccessResponse(assignment, "Asignación actualizada exitosamente"));
+    }
+
+    /// <summary>
+    /// Elimina una asignación (soft delete)
+    /// </summary>
+    /// <response code="204">Asignación eliminada</response>
+    /// <response code="404">Asignación no encontrada</response>
+    /// <response code="403">Sin permisos (requiere rol Admin)</response>
+    [Authorize(Roles = AppRoles.Admin)]
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+
+        await _assignmentService.DeleteAssignmentAsync(id, organizationId);
+
+        return NoContent();
     }
 }

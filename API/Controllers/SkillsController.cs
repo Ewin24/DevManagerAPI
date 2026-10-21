@@ -4,6 +4,7 @@ using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.DTOs.Skills;
 using Application.Interfaces;
+using API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -121,6 +122,7 @@ public class SkillsController : ControllerBase
     /// <response code="400">Datos inválidos o habilidad duplicada</response>
     /// <response code="401">No autenticado</response>
     /// <response code="403">Sin permisos (requiere rol Admin o Manager)</response>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -147,6 +149,7 @@ public class SkillsController : ControllerBase
     /// <summary>
     /// Actualiza una habilidad existente
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -174,6 +177,7 @@ public class SkillsController : ControllerBase
     /// <summary>
     /// Elimina una habilidad (soft delete)
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpDelete("{id}")]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

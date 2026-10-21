@@ -4,6 +4,7 @@ using Application.Common.Exceptions;
 using Application.Common.Models;
 using Application.DTOs.RolesPermissions;
 using Application.Interfaces;
+using API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -63,6 +64,7 @@ public class RolesController : ControllerBase
     /// <summary>
     /// Crea un nuevo rol en la organización
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<RoleResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -85,6 +87,7 @@ public class RolesController : ControllerBase
     /// <summary>
     /// Actualiza un rol existente
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(ApiResponse<RoleResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -110,6 +113,7 @@ public class RolesController : ControllerBase
     /// <summary>
     /// Elimina un rol (soft delete)
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -157,6 +161,7 @@ public class RolesController : ControllerBase
     /// <summary>
     /// Asigna permisos a un rol (reemplaza los permisos actuales)
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("{id}/permissions")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -177,6 +182,7 @@ public class RolesController : ControllerBase
     /// <summary>
     /// Revoca un permiso específico de un rol
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpDelete("{id}/permissions/{permissionId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -212,6 +218,7 @@ public class RolesController : ControllerBase
     /// <summary>
     /// Asigna un rol a un usuario
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost("assign-to-user")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -232,6 +239,7 @@ public class RolesController : ControllerBase
     /// <summary>
     /// Revoca un rol de un usuario
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost("revoke-from-user")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> RevokeRoleFromUser([FromBody] RevokeRoleFromUserRequest request)

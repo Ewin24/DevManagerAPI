@@ -1215,10 +1215,34 @@ Sé concreto, menciona nombres reales. No inventes datos.";
         if (action.Status != "PENDING_APPROVAL")
             throw new InvalidOperationException($"Acción {actionId} no está pendiente de aprobación");
 
+        ExecuteApprovedAction(action);
+
         await _agentRepository.UpdateActionStatusAsync(
             actionId, "APPROVED", approvedByUserId);
 
         _logger.LogInformation("Acción {ActionId} aprobada exitosamente", actionId);
+    }
+
+    /// <summary>
+    /// Despachador HITL: ejecuta la acción aprobada según su ActionType.
+    /// Solo GENERAL_QUERY llega a PENDING_APPROVAL hoy (SKILL_VALIDATION y PROJECT_MATCHING
+    /// se registran como SUCCESS/FAILED). Agregar un case aquí cuando el agente emita acciones ejecutables.
+    /// </summary>
+    private void ExecuteApprovedAction(Domain.Entities.Agent.AgentAction action)
+    {
+        switch (action.ActionType)
+        {
+            case "GENERAL_QUERY":
+                // Respuesta informativa: la aprobación solo valida el contenido, no hay efecto que ejecutar
+                _logger.LogInformation("Acción {ActionId} ({ActionType}) aprobada: sin efecto ejecutable",
+                    action.Id, action.ActionType);
+                break;
+
+            default:
+                _logger.LogWarning("Sin ejecutor para ActionType {ActionType} (acción {ActionId}); solo se registra la aprobación",
+                    action.ActionType, action.Id);
+                break;
+        }
     }
 
     public async Task RejectAgentActionAsync(

@@ -132,6 +132,16 @@ public class ProjectService : IProjectService
         };
     }
 
+    public async Task DeleteProjectAsync(Guid id, Guid organizationId)
+    {
+        var deleted = await _projectRepository.SoftDeleteAsync(id, organizationId);
+
+        if (!deleted)
+        {
+            throw new NotFoundException("Proyecto", id);
+        }
+    }
+
     public async Task<Guid> AddSkillRequirementAsync(Guid projectId, Guid organizationId, AddSkillRequirementRequest request)
     {
         // Verificar que el proyecto existe

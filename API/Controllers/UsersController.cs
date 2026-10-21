@@ -3,6 +3,7 @@ namespace API.Controllers;
 using Application.Common.Models;
 using Application.DTOs.Users;
 using Application.Interfaces;
+using API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -172,6 +173,7 @@ public class UsersController : ControllerBase
     /// <response code="400">Datos inválidos o email duplicado</response>
     /// <response code="401">No autenticado</response>
     /// <response code="403">Sin permisos (requiere rol Admin o Manager)</response>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<UserResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
@@ -237,6 +239,7 @@ public class UsersController : ControllerBase
     /// <response code="404">Usuario no encontrado</response>
     /// <response code="400">Datos inválidos</response>
     /// <response code="401">No autenticado</response>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(ApiResponse<UserResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
@@ -283,6 +286,7 @@ public class UsersController : ControllerBase
     /// <response code="404">Usuario no encontrado</response>
     /// <response code="401">No autenticado</response>
     /// <response code="403">Sin permisos (requiere rol Admin o Manager)</response>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]

@@ -3,6 +3,7 @@ namespace API.Controllers;
 using Application.Common.Models;
 using Application.DTOs.Reports;
 using Application.Interfaces;
+using API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = AppRoles.Admin)]
 public class ReportsController : ControllerBase
 {
     private readonly IReportsService _reportsService;

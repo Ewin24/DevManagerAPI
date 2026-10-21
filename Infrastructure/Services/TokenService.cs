@@ -29,7 +29,7 @@ public class TokenService : ITokenService
         _expirationHours = int.Parse(configuration["JwtSettings:ExpirationHours"] ?? "8");
     }
 
-    public string GenerateToken(User user)
+    public string GenerateToken(User user, IEnumerable<string>? roles = null)
     {
         var claims = new List<Claim>
         {
@@ -39,6 +39,10 @@ public class TokenService : ITokenService
             new Claim("OrganizationId", user.OrganizationId.ToString()), // Crítico para multi-tenant
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        // Roles del usuario (habilitan [Authorize(Roles = ...)])
+        if (roles != null)
+            claims.AddRange(roles.Distinct().Select(r => new Claim(ClaimTypes.Role, r)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);

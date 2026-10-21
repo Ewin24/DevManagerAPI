@@ -16,17 +16,20 @@ public class AuthService : IAuthService
 {
     private readonly IAuthRepository _authRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IRolePermissionRepository _rolePermissionRepository;
     private readonly ITokenService _tokenService;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         IAuthRepository authRepository,
         IUserRepository userRepository,
+        IRolePermissionRepository rolePermissionRepository,
         ITokenService tokenService,
         ILogger<AuthService> logger)
     {
         _authRepository = authRepository;
         _userRepository = userRepository;
+        _rolePermissionRepository = rolePermissionRepository;
         _tokenService = tokenService;
         _logger = logger;
     }
@@ -35,11 +38,20 @@ public class AuthService : IAuthService
     {
         _logger.LogInformation("Intento de login para email: {Email}", request.Email);
 
-        // Nota: En un flujo real, necesitaríamos obtener OrganizationId del email o subdomain
-        // Por ahora, usamos un OrganizationId fijo para desarrollo
-        var tempOrgId = Guid.Parse("11111111-1111-1111-1111-111111111111"); // TODO: Implementar lógica de resolución de organización
+        // Resolver organización a partir del email (el email es único por organización, no global)
+        var candidates = (await _authRepository.GetUsersByEmailAsync(request.Email)).ToList();
 
-        var user = await _authRepository.GetUserByEmailAsync(request.Email, tempOrgId);
+        if (request.OrganizationId.HasValue)
+        {
+            candidates = candidates.Where(u => u.OrganizationId == request.OrganizationId.Value).ToList();
+        }
+        else if (candidates.Count > 1)
+        {
+            throw new BusinessValidationException(
+                "El email está registrado en varias organizaciones. Debe indicar 'organizationId' en la solicitud de login.");
+        }
+
+        var user = candidates.FirstOrDefault();
 
         if (user == null || !user.IsActive)
         {
@@ -57,8 +69,9 @@ public class AuthService : IAuthService
         // Actualizar último login
         await _userRepository.UpdateLastLoginAsync(user.Id);
 
-        // Generar token
-        var token = _tokenService.GenerateToken(user);
+        // Generar token con los roles del usuario
+        var roles = await _rolePermissionRepository.GetRolesByUserAsync(user.Id, user.OrganizationId);
+        var token = _tokenService.GenerateToken(user, roles.Select(r => r.Name));
 
         return new LoginResponse
         {
@@ -78,7 +91,10 @@ public class AuthService : IAuthService
         _logger.LogInformation("Registrando nueva organización: {OrgName}", request.OrganizationName);
 
         // Validar NIT único si se proporciona
-        // TODO: Agregar validación de NIT único
+        if (!string.IsNullOrWhiteSpace(request.Nit) && await _authRepository.NitExistsAsync(request.Nit))
+        {
+            throw new ConflictException($"Ya existe una organización registrada con el NIT '{request.Nit}'");
+        }
 
         // Crear entidades
         var orgId = Guid.NewGuid();

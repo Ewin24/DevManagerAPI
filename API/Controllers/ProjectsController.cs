@@ -5,6 +5,7 @@ using Application.Common.Models;
 using Application.DTOs.Projects;
 using Application.Interfaces;
 using Domain.Enums;
+using API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -198,6 +199,7 @@ public class ProjectsController : ControllerBase
     /// <response code="400">Datos inválidos o código duplicado</response>
     /// <response code="401">No autenticado</response>
     /// <response code="403">Sin permisos (requiere rol Manager o Admin)</response>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status201Created)]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequest request)
@@ -279,6 +281,7 @@ public class ProjectsController : ControllerBase
     /// <response code="400">Datos inválidos</response>
     /// <response code="401">No autenticado</response>
     /// <response code="403">Sin permisos (requiere rol Manager o Admin)</response>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(ApiResponse<ProjectResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
@@ -289,6 +292,32 @@ public class ProjectsController : ControllerBase
         var project = await _projectService.UpdateProjectAsync(id, request, organizationId);
 
         return Ok(ApiResponse<ProjectResponse>.SuccessResponse(project, "Proyecto actualizado exitosamente"));
+    }
+
+    /// <summary>
+    /// Elimina un proyecto (soft delete)
+    /// </summary>
+    /// <remarks>
+    /// Marca el proyecto como eliminado (IsDeleted = true). Solo afecta proyectos de la organización del token.
+    ///
+    ///     DELETE /api/projects/eeeeeeee-0000-0000-0000-000000000001
+    /// </remarks>
+    /// <param name="id">ID del proyecto a eliminar</param>
+    /// <response code="204">Proyecto eliminado exitosamente (sin contenido)</response>
+    /// <response code="404">Proyecto no encontrado en la organización</response>
+    /// <response code="401">No autenticado</response>
+    /// <response code="403">Sin permisos (requiere rol Admin)</response>
+    [Authorize(Roles = AppRoles.Admin)]
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var organizationId = Guid.Parse(User.FindFirst("OrganizationId")?.Value ?? string.Empty);
+
+        await _projectService.DeleteProjectAsync(id, organizationId);
+
+        return NoContent();
     }
 
     /// <summary>
@@ -335,6 +364,7 @@ public class ProjectsController : ControllerBase
     /// <response code="404">Proyecto no encontrado</response>
     /// <response code="400">Datos inválidos o requisito duplicado</response>
     /// <response code="401">No autenticado</response>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost("{id}/reqs")]
     [ProducesResponseType(typeof(ApiResponse<Guid>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

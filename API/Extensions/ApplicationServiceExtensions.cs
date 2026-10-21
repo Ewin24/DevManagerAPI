@@ -77,7 +77,6 @@ public static class ApplicationServiceExtensions
         if (enableBackgroundServices)
         {
             services.AddHostedService<Infrastructure.BackgroundServices.ReportSnapshotGeneratorService>();
-            services.AddHostedService<Infrastructure.BackgroundServices.RecommendationOptimizerService>();
         }
 
         // Configuración de CORS

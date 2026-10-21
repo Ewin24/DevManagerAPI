@@ -8,7 +8,7 @@ using Domain.Entities.IAM;
 public interface ITokenService
 {
     /// <summary>
-    /// Genera un token JWT para el usuario autenticado
+    /// Genera un token JWT para el usuario autenticado, incluyendo sus roles como ClaimTypes.Role
     /// </summary>
-    string GenerateToken(User user);
+    string GenerateToken(User user, IEnumerable<string>? roles = null);
 }

@@ -14,6 +14,7 @@ public interface IProjectService
     Task<ProjectResponse?> GetProjectByIdAsync(Guid id, Guid organizationId);
     Task<Guid> CreateProjectAsync(CreateProjectRequest request, Guid organizationId);
     Task<ProjectResponse> UpdateProjectAsync(Guid id, UpdateProjectRequest request, Guid organizationId);
+    Task DeleteProjectAsync(Guid id, Guid organizationId);
     Task<Guid> AddSkillRequirementAsync(Guid projectId, Guid organizationId, AddSkillRequirementRequest request);
     Task<IEnumerable<SkillRequirementResponse>> GetSkillRequirementsAsync(Guid projectId, Guid organizationId);
 
@@ -37,4 +38,7 @@ public interface IApplicationService
 public interface IAssignmentService
 {
     Task<Guid> AssignUserToProjectAsync(CreateAssignmentRequest request, Guid organizationId, Guid assignedByUserId);
+    Task<IEnumerable<AssignmentResponse>> GetAssignmentsAsync(Guid organizationId, Guid? projectId = null, Guid? userId = null);
+    Task<AssignmentResponse> UpdateAssignmentAsync(Guid id, UpdateAssignmentRequest request, Guid organizationId);
+    Task DeleteAssignmentAsync(Guid id, Guid organizationId);
 }

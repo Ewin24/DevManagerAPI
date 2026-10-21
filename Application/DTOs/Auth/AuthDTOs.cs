@@ -14,6 +14,11 @@ public class LoginRequest
     [Required(ErrorMessage = "La contraseña es requerida")]
     [MinLength(6, ErrorMessage = "La contraseña debe tener al menos 6 caracteres")]
     public string Password { get; set; } = null!;
+
+    /// <summary>
+    /// Organización (opcional). Requerida solo si el email existe en más de una organización.
+    /// </summary>
+    public Guid? OrganizationId { get; set; }
 }
 
 /// <summary>

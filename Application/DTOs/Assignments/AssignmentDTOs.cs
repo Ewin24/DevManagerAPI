@@ -23,6 +23,17 @@ public class CreateAssignmentRequest
 }
 
 /// <summary>
+/// DTO para actualizar una asignación (campos mutables de CreateAssignmentRequest)
+/// </summary>
+public class UpdateAssignmentRequest
+{
+    /// <summary>
+    /// Rol dentro del proyecto (null = sin rol)
+    /// </summary>
+    public Guid? ProjectRoleId { get; set; }
+}
+
+/// <summary>
 /// DTO de respuesta de asignación
 /// </summary>
 public class AssignmentResponse

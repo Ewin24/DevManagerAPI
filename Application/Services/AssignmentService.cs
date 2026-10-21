@@ -73,4 +73,52 @@ public class AssignmentService : IAssignmentService
 
         return await _assignmentRepository.AssignUserAsync(assignment);
     }
+
+    public async Task<IEnumerable<AssignmentResponse>> GetAssignmentsAsync(
+        Guid organizationId,
+        Guid? projectId = null,
+        Guid? userId = null)
+    {
+        var assignments = await _assignmentRepository.GetAllAsync(organizationId, projectId, userId);
+        return assignments.Select(MapToResponse);
+    }
+
+    public async Task<AssignmentResponse> UpdateAssignmentAsync(
+        Guid id,
+        UpdateAssignmentRequest request,
+        Guid organizationId)
+    {
+        var updated = await _assignmentRepository.UpdateProjectRoleAsync(id, organizationId, request.ProjectRoleId);
+        if (!updated)
+        {
+            throw new NotFoundException("Asignación", id);
+        }
+
+        var assignment = await _assignmentRepository.GetByIdAsync(id, organizationId)
+            ?? throw new NotFoundException("Asignación", id);
+
+        return MapToResponse(assignment);
+    }
+
+    public async Task DeleteAssignmentAsync(Guid id, Guid organizationId)
+    {
+        var deleted = await _assignmentRepository.SoftDeleteAsync(id, organizationId);
+        if (!deleted)
+        {
+            throw new NotFoundException("Asignación", id);
+        }
+    }
+
+    private static AssignmentResponse MapToResponse(ProjectAssignment a) => new()
+    {
+        Id = a.Id,
+        ProjectId = a.ProjectId,
+        ProjectName = a.Project?.Name ?? string.Empty,
+        UserId = a.UserId,
+        UserName = a.User == null ? string.Empty : $"{a.User.FirstName} {a.User.LastName}",
+        RoleName = a.ProjectRole?.Name,
+        Status = a.Status,
+        AssignedAt = a.AssignedAt,
+        EndedAt = a.EndedAt
+    };
 }

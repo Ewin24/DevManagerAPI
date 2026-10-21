@@ -47,6 +47,10 @@ Implementation of three key improvements: Roles module enhancement with `userCou
 - [ ] 4.7 Test `GET /api/reports/employee-utilization` - verify employee allocation status and utilization percentages
 - [ ] 4.8 Test `GET /api/reports/department-metrics` - verify team statistics and experience distribution
 - [ ] 4.9 Verify multi-tenancy: All endpoints filter by OrganizationId from JWT claim
+- [x] 4.10 xUnit project `Tests` added to DevManager.sln (`dotnet test`)
+- [x] 4.11 Test: TokenService emits `ClaimTypes.Role` claims (validated token satisfies `IsInRole`)
+- [x] 4.12 Test: AuthService login tenant resolution (single org; multi-org requires `organizationId`) and unique NIT on register
+- [x] 4.13 Test: project soft delete is tenant-scoped (other org gets 404)
 
 ---
 

@@ -31,15 +31,37 @@ Todos los endpoints (excepto login y registro) requieren un token JWT en el head
 Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9...
 ```
 
+### 🛡️ Endpoints restringidos por rol
+
+El token incluye un claim `role` por cada rol asignado al usuario (`iam.UserRoles`). Los siguientes endpoints exigen rol **`Admin`** o **`Administrator`** (sensible a mayúsculas); otro rol recibe **403 Forbidden**:
+
+| Módulo | Endpoints |
+|--------|-----------|
+| Usuarios | `POST /api/users`, `PUT /api/users/{id}`, `DELETE /api/users/{id}` |
+| Roles | `POST /api/roles`, `PUT /api/roles/{id}`, `DELETE /api/roles/{id}`, `PUT /api/roles/{id}/permissions`, `DELETE /api/roles/{id}/permissions/{permissionId}`, `POST /api/roles/assign-to-user`, `POST /api/roles/revoke-from-user` |
+| Permisos | `POST /api/permissions`, `PUT /api/permissions/{id}`, `DELETE /api/permissions/{id}`, `POST /api/permissions/assign-to-user`, `DELETE /api/permissions/revoke-from-user/{userId}/{permissionId}` |
+| Proyectos | `POST /api/projects`, `PUT /api/projects/{id}`, `DELETE /api/projects/{id}`, `POST /api/projects/{id}/reqs` |
+| Skills (catálogo) | `POST /api/skills`, `PUT /api/skills/{id}`, `DELETE /api/skills/{id}` |
+| Postulaciones | `PUT /api/applications/{id}/review` |
+| Asignaciones | `POST /api/assignments`, `PUT /api/assignments/{id}`, `DELETE /api/assignments/{id}` |
+| Reportes | Todos los `/api/reports/*` |
+
+Los endpoints de autoservicio (`/api/profile/me`, `/api/certifications/me`, `POST /api/projects/{id}/apply`, `/api/employees/skills`) y todos los GET (salvo reportes) solo requieren autenticación.
+
+> Los tokens emitidos antes de este cambio no contienen roles: el usuario debe volver a iniciar sesión.
+
 ### POST `/api/auth/login`
 
-Autentica un usuario y retorna un token JWT válido por 7 días.
+Autentica un usuario y retorna un token JWT (expira según `JwtSettings:ExpirationHours`, por defecto 8 h).
+
+La organización se resuelve a partir del email. `organizationId` es **opcional** y solo es obligatorio si el email está registrado en más de una organización.
 
 **Request:**
 ```json
 {
   "email": "admin@techcorp.com",
-  "password": "Password123!"
+  "password": "Password123!",
+  "organizationId": "11111111-1111-1111-1111-111111111111"
 }
 ```
 
@@ -49,13 +71,13 @@ Autentica un usuario y retorna un token JWT válido por 7 días.
   "success": true,
   "message": "Login exitoso",
   "data": {
-    "token": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9...",
     "userId": "11111111-0000-0000-0000-000000000001",
     "email": "admin@techcorp.com",
-    "fullName": "Admin TechCorp",
+    "firstName": "Admin",
+    "lastName": "TechCorp",
     "organizationId": "11111111-1111-1111-1111-111111111111",
-    "organizationName": "TechCorp",
-    "role": "Admin"
+    "token": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9...",
+    "expiresAt": "2026-01-29T18:00:00Z"
   },
   "timestamp": "2026-01-29T10:00:00Z"
 }
@@ -64,6 +86,7 @@ Autentica un usuario y retorna un token JWT válido por 7 días.
 **Errores:**
 | Código | Descripción |
 |--------|-------------|
+| 400 | `VALIDATION_ERROR`: el email existe en varias organizaciones y no se envió `organizationId` |
 | 401 | Credenciales inválidas |
 
 ---
@@ -102,6 +125,9 @@ Registra una nueva organización con su usuario administrador. Retorna token JWT
 | Código | Descripción |
 |--------|-------------|
 | 400 | Email o nombre de organización duplicado |
+| 409 | `CONFLICT`: ya existe una organización con ese `nit` |
+
+> El usuario administrador creado recibe el rol global `Admin` (si existe en `iam.Roles`).
 
 ---
 
@@ -1004,6 +1030,20 @@ Crea un nuevo proyecto. Requiere rol Manager o Admin.
 
 ---
 
+### DELETE `/api/projects/{id}`
+
+Elimina un proyecto (soft delete: `IsDeleted = true`). Solo afecta proyectos de la organización del token. Requiere rol Admin.
+
+**Response:** `204 No Content`
+
+**Errores:**
+| Código | Descripción |
+|--------|-------------|
+| 403 | Sin rol Admin |
+| 404 | Proyecto no encontrado en la organización (o ya eliminado) |
+
+---
+
 ### POST `/api/projects/{id}/reqs`
 
 Agrega un requisito de habilidad al proyecto.
@@ -1146,17 +1186,15 @@ Revisa una postulación (aprobar/rechazar). Requiere rol Manager o Admin.
 
 ### POST `/api/assignments`
 
-Asigna un usuario a un proyecto. Requiere rol Manager o Admin.
+Asigna un usuario a un proyecto. Requiere rol Admin.
 
 **Request:**
 ```json
 {
   "projectId": "eeeeeeee-0000-0000-0000-000000000001",
   "userId": "11111111-0000-0000-0000-000000000004",
-  "role": "Backend Developer",
-  "hoursPerWeek": 40,
-  "startDate": "2026-02-01T00:00:00Z",
-  "endDate": "2026-08-31T00:00:00Z"
+  "projectRoleId": "ffffffff-0000-0000-0000-000000000001",
+  "applicationId": null
 }
 ```
 
@@ -1174,6 +1212,59 @@ Asigna un usuario a un proyecto. Requiere rol Manager o Admin.
 |----------|-------------|
 | Application | Postulación voluntaria del empleado (bottom-up) |
 | Assignment | Asignación administrativa por manager (top-down) |
+
+---
+
+### GET `/api/assignments?projectId={guid}&userId={guid}`
+
+Lista las asignaciones (no eliminadas) de la organización. Ambos filtros son opcionales y combinables. Solo requiere autenticación.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Asignaciones obtenidas exitosamente",
+  "data": [
+    {
+      "id": "iiiiiiii-0000-0000-0000-000000000001",
+      "projectId": "eeeeeeee-0000-0000-0000-000000000001",
+      "projectName": "Sistema de Gestión Hospitalaria",
+      "userId": "11111111-0000-0000-0000-000000000004",
+      "userName": "Ana Gómez",
+      "roleName": "Tech Lead",
+      "status": 1,
+      "assignedAt": "2026-02-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+`endedAt` y `roleName` se omiten cuando son `null`.
+
+---
+
+### PUT `/api/assignments/{id}`
+
+Actualiza el rol de proyecto de la asignación (único campo mutable de `CreateAssignmentRequest`; `projectId`/`userId` no cambian). Requiere rol Admin.
+
+**Request:**
+```json
+{
+  "projectRoleId": "ffffffff-0000-0000-0000-000000000001"
+}
+```
+
+**Response (200 OK):** `ApiResponse<AssignmentResponse>` (misma forma que un elemento del GET).
+
+**Errores:** `403` sin rol Admin · `404` asignación no encontrada en la organización
+
+---
+
+### DELETE `/api/assignments/{id}`
+
+Elimina una asignación (soft delete). Requiere rol Admin.
+
+**Response:** `204 No Content` · **Errores:** `403` sin rol Admin · `404` no encontrada
 
 ---
 
@@ -1416,7 +1507,7 @@ Matching inteligente de candidatos para un proyecto.
 
 ### POST `/agent/approve/{actionId}`
 
-Aprueba una acción del agente (flujo HITL - Human In The Loop).
+Aprueba una acción del agente (flujo HITL - Human In The Loop). Tras validar que está en `PENDING_APPROVAL`, un despachador ejecuta la acción según su `ActionType` y luego registra la aprobación. Hoy solo `GENERAL_QUERY` llega a `PENDING_APPROVAL` y no tiene efecto ejecutable; tipos sin ejecutor solo registran la aprobación (con log de advertencia).
 
 **Response (200 OK):**
 ```json

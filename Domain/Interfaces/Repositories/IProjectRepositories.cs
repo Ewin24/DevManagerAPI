@@ -29,6 +29,11 @@ public interface IProjectRepository
     Task<bool> UpdateAsync(Project project);
 
     /// <summary>
+    /// Elimina lógicamente un proyecto (IsDeleted = true)
+    /// </summary>
+    Task<bool> SoftDeleteAsync(Guid id, Guid organizationId);
+
+    /// <summary>
     /// Obtiene la complejidad de un proyecto (para lógica del agente)
     /// </summary>
     Task<ProjectComplexity?> GetComplexityAsync(Guid projectId, Guid organizationId);
@@ -114,6 +119,21 @@ public interface IAssignmentRepository
     /// Obtiene asignaciones activas de un proyecto
     /// </summary>
     Task<IEnumerable<ProjectAssignment>> GetByProjectIdAsync(Guid projectId, Guid organizationId);
+
+    /// <summary>
+    /// Lista asignaciones de la organización, filtrando opcionalmente por proyecto y/o usuario
+    /// </summary>
+    Task<IEnumerable<ProjectAssignment>> GetAllAsync(Guid organizationId, Guid? projectId = null, Guid? userId = null);
+
+    /// <summary>
+    /// Actualiza el rol de proyecto de una asignación
+    /// </summary>
+    Task<bool> UpdateProjectRoleAsync(Guid id, Guid organizationId, Guid? projectRoleId);
+
+    /// <summary>
+    /// Elimina lógicamente una asignación (IsDeleted = true)
+    /// </summary>
+    Task<bool> SoftDeleteAsync(Guid id, Guid organizationId);
 }
 
 /// <summary>

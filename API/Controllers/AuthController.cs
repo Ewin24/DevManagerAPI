@@ -34,9 +34,13 @@ public class AuthController : ControllerBase
     ///     POST /api/auth/login
     ///     {
     ///         "email": "admin@techcorp.com",
-    ///         "password": "Password123!"
+    ///         "password": "Password123!",
+    ///         "organizationId": null
     ///     }
-    /// 
+    ///
+    /// **organizationId (opcional):** la organización se resuelve por email. Solo es obligatorio
+    /// si el email existe en más de una organización (si se omite en ese caso: 400 VALIDATION_ERROR).
+    ///
     /// **Ejemplo de Response (200 OK):**
     /// 
     ///     {
@@ -69,6 +73,7 @@ public class AuthController : ControllerBase
     /// <response code="401">Credenciales inválidas - Email o contraseña incorrectos</response>
     [HttpPost("login")]
     [ProducesResponseType(typeof(ApiResponse<LoginResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<LoginResponse>>> Login(
         [FromBody] LoginRequest request)
@@ -127,6 +132,7 @@ public class AuthController : ControllerBase
     [HttpPost("register-organization")]
     [ProducesResponseType(typeof(ApiResponse<RegisterOrganizationResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse<RegisterOrganizationResponse>>> RegisterOrganization(
         [FromBody] RegisterOrganizationRequest request)
     {

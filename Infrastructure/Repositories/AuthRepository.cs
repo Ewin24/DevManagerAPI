@@ -19,24 +19,27 @@ public class AuthRepository : IAuthRepository
         _logger = logger;
     }
 
-    public async Task<Domain.Entities.IAM.User?> GetUserByEmailAsync(string email, Guid organizationId)
+    public async Task<IEnumerable<Domain.Entities.IAM.User>> GetUsersByEmailAsync(string email)
     {
         try
         {
-            var efUser = await _context.Users
+            var efUsers = await _context.Users
                 .AsNoTracking()
-                .FirstOrDefaultAsync(u =>
-                    u.Email == email &&
-                    u.OrganizationId == organizationId &&
-                    !u.IsDeleted);
+                .Where(u => u.Email == email && !u.IsDeleted)
+                .ToListAsync();
 
-            return efUser == null ? null : MapToDomain(efUser);
+            return efUsers.Select(MapToDomain).ToList();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al obtener usuario por email {Email}", email);
             throw;
         }
+    }
+
+    public async Task<bool> NitExistsAsync(string nit)
+    {
+        return await _context.Organizations.AnyAsync(o => o.Nit == nit);
     }
 
     public async Task<(Guid OrganizationId, Guid UserId)> RegisterOrganizationAsync(
@@ -75,6 +78,23 @@ public class AuthRepository : IAuthRepository
 
             _context.Organizations.Add(efOrg);
             _context.Users.Add(efUser);
+
+            // Asignar el rol global "Admin" al usuario administrador (si existe en el seeder)
+            var adminRoleId = await _context.Roles
+                .Where(r => r.OrganizationId == null && r.Name == "Admin" && !r.IsDeleted)
+                .Select(r => (Guid?)r.Id)
+                .FirstOrDefaultAsync();
+
+            if (adminRoleId.HasValue)
+            {
+                _context.UserRoles.Add(new Infrastructure.Data.Entities.UserRole
+                {
+                    UserId = efUser.Id,
+                    RoleId = adminRoleId.Value,
+                    OrganizationId = efOrg.Id,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();

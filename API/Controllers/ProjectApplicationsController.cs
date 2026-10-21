@@ -5,6 +5,7 @@ using Application.Common.Models;
 using Application.DTOs.Applications;
 using Application.Interfaces;
 using Domain.Enums;
+using API.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -162,6 +163,7 @@ public class ProjectApplicationsController : ControllerBase
     /// <response code="404">Postulación no encontrada</response>
     /// <response code="401">No autenticado</response>
     /// <response code="403">Sin permisos (requiere rol Manager o Admin)</response>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPut("applications/{id}/review")]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
